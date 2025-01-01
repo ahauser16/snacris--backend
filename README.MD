@@ -67,6 +67,7 @@ These notes are for how to use this template for my own backend.
   - [ ] COUNTRY_TYPE_RECORD 
 
 - [ ] refactor `jobly-seed.sql` to `snacris-seed.sql` by keeping the `INSERT INTO users (username, password, first_name, last_name, email, is_admin)` reference and removing the `INSERT INTO companies ... ` and `INSERT INTO jobs ... ` data.  Instead I want to include the data from the `DOCUMENT_CONTROL`, `UCC_COLLATERAL`, `PROPERTY_TYPE_RECORD`, `STATE_CODES` and `COUNTRY_TYPE_RECORD` datasets into their respective table.  This will reduce the number of API calls when data is needed, however, you should have a way to check that these datasets do not change or are replaced.
+  
 
 #### models todos
 - [ ] keep the `user.js` model as is but create a model for each of the 15 datasets and keep in mind this is where structures and methods are defined that will interact with the database.
@@ -176,7 +177,7 @@ Here is a step-by-step approach to plan and implement the database structure:
 
 [BACK TO TOC](#react-jobly-backend)
 
-1. Define the Database Schema
+**1. Define the Database Schema**
 
 Create tables for each dataset, ensuring that the `document_id` field is used as a foreign key to establish relationships between the tables. Here is an example of how you can define the schema for the Real Property datasets:
 
@@ -254,6 +255,11 @@ CREATE TABLE acris_real_property_remarks (
     remark_text VARCHAR(232),
     good_through_date DATE
 );
+
+CREATE INDEX idx_acris_real_property_legals_document_id ON acris_real_property_legals(document_id);
+CREATE INDEX idx_acris_real_property_parties_document_id ON acris_real_property_parties(document_id);
+CREATE INDEX idx_acris_real_property_references_document_id ON acris_real_property_references(document_id);
+CREATE INDEX idx_acris_real_property_remarks_document_id ON acris_real_property_remarks(document_id);
 ```
 
 **Personal Property Datasets**
@@ -330,6 +336,11 @@ CREATE TABLE acris_personal_property_remarks (
     remark_text VARCHAR(232),
     good_through_date TIMESTAMP
 );
+
+CREATE INDEX idx_acris_personal_property_legals_document_id ON acris_personal_property_legals(document_id);
+CREATE INDEX idx_acris_personal_property_parties_document_id ON acris_personal_property_parties(document_id);
+CREATE INDEX idx_acris_personal_property_references_document_id ON acris_personal_property_references(document_id);
+CREATE INDEX idx_acris_personal_property_remarks_document_id ON acris_personal_property_remarks(document_id);
 ```
 
 **CODE MAPPINGS DATASETS**
@@ -379,31 +390,18 @@ CREATE TABLE country_type_record (
 
 [BACK TO TOC](#react-jobly-backend)
 
-1. Indexing
-
-Ensure that you create indexes on the `document_id` fields to optimize query performance, especially for cross-referencing between tables.
-
-**Real Property Datasets**
+**snacris.sql**
 
 ```sql
-CREATE INDEX idx_acris_real_property_legals_document_id ON acris_real_property_legals(document_id);
-CREATE INDEX idx_acris_real_property_parties_document_id ON acris_real_property_parties(document_id);
-CREATE INDEX idx_acris_real_property_references_document_id ON acris_real_property_references(document_id);
-CREATE INDEX idx_acris_real_property_remarks_document_id ON acris_real_property_remarks(document_id);
+
 ```
 
-**Personal Property Datasets**
 
-```sql
-CREATE INDEX idx_acris_personal_property_legals_document_id ON acris_personal_property_legals(document_id);
-CREATE INDEX idx_acris_personal_property_parties_document_id ON acris_personal_property_parties(document_id);
-CREATE INDEX idx_acris_personal_property_references_document_id ON acris_personal_property_references(document_id);
-CREATE INDEX idx_acris_personal_property_remarks_document_id ON acris_personal_property_remarks(document_id);
-```
+---
+---
+---
 
-[BACK TO TOC](#react-jobly-backend)
-
-3. Models
+1. Models
 
 Define models for each table in your application. These models will interact with the database and perform CRUD operations.
 
