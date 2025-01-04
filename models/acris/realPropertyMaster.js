@@ -10,12 +10,14 @@ const API_ENDPOINTS = require("../../api/apiEndpoints");
 class RealPropertyMaster {
   /** The user fills out a form with input fields mapped to each of the fields associated with ACRIS-Real Property Master dataset.  The user submits the form which triggers the `sendUserDataToServer` and in response the server executes `fetchFromApi` which fetches data from the ACRIS-Real Property Master dataset based on user-data sent from the frontend.
    *
+   * `URLSearchParams` is a built-in JavaScript class that provides utility methods to work with the query string of a URL. It is part of the Web API and is available in modern browsers and Node.js environments.  The URLSearchParams class allows you to create and manipulate the query string of a URL. You can add, delete, and retrieve query parameters easily. This class is useful when you need to work with query parameters in a URL.
+   * 
    * Returns [{ document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }, ...]
    **/
 
   static async fetchFromApi(query) {
-    const url = `${API_ENDPOINTS.realPropertyMaster}?${query}`;
-    //const url = `${API_ENDPOINTS.realPropertyMaster}?${new URLSearchParams(query).toString()}`;
+    // const url = `${API_ENDPOINTS.realPropertyMaster}?${query}`;
+    const url = `${API_ENDPOINTS.realPropertyMaster}?${new URLSearchParams(query).toString()}`;
     console.log("Constructed URL:", url); // Log the constructed URL
     const response = await axios.get(url, {
       headers: {
