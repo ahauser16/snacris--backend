@@ -1,13 +1,14 @@
-# react jobly (backend)
+# snacris server (backend)
 
 **TABLE OF CONTENTS**
-- [react jobly (backend)](#react-jobly-backend)
+- [snacris server (backend)](#snacris-server-backend)
   - [Refactor Notes](#refactor-notes)
     - [To Do List](#to-do-list)
       - [data table todos](#data-table-todos)
       - [models todos](#models-todos)
       - [schemas todos](#schemas-todos)
       - [routes todos](#routes-todos)
+      - [`api.js` to dos](#apijs-to-dos)
     - [Refactor Plan](#refactor-plan)
       - [Planning the Database Structure for ACRIS Datasets](#planning-the-database-structure-for-acris-datasets)
     - [Cross Referencing Datasets: RealPropertyMaster and RealPropertyParties with DocumentControls](#cross-referencing-datasets-realpropertymaster-and-realpropertyparties-with-documentcontrols)
@@ -43,38 +44,36 @@
 
 ## Refactor Notes
 
-These notes are for how to use this template for my own backend.
+These notes are for how to use this template for my own backend.  Most of the files in this repository
 
 ### To Do List
 
 #### data table todos
-- [ ] refactor `jobly.sql` to `snacris.sql` by changing "jobly" references to "snacris" references.  The file should still prompt the user to confirm the deletion and recreation of the `snacris` database, drop the existing `snacris` database if it exists, create a new `snacris` database, execute the `snacris-schema.sql` (f/k/a `jobly-schema.sql`) file to create the database schema, execute the `snacris-seed.sql` file (f/k/a `jobly-seed.sql`) to populate the database with initial data and repeat the process for the `snacris_test` database which is used for testing purposes.
+- [x] refactor `jobly.sql` to `snacris.sql` by changing "jobly" references to "snacris" references.  The file should still prompt the user to confirm the deletion and recreation of the `snacris` database, drop the existing `snacris` database if it exists, create a new `snacris` database, execute the `snacris-schema.sql` (f/k/a `jobly-schema.sql`) file to create the database schema, execute the `snacris-seed.sql` file (f/k/a `jobly-seed.sql`) to populate the database with initial data and repeat the process for the `snacris_test` database which is used for testing purposes.
 
-- [ ] refactor `jobly-schema.sql` to `snacris-schema.sql` by keeping the `users` table and removing all the table references.  Add a table for each of the 15 ACRIS datasets listed below.  See [Planning the Database Structure for ACRIS Datasets](#planning-the-database-structure-for-acris-datasets) for a more detailed plan.
-  - [ ] ACRIS_REAL_PROPERTY_MASTER 
-  - [ ] ACRIS_REAL_PROPERTY_LEGALS 
-  - [ ] ACRIS_REAL_PROPERTY_PARTIES 
-  - [ ] ACRIS_REAL_PROPERTY_REFERENCES 
-  - [ ] ACRIS_REAL_PROPERTY_REMARKS 
-  - [ ] ACRIS_PERSONAL_PROPERTY_MASTER 
-  - [ ] ACRIS_PERSONAL_PROPERTY_LEGALS 
-  - [ ] ACRIS_PERSONAL_PROPERTY_PARTIES 
-  - [ ] ACRIS_PERSONAL_PROPERTY_REFERENCES 
-  - [ ] DOCUMENT_CONTROL 
-  - [ ] UCC_COLLATERAL 
-  - [ ] PROPERTY_TYPE_RECORD 
-  - [ ] STATE_CODES 
-  - [ ] COUNTRY_TYPE_RECORD 
+- [x] refactor `jobly-schema.sql` to `snacris-schema.sql` by keeping the `users` table and removing all the table references.  Add a table for each of the 15 ACRIS datasets.  Refer to the `README.MD` file in the `sql` folder for more info
 
-- [ ] refactor `jobly-seed.sql` to `snacris-seed.sql` by keeping the `INSERT INTO users (username, password, first_name, last_name, email, is_admin)` reference and removing the `INSERT INTO companies ... ` and `INSERT INTO jobs ... ` data.  Instead I want to include the data from the `DOCUMENT_CONTROL`, `UCC_COLLATERAL`, `PROPERTY_TYPE_RECORD`, `STATE_CODES` and `COUNTRY_TYPE_RECORD` datasets into their respective table.  This will reduce the number of API calls when data is needed, however, you should have a way to check that these datasets do not change or are replaced.
+- [X] refactor `jobly-seed.sql` to `snacris-seed.sql` by keeping the `INSERT INTO users (username, password, first_name, last_name, email, is_admin)` reference and removing the `INSERT INTO companies ... ` and `INSERT INTO jobs ... ` data.  Instead I want to include the data from the `DOCUMENT_CONTROL`, `UCC_COLLATERAL`, `PROPERTY_TYPE_RECORD`, `STATE_CODES` and `COUNTRY_TYPE_RECORD` datasets into their respective table.  This will reduce the number of API calls when data is needed, however, you should have a way to check that these datasets do not change or are replaced.  I also seeded the `snacris` and `snacris_test` databases with data from the Real Property datasets such as the current deed to the **Empire State Building**, the deed associated with the **The Wyckoff House Museum** and an assignment of mortgage associated with hundreds of properties with Textron Financial Corporation as the ASSIGNOR/OLD LENDER and CAPITALSOURCE BANK as the ASSIGNEE/NEW LENDER.
   
 
 #### models todos
-- [ ] keep the `user.js` model as is but create a model for each of the 15 datasets and keep in mind this is where structures and methods are defined that will interact with the database.
-  
+- [x] keep the `user.js` model as is but create a model for each of the 15 datasets and keep in mind this is where structures and methods are defined that will interact with the database.  
+
+Given my use case, where the user will fill out a form that containing input fields that correspond to fields within the five datasets represented by `acris_real_property_master`, `acris_real_property_legals`, `acris_real_property_parties`, `acris_real_property_references` and `acris_real_property_remarks` `sql` tables. When the user submits the form and my server receives their query data my server will make an API call to each dataset and cross reference the records based on the `document_id` value. For example, the user could submit a form to my server that queries the `document_date` and `doc_type` fields associated with the `acris_real_property_master` dataset, the `borough`, `block` and `lot` fields associated with the `acris_real_property_legals` and the `party_type` and `name` fields associated with the `acris_real_property_parties` dataset. The server will construct the three query URLs, send and receive the API responses that contain the results from each API request will need to be cross referenced for a `document_id` that they have in common. The result are records that meet the criteria of the user's search. 
+
+**Approach:**
+- [x] **1. Define Models for Each Dataset:** Create models for `acrisRealPropertyMaster`, `acrisRealPropertyLegals`, `acrisRealPropertyParties`, `acrisRealPropertyReferences`, and `acrisRealPropertyRemarks`.
+- [x] **2. Define Methods for API Interaction:** Each model will have methods to fetch data from the 3rd party APIs.
+- [ ] **3. Cross-Reference Data:** Implement a method to cross-reference the data based on `document_id`.
+- [ ] **4. Data Transformation:** Ensure the data is transformed into a format suitable for the front-end and database.
+- [ ] **5. Error Handling:** Implement error handling for both API requests and database operations.
+
+
 #### schemas todos
 
-- [ ] Keep the `userAuth.json`, `userNew.json`, `userRegister.json` and `userUpdate.json` files as they are and create a schema for each dataset to be used to validate the API calls in your routes.
+- [ ] Keep the `userAuth.json`, `userNew.json`, `userRegister.json` and `userUpdate.json` files as they are and create a schema for each ACRIS dataset to be used to validate the API calls in the associated routes.
+
+
 
 #### routes todos
 
@@ -148,13 +147,16 @@ router.get("/master", async function (req, res, next) {
     return res.json({ savedData });
   } catch (err) {
     return next(err);
-  }
+  } 
 });
 
 // Add other routes as needed
 
 module.exports = router;
 ```
+
+#### `api.js` to dos
+- [ ] refactor `api.js` in the `api` folder.  `api.js` is from my chrome extension which made GET requests to the ACRIS API endpoints but now I want to make these requests from the server.  I've included all the other files that `api.js` depends on in a folder named `refactor` within the `api` folder for reference.
 
 ### Refactor Plan
 
@@ -915,6 +917,14 @@ This file defines the `Job` model, which contains methods for interacting with t
 
 The `routes` folder contains files like `auth.js`, `companies.js`, `jobs.js`, and `users.js`, which define the API endpoints for the application. These routes handle HTTP requests, invoke the appropriate model methods, and return responses to the client. For instance, the `jobs.js` route file includes endpoints for creating a new job, retrieving all jobs, retrieving a specific job, updating a job, and deleting a job. The routes also include middleware functions for tasks like authentication and authorization.
 
+Given my use case, the `realPropertyMaster.js` route will handle requests related to the `acris_real_property_master` dataset. Users will fill out a form with input fields corresponding to the fields within the five datasets: `acris_real_property_master`, `acris_real_property_legals`, `acris_real_property_parties`, `acris_real_property_references` and `acris_real_property_remarks`. When the form is submitted, the server will:
+**1. Receive Query Data:** The server receives the query data from the user's form submission.
+**2. Validate Data:** The server validates the data against the `realPropertyMaster.json` schema to ensure it conforms to the expected format.
+**3. Construct Query URLs:** The server constructs query URLs for each dataset based on the validated data.
+**4. Fetch Data from APIs:** The server makes API calls to fetch data from the 3rd party APIs for each dataset.
+**5. Cross-Reference Data:** The server cross-references the records based on the `document_id` value.
+**6. Return Results:** The server returns the cross-referenced results to the front-end for the user to view and possibly save to their account.
+
 ##### `auth.js` route overview
 This file defines the authentication-related routes. It includes routes for logging in (`POST /auth/token`) and registering (`POST /auth/register`). These routes validate the input data using JSON schemas and handle user authentication and registration, returning a JWT token upon successful login or registration.
 
@@ -932,6 +942,15 @@ This file defines the job-related routes. It includes routes for creating a new 
 #### schemas overview
 
 The `schemas` folder contains JSON schema files like `companyNew.json`, `companySearch.json`, `companyUpdate.json`, `jobNew.json`, `jobSearch.json`, `jobUpdate.json`, `userAuth.json`, `userNew.json`, `userRegister.json`, and `userUpdate.json`. These schemas define the structure and validation rules for the data used in the application. They ensure that the data conforms to the expected format before it is processed by the routes and models. For example, the `jobNew.json` schema validates the data for creating a new job, ensuring that required fields like `title` and `companyHandle` are present and correctly formatted.
+
+In my use case, the `realPropertyMaster.json` schema will be used to validate the data submitted by users through forms. When the server receives the query data, it will validate the data against the schema to ensure it conforms to the expected format before processing it further.
+
+For example, when a user submits a form to query the `document_date` and `doc_type` fields, the server will:
+1. Validate the Data: Use the `realPropertyMaster.json` schema to validate the submitted data.
+2. Construct the Query URL: If the data is valid, construct the query URL for the API call.
+3. Fetch Data from API: Use the `fetchFromApi` method to fetch data from the 3rd party API.
+4. Cross-Reference Data: Cross-reference the data with other datasets based on the `document_id` value.
+5. Return Results: Return the cross-referenced results to the front-end for the user to view and possibly save to their account.
 
 ##### `companyNew.json` schema overview
 

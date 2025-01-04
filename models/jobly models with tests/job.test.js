@@ -1,7 +1,7 @@
 "use strict";
 
-const { NotFoundError, BadRequestError } = require("../expressError");
-const db = require("../db.js");
+const { NotFoundError, BadRequestError } = require("../../expressError.js");
+const db = require("../../db.js");
 const Job = require("./job.js");
 const {
   commonBeforeAll,
@@ -9,7 +9,7 @@ const {
   commonAfterEach,
   commonAfterAll,
   testJobIds,
-} = require("./_testCommon");
+} = require("../_testCommon.js");
 
 beforeAll(commonBeforeAll);
 beforeEach(commonBeforeEach);
@@ -215,7 +215,7 @@ describe("remove", function () {
   test("works", async function () {
     await Job.remove(testJobIds[0]);
     const res = await db.query(
-        "SELECT id FROM jobs WHERE id=$1", [testJobIds[0]]);
+      "SELECT id FROM jobs WHERE id=$1", [testJobIds[0]]);
     expect(res.rows.length).toEqual(0);
   });
 

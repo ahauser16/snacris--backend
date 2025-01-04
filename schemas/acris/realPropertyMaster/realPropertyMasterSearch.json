@@ -1,0 +1,23 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://our.company.com/realPropertyMasterSearch.schema.json",
+    "type": "object",
+    "properties": {
+      "document_id": { "type": "string", "minLength": 16, "maxLength": 16 },
+      "record_type": { "type": "string", "minLength": 1, "maxLength": 1 },
+      "crfn": { "type": "string", "minLength": 13, "maxLength": 13 },
+      "recorded_borough": { "type": "integer" },
+      "doc_type": { "type": "string", "minLength": 1, "maxLength": 8 },
+      "document_date": { "type": "string", "format": "date" },
+      "document_amt": { "type": "number" },
+      "recorded_datetime": { "type": "string", "format": "date-time" },
+      "modified_date": { "type": "string", "format": "date" },
+      "reel_yr": { "type": "integer" },
+      "reel_nbr": { "type": "integer" },
+      "reel_pg": { "type": "integer" },
+      "percent_trans": { "type": "number" },
+      "good_through_date": { "type": "string", "format": "date" }
+    },
+    "additionalProperties": false,
+    "required": []
+  }
