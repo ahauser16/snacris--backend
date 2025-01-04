@@ -59,6 +59,7 @@ These notes are for how to use this template for my own backend.  Most of the fi
 #### models todos
 - [x] keep the `user.js` model as is but create a model for each of the 15 datasets and keep in mind this is where structures and methods are defined that will interact with the database.  
 
+**Making GET requests from the server using query-data sent from the front-end**
 Given my use case, where the user will fill out a form that containing input fields that correspond to fields within the five datasets represented by `acris_real_property_master`, `acris_real_property_legals`, `acris_real_property_parties`, `acris_real_property_references` and `acris_real_property_remarks` `sql` tables. When the user submits the form and my server receives their query data my server will make an API call to each dataset and cross reference the records based on the `document_id` value. For example, the user could submit a form to my server that queries the `document_date` and `doc_type` fields associated with the `acris_real_property_master` dataset, the `borough`, `block` and `lot` fields associated with the `acris_real_property_legals` and the `party_type` and `name` fields associated with the `acris_real_property_parties` dataset. The server will construct the three query URLs, send and receive the API responses that contain the results from each API request will need to be cross referenced for a `document_id` that they have in common. The result are records that meet the criteria of the user's search. 
 
 **Approach:**
@@ -68,92 +69,36 @@ Given my use case, where the user will fill out a form that containing input fie
 - [ ] **4. Data Transformation:** Ensure the data is transformed into a format suitable for the front-end and database.
 - [ ] **5. Error Handling:** Implement error handling for both API requests and database operations.
 
+---
+
+**Question**
+For context, the use case above **Making GET requests from the server using query-data sent from the front-end** explains how my server makes GET requests to ACRIS API datasets using query-data sent from the user on the frontend. The design problem I have is how to handle the response-data from those ACRIS API datasets in terms of allowing the user to save that data to my database. How do I represent a single user with the data they save to the database in my javascript models and routes? 
+
+For example, in the `realPropertyMaster.js` model the `findAll` function should return all the records that the user saved to the database but not all of the records from all of the users in the database. Furthermore, the `router.get("/", async function (req, res, next) {` route from my `realPropertyMaster.js` route-file which uses the `findAll` function should be split into two routes: one where the user can retrieve all records that they saved to the database and one where an admin can retrieve all records from all users that were saved to the database. How do I plan this approach?
+
+**Differentiating between data saved by the user to the database vs database data that is accessible by all users or only accessible by an admin**
+To handle the design problem of associating saved data with individual users and allowing both users and admins to retrieve records, you can follow these steps:
+- [x] **1. Update the Database Schema:** Create a join table (see **Associating User data with ACRIS data using join tables** within **schemas todos** below) to establish a many-to-many relationship between users and records.
+- [x] **2. Update the Model:** Update the `RealPropertyMaster` model to handle user-specific data using the join table.
+  - [ ] `saveToDb` and `saveUserRecord` methods added to `realPropertyMaster.js` model file with documentation.
+**3. Update the Routes:** Split the routes to handle user-specific and admin-specific data retrieval.  Update the routes to handle user-specific data using the join table.
 
 #### schemas todos
 
-- [ ] Keep the `userAuth.json`, `userNew.json`, `userRegister.json` and `userUpdate.json` files as they are and create a schema for each ACRIS dataset to be used to validate the API calls in the associated routes.
+- [x] Keep the `userAuth.json`, `userNew.json`, `userRegister.json` and `userUpdate.json` files as they are and create a schema for each ACRIS dataset to be used to validate the API calls in the associated routes.
 
+**Associating User data with ACRIS data using join tables**
 
+To create join tables that associate the `users` table with the various acris tables, you can follow these steps:
+- [x] **Create Join Tables:** Define join tables for each `acris` table to establish a many-to-many relationship between users and records.
+- [x] **Update the Schema Files:** Add the join table definitions to separate schema file for join tables.
+- [x] **Update the `snacris.sql` File:** Include the join table schema file in the `snacris.sql` file.
 
 #### routes todos
 
-Define routes to handle API requests, construct the query URLs, send GET requests, receive the API response data, and store it in the database.  Below are examples of what that code could look like.
+- [ ] Define routes to handle the `fetchData` API requests for the 15 ACRIS datasets which involves constructing the query URLs, send those `uery-URLs via GET requests, receive the API response data, and store it in the database.  Each dataset should have its own route file which in addition to fetching ACRIS data will allow the user to 
+- [ ] `realPropertyMaster.js` - the `router.get("/", async function (req, res, next) {` route retrieves records from the database.  I need to consider the following 2 scenarios. There are records in the database that are saved by, and associated with, the user and there are records in the database that are accessible by all users.
 
-`realProperty.js`
-```js
-// routes/realProperty.js
-"use strict";
-
-const express = require("express");
-const axios = require("axios");
-const AcrisRealPropertyMaster = require("../models/acrisRealPropertyMaster");
-const { BadRequestError } = require("../expressError");
-
-const router = new express.Router();
-
-router.get("/master", async function (req, res, next) {
-  try {
-    const { document_id } = req.query;
-    if (!document_id) {
-      throw new BadRequestError("document_id is required");
-    }
-
-    const url = `https://api.example.com/acris_real_property_master?document_id=${document_id}`;
-    const response = await axios.get(url);
-    const data = response.data;
-
-    // Save data to the database
-    const savedData = await AcrisRealPropertyMaster.create(data);
-
-    // Organize and manipulate data as needed
-    return res.json({ savedData });
-  } catch (err) {
-    return next(err);
-  }
-});
-
-// Add other routes as needed
-
-module.exports = router;
-```
-
-`personalProperty.js`
-```js
-// routes/personalProperty.js
-"use strict";
-
-const express = require("express");
-const axios = require("axios");
-const AcrisPersonalPropertyMaster = require("../models/acrisPersonalPropertyMaster");
-const { BadRequestError } = require("../expressError");
-
-const router = new express.Router();
-
-router.get("/master", async function (req, res, next) {
-  try {
-    const { document_id } = req.query;
-    if (!document_id) {
-      throw new BadRequestError("document_id is required");
-    }
-
-    const url = `https://api.example.com/acris_personal_property_master?document_id=${document_id}`;
-    const response = await axios.get(url);
-    const data = response.data;
-
-    // Save data to the database
-    const savedData = await AcrisPersonalPropertyMaster.create(data);
-
-    // Organize and manipulate data as needed
-    return res.json({ savedData });
-  } catch (err) {
-    return next(err);
-  } 
-});
-
-// Add other routes as needed
-
-module.exports = router;
-```
 
 #### `api.js` to dos
 - [ ] refactor `api.js` in the `api` folder.  `api.js` is from my chrome extension which made GET requests to the ACRIS API endpoints but now I want to make these requests from the server.  I've included all the other files that `api.js` depends on in a folder named `refactor` within the `api` folder for reference.

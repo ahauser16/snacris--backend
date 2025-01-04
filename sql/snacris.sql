@@ -9,6 +9,7 @@ CREATE DATABASE snacris;
 \i schema/snacris-acris-code-mappings-schema.sql
 \i schema/snacris-acris-real-property-schema.sql
 \i schema/snacris-acris-personal-property-schema.sql
+\i join/acris-user-join-schema.sql
 \i seed/snacris-seed-users.sql
 \i seed/snacris-seed-acris-document-control-codes.sql
 \i seed/snacris-seed-acris-ucc-collateral-type-codes.sql
@@ -28,6 +29,7 @@ CREATE DATABASE snacris_test;
 \i schema/snacris-acris-code-mappings-schema.sql
 \i schema/snacris-acris-real-property-schema.sql
 \i schema/snacris-acris-personal-property-schema.sql
+\i join/acris-user-join-schema.sql
 \i seed/snacris-seed-users.sql
 \i seed/snacris-seed-acris-document-control-codes.sql
 \i seed/snacris-seed-acris-ucc-collateral-type-codes.sql

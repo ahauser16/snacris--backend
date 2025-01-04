@@ -33,7 +33,7 @@ class RealPropertyMaster {
     return response.data;
   }
 
-  /** After the server receives data from the ACRIS-Real Property Master dataset it is sent back to the user on the front end where they will have the option of clicking a "Save Record" button which triggers the route that executes the `saveToDb` function.
+  /** After the server receives data from the ACRIS-Real Property Master dataset it is sent back to the user on the front end where they will have the option of clicking a "Save Record" button which triggers the route that executes the `saveUserRecord` function which calls the `saveToDb` function.  The `saveToDb` function saves the record data to the database whereas the `saveUserRecord` function saves the record data to the user-specific record data table.  The `saveToDb` function would be executed alone in cases where an admin user is adding a new record to the database which is not associated with a particular user.
    *
    * Returns { document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }
    **/
@@ -65,42 +65,130 @@ class RealPropertyMaster {
     return result.rows[0];
   }
 
-  /** The user has the option to view all records associated with the ACRIS-Real Property Master dataset that they saved to the database such as a `View All` button which triggers the route that executes the `findAll` function.  
+  /** 
+   * Save user-specific record data.
+   *
+   * Returns { id, username, document_id, saved_at }
+   * 
+   * Explanation of saveUserRecord Method
+   * The `saveUserRecord` method is designed to save a record to the `acris_real_property_master` table and then create an association between the user and the saved record in the `user_saved_real_property_master` join table. Here is a detailed explanation of how it works:
+   * 1. Save the Record to `acris_real_property_master`:
+   * - The `saveUserRecord` method first calls the saveToDb method to save the record to the `acris_real_property_master` table.
+   * - The saveToDb method inserts the record into the `acris_real_property_master` table and returns the saved record.
+   * 2. Create an Association in the Join Table:
+   * - After saving the record, the `saveUserRecord` method inserts a new entry into the `user_saved_real_property_master` join table.
+   * - This entry associates the `username` with the `document_id` of the saved record.
+  **/
+
+  static async saveUserRecord(username, data) {
+    const record = await this.saveToDb(data);
+    const result = await db.query(
+      `INSERT INTO user_saved_real_property_master (username, document_id)
+       VALUES ($1, $2)
+       RETURNING id, username, document_id, saved_at`,
+      [username, record.document_id]
+    );
+
+    return result.rows[0];
+  }
+
+  /** Find all records saved by a specific user.
    *
    * Returns [{ document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }, ...]
+   * 
+   * Use Case: This function is used when an authenticated user wants to retrieve all records from the database that are associated with their account. For example, a user might want to view all the property records they have saved.
+   * 
+   * Access Control: Only the authenticated user should have access to this function to ensure that users can only view their own records.
    **/
 
-  static async findAll() {
+  static async findAllByUser(username) {
     const result = await db.query(
-      `SELECT document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date
-       FROM acris_real_property_master
-       ORDER BY document_id`
+      `SELECT arm.document_id, arm.record_type, arm.crfn, arm.recorded_borough, arm.doc_type, arm.document_date, arm.document_amt, arm.recorded_datetime, arm.modified_date, arm.reel_yr, arm.reel_nbr, arm.reel_pg, arm.percent_trans, arm.good_through_date
+       FROM acris_real_property_master arm
+       JOIN user_saved_real_property_master usr ON arm.document_id = usr.document_id
+       WHERE usr.username = $1
+       ORDER BY arm.document_id`,
+      [username]
     );
 
     return result.rows;
   }
 
-  /** The user has the option to view a single record associated with the ACRIS-Real Property Master dataset that they saved to the database such as a `View Record` button or a short form with input field labeled `View Record By Document ID` which triggers the route that executes the `get` function with the `document_id` as its sole parameter.
+  /** Find all records in the database or all records saved by a specific user (admin only).
+   *
+   * Returns [{ document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }, ...]
    * 
-   *
-   * Returns { document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }
-   *
-   * Throws NotFoundError if record not found.
+   * Use Case: This function is used when an authenticated admin wants to retrieve all records from the database or optionally retrieve all records saved by a particular user. For example, an admin might want to review all property records saved by all users or investigate the records saved by a specific user.
+   * Access Control: Only an authenticated admin should have access to this function to ensure that sensitive data is protected and only accessible by authorized personnel.
    **/
 
-  static async get(document_id) {
+  static async findAll(username = null) {
+    if (username) {
+      return this.findAllByUser(username);
+    } else {
+      const result = await db.query(
+        `SELECT document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date
+         FROM acris_real_property_master
+         ORDER BY document_id`
+      );
+      return result.rows;
+    }
+  }
+
+  /** Retrieve a single record associated with a specific user.
+     *
+     * Returns { document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }
+     *
+     * Throws NotFoundError if record not found.
+     * 
+     * Use Case: This function is used when an authenticated user wants to retrieve a single record from the database by referencing the record's document_id value, ensuring that the record is associated with that particular user. For example, a user might want to view the details of a specific property record they have saved.
+     * Access Control: Only the authenticated user should have access to this function to ensure that users can only view their own records.
+     **/
+
+  static async getByUser(username, document_id) {
     const result = await db.query(
-      `SELECT document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date
-       FROM acris_real_property_master
-       WHERE document_id = $1`,
-      [document_id]
+      `SELECT arm.document_id, arm.record_type, arm.crfn, arm.recorded_borough, arm.doc_type, arm.document_date, arm.document_amt, arm.recorded_datetime, arm.modified_date, arm.reel_yr, arm.reel_nbr, arm.reel_pg, arm.percent_trans, arm.good_through_date
+     FROM acris_real_property_master arm
+     JOIN user_saved_real_property_master usr ON arm.document_id = usr.document_id
+     WHERE usr.username = $1 AND arm.document_id = $2`,
+      [username, document_id]
     );
 
     const record = result.rows[0];
 
-    if (!record) throw new NotFoundError(`No record: ${document_id}`);
+    if (!record) throw new NotFoundError(`No record: ${document_id} for user: ${username}`);
 
     return record;
+  }
+
+
+  /** Retrieve a single record by document_id (admin only).
+     *
+     * Returns { document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }
+     *
+     * Throws NotFoundError if record not found.
+     * 
+     * Use Case: This function is used when an authenticated admin wants to retrieve a single record from the database by referencing its document_id value, regardless of whether the record is associated with any user. For example, an admin might want to review the details of any property record in the database.
+     * Access Control: Only an authenticated admin should have access to this function to ensure that sensitive data is protected and only accessible by authorized personnel.
+     **/
+
+  static async get(document_id, username = null) {
+    if (username) {
+      return this.getByUser(username, document_id);
+    } else {
+      const result = await db.query(
+        `SELECT document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date
+       FROM acris_real_property_master
+       WHERE document_id = $1`,
+        [document_id]
+      );
+
+      const record = result.rows[0];
+
+      if (!record) throw new NotFoundError(`No record: ${document_id}`);
+
+      return record;
+    }
   }
 
   /** Update record data with `data`.
