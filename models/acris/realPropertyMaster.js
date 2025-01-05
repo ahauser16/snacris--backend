@@ -4,21 +4,22 @@ const db = require("../../db");
 const axios = require("axios");
 const { NotFoundError, BadRequestError } = require("../../expressError");
 const API_ENDPOINTS = require("../../api/apiEndpoints");
+const { genSqlSetWhere } = require("../../helpers/genSqlSetWhere");
+const { sqlForPartialUpdate } = require("../../helpers/sql");
 
 /** Related functions for ACRIS Real Property Master. */
 
 class RealPropertyMaster {
-  /** The user fills out a form with input fields mapped to each of the fields associated with ACRIS-Real Property Master dataset.  The user submits the form which triggers the `sendUserDataToServer` and in response the server executes `fetchFromApi` which fetches data from the ACRIS-Real Property Master dataset based on user-data sent from the frontend.
+  /** The user fills out a form with input fields mapped to each of the fields associated with ACRIS-Real Property Master dataset.  The user submits the form which triggers the `sendUserDataToServer` and in response the server executes `fetchFromAcris` which fetches data from the ACRIS-Real Property Master dataset based on user-data sent from the frontend.
    *
    * `URLSearchParams` is a built-in JavaScript class that provides utility methods to work with the query string of a URL. It is part of the Web API and is available in modern browsers and Node.js environments.  The URLSearchParams class allows you to create and manipulate the query string of a URL. You can add, delete, and retrieve query parameters easily. This class is useful when you need to work with query parameters in a URL.
    * 
    * Returns [{ document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }, ...]
    **/
 
-  static async fetchFromApi(query) {
-    // const url = `${API_ENDPOINTS.realPropertyMaster}?${query}`;
+  static async fetchFromAcris(query) {
     const url = `${API_ENDPOINTS.realPropertyMaster}?${new URLSearchParams(query).toString()}`;
-    console.log("Constructed URL:", url); // Log the constructed URL
+    console.log("Constructed URL:", url);
     const response = await axios.get(url, {
       headers: {
         'Content-Type': 'application/json',
@@ -145,7 +146,7 @@ class RealPropertyMaster {
      * Access Control: Only the authenticated user should have access to this function to ensure that users can only view their own records.
      **/
 
-  static async getByUser(username, document_id) {
+  static async getRecordByUser(username, document_id) {
     const result = await db.query(
       `SELECT arm.document_id, arm.record_type, arm.crfn, arm.recorded_borough, arm.doc_type, arm.document_date, arm.document_amt, arm.recorded_datetime, arm.modified_date, arm.reel_yr, arm.reel_nbr, arm.reel_pg, arm.percent_trans, arm.good_through_date
      FROM acris_real_property_master arm
@@ -172,7 +173,7 @@ class RealPropertyMaster {
      * Access Control: Only an authenticated admin should have access to this function to ensure that sensitive data is protected and only accessible by authorized personnel.
      **/
 
-  static async get(document_id, username = null) {
+  static async getRecordByAdmin(document_id, username = null) {
     if (username) {
       return this.getByUser(username, document_id);
     } else {
@@ -189,6 +190,34 @@ class RealPropertyMaster {
 
       return record;
     }
+  }
+
+  /** Search records saved by a specific user based on search criteria.
+    *
+    * Returns [{ document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }, ...]
+    *
+    * Throws NotFoundError if no records match the search criteria.
+    * 
+    * This method allows users to search for records they have saved based on various search criteria. It constructs a dynamic SQL query using the provided search criteria and returns the matching records.
+    * 
+    * The alias `arpm` refers to the `acris_real_property_master` table.
+    * The alias `usrpm` refers to the `user_saved_real_property_master` join table.
+    **/
+
+  static async searchRecordsByUser(username, searchCriteria) {
+    const { whereClause, values } = genSqlSetWhere(searchCriteria);
+    const querySql = `SELECT arpm.document_id, arpm.record_type, arpm.crfn, arpm.recorded_borough, arpm.doc_type, arpm.document_date, arpm.document_amt, arpm.recorded_datetime, arpm.modified_date, arpm.reel_yr, arpm.reel_nbr, arpm.reel_pg, arpm.percent_trans, arpm.good_through_date
+                      FROM acris_real_property_master arpm
+                      JOIN user_saved_real_property_master usrpm ON arpm.document_id = usrpm.document_id
+                      WHERE usrpm.username = $1 AND ${whereClause}
+                      ORDER BY arpm.document_id`;
+    const result = await db.query(querySql, [username, ...values]);
+
+    if (result.rows.length === 0) {
+      throw new NotFoundError(`No records found for user: ${username} with criteria: ${JSON.stringify(searchCriteria)}`);
+    }
+
+    return result.rows;
   }
 
   /** Update record data with `data`.
@@ -229,19 +258,47 @@ class RealPropertyMaster {
     return record;
   }
 
-  /** Delete given record from database; returns undefined. */
+  /** Delete a single record associated with a specific user.
+   *
+   * Returns { document_id }
+   *
+   * Throws NotFoundError if record not found.
+   **/
 
-  static async remove(document_id) {
+  static async removeByUser(username, document_id) {
     const result = await db.query(
-      `DELETE
-       FROM acris_real_property_master
-       WHERE document_id = $1
+      `DELETE FROM user_saved_real_property_master
+       WHERE username = $1 AND document_id = $2
        RETURNING document_id`,
-      [document_id]
+      [username, document_id]
     );
+
     const record = result.rows[0];
 
-    if (!record) throw new NotFoundError(`No record: ${document_id}`);
+    if (!record) throw new NotFoundError(`No record: ${document_id} for user: ${username}`);
+
+    return record;
+  }
+
+  /** Delete given record from database; returns undefined. */
+
+  static async remove(document_id, username = null) {
+    if (username) {
+      return this.removeByUser(username, document_id);
+    } else {
+      const result = await db.query(
+        `DELETE
+         FROM acris_real_property_master
+         WHERE document_id = $1
+         RETURNING document_id`,
+        [document_id]
+      );
+      const record = result.rows[0];
+
+      if (!record) throw new NotFoundError(`No record: ${document_id}`);
+
+      return record;
+    }
   }
 }
 

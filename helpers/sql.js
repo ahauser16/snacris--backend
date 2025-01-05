@@ -15,6 +15,9 @@ const { BadRequestError } = require("../expressError");
  * @example {firstName: 'Aliya', age: 32} =>
  *   { setCols: '"first_name"=$1, "age"=$2',
  *     values: ['Aliya', 32] }
+ * 
+ * 
+ * 
  */
 
 function sqlForPartialUpdate(dataToUpdate, jsToSql) {
