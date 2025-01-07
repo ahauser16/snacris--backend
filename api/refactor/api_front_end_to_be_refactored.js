@@ -16,7 +16,7 @@ import documentControlCodesFields from './documentControlCodesFields';
 import countryCodesFields from './countryCodesFields';
 import uccCollateralCodesFields from './uccCollateralCodesFields';
 import stateCodesFields from './stateCodesFields';
-import API_ENDPOINTS from './apiEndpoints';
+import API_ENDPOINTS from '../apiEndpoints';
 
 const APP_TOKEN = secrets.appToken;
 

@@ -8,7 +8,7 @@
       - [models todos](#models-todos)
       - [schemas todos](#schemas-todos)
       - [routes todos](#routes-todos)
-      - [`api.js` to dos](#apijs-to-dos)
+      - [api ToDos](#api-todos)
     - [Refactor Plan](#refactor-plan)
       - [Planning the Database Structure for ACRIS Datasets](#planning-the-database-structure-for-acris-datasets)
     - [Cross Referencing Datasets: RealPropertyMaster and RealPropertyParties with DocumentControls](#cross-referencing-datasets-realpropertymaster-and-realpropertyparties-with-documentcontrols)
@@ -95,13 +95,15 @@ To create join tables that associate the `users` table with the various acris ta
 - [x] **Update the `snacris.sql` File:** Include the join table schema file in the `snacris.sql` file.
 
 #### routes todos
+- [ ] The routes folder needs to be broken up into at least two subfolders: `api` and `db`.  The `api` folder will contain all the routes associated with fetching data from 3rd party APIs such as the `ACRIS-real property master` dataset while the `db` folder will contain all the routes that implement methods from the `models` folder which interact with the database.
+- [ ] Define routes to handle the `fetchData` API requests for the 15 ACRIS datasets which involves constructing the query URLs, send those `uery-URLs via GET requests, receive the API response data, and store it in the database.  
 
-- [ ] Define routes to handle the `fetchData` API requests for the 15 ACRIS datasets which involves constructing the query URLs, send those `uery-URLs via GET requests, receive the API response data, and store it in the database.  Each dataset should have its own route file which in addition to fetching ACRIS data will allow the user to 
 - [ ] `realPropertyMaster.js` - the `router.get("/", async function (req, res, next) {` route retrieves records from the database.  I need to consider the following 2 scenarios. There are records in the database that are saved by, and associated with, the user and there are records in the database that are accessible by all users.
 
 
-#### `api.js` to dos
-- [ ] refactor `api.js` in the `api` folder.  `api.js` is from my chrome extension which made GET requests to the ACRIS API endpoints but now I want to make these requests from the server.  I've included all the other files that `api.js` depends on in a folder named `refactor` within the `api` folder for reference.
+#### api ToDos
+- [ ] refactor `api_front_end_to_be_refactored.js` in the `api` folder which is from my chrome extension which made GET requests to the ACRIS API endpoints but now I want to make these requests from the server.  I've included all the other files that `api_front_end_to_be_refactored.js` depends on in a folder named `refactor` within the `api` folder for reference.
+- [x] extract the `fetchFromAcris` method from the `realPropertyMaster` model file and create a new file called `realPropertyMasterApi.js` within a subfolder named `acris` within the `api` folder.  The result of this refactor is that the `realPropertyMaster.js` focuses solely on dtabase operations.  
 
 ### Refactor Plan
 

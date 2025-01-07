@@ -1,9 +1,9 @@
 "use strict";
 
 const db = require("../../db");
-const axios = require("axios");
+// const axios = require("axios");
 const { NotFoundError, BadRequestError } = require("../../expressError");
-const API_ENDPOINTS = require("../../api/apiEndpoints");
+// const API_ENDPOINTS = require("../../api/apiEndpoints");
 const { genSqlSetWhere } = require("../../helpers/genSqlSetWhere");
 const { sqlForPartialUpdate } = require("../../helpers/sql");
 
@@ -17,22 +17,22 @@ class RealPropertyMaster {
    * Returns [{ document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }, ...]
    **/
 
-  static async fetchFromAcris(query) {
-    const url = `${API_ENDPOINTS.realPropertyMaster}?${new URLSearchParams(query).toString()}`;
-    console.log("Constructed URL:", url);
-    const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-App-Token': process.env.APP_TOKEN,
-      },
-    });
+  // static async fetchFromAcris(query) {
+  //   const url = `${API_ENDPOINTS.realPropertyMaster}?${new URLSearchParams(query).toString()}`;
+  //   console.log("Constructed URL:", url);
+  //   const response = await axios.get(url, {
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'X-App-Token': process.env.APP_TOKEN,
+  //     },
+  //   });
 
-    if (response.data.length === 0) {
-      throw new NotFoundError(`No records found for query: ${query}`);
-    }
+  //   if (response.data.length === 0) {
+  //     throw new NotFoundError(`No records found for query: ${query}`);
+  //   }
 
-    return response.data;
-  }
+  //   return response.data;
+  // }
 
   /** After the server receives data from the ACRIS-Real Property Master dataset it is sent back to the user on the front end where they will have the option of clicking a "Save Record" button which triggers the route that executes the `saveUserRecord` function which calls the `saveToDb` function.  The `saveToDb` function saves the record data to the database whereas the `saveUserRecord` function saves the record data to the user-specific record data table.  The `saveToDb` function would be executed alone in cases where an admin user is adding a new record to the database which is not associated with a particular user.
    *
