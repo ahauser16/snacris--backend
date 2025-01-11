@@ -2,6 +2,14 @@
 
 This is a notepad for Socrata's simple filter and more complex SoQL Queries and the ACRIS datasets.
 
+## API Folder - ToDos
+
+- [x] Create a `js` file for each ACRIS API dataset in the `snacris--backend/api/acris/real-property`, `snacris--backend/api/acris/personal-property` and `snacris--backend/api/acris/code-maps` sub-folders.
+- [x] Each `real-property`, `personal-property` and `code-maps` sub-folder has five `js` files that follow the **UpperCamelCase** naming convention: "shortform dataset name" + "shortform dataset category name" + "Api" (e.g. "MasterRealPropApi.js", "ReferencesPersPropApi.js", etc).
+- [x] Change the `real-property` folder's file names from `masterApi.js`, `legalsApi.js`, `partiesApi.js`, `referencesApi.js` and `remarksApi.js` to `MasterRealPropApi.js`, `LegalsRealPropApi.js`, `PartiesRealPropApi.js`, `ReferencesRealPropApi.js` and `RemarksRealPropApi.js`.
+- [x] Change the `personal-property` folder's file names from `masterApi.js`, `legalsApi.js`, `partiesApi.js`, `referencesApi.js` and `remarksApi.js` to `MasterPersPropApi.js`, `LegalsPersPropApi.js`, `PartiesPersPropApi.js`, `ReferencesPersPropApi.js` and `RemarksPersPropApi.js`.
+- [x] Change the `code-maps` folder's file names from `codeMapCountriesApi.js`, `codeMapDocumentTypesApi.js`, `codeMapPropertyTypesApi.js`, `codeMapStatesApi.js` and `codeMapUccApi.js` to `CountriesCodeMapApi.js`, `StatesCodeMapApi.js`, `DocTypesCodeMapApi.js`, `PropTypesCodeMapApi.js` and `uccTypesApi.js`.
+
 ## Socrata APIs - filters versus SoQL queries
 
 ### Simple Filters

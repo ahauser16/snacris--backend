@@ -8,36 +8,36 @@ const morgan = require("morgan");
 const {
   authRoutes,
   usersRoutes,
-  realPropertyMasterApiRoutes,
-  realPropertyLegalsApiRoutes,
-  realPropertyPartiesApiRoutes,
-  realPropertyRemarksApiRoutes,
-  realPropertyReferencesApiRoutes,
-  personalPropertyMasterApiRoutes,
-  personalPropertyLegalsApiRoutes,
-  personalPropertyPartiesApiRoutes,
-  personalPropertyRemarksApiRoutes,
-  personalPropertyReferencesApiRoutes,
-  codeMapCountriesApiRoutes,
-  codeMapStatesApiRoutes,
-  codeMapDocumentsApiRoutes,
-  codeMapPropertiesApiRoutes,
-  codeMapUccApiRoutes,
-  realPropertyMasterDbRoutes,
-  realPropertyLegalsDbRoutes,
-  realPropertyPartiesDbRoutes,
-  realPropertyRemarksDbRoutes,
-  realPropertyReferencesDbRoutes,
-  personalPropertyMasterDbRoutes,
-  personalPropertyLegalsDbRoutes,
-  personalPropertyPartiesDbRoutes,
-  personalPropertyRemarksDbRoutes,
-  personalPropertyReferencesDbRoutes,
-  codeMapCountriesDbRoutes,
-  codeMapStatesDbRoutes,
-  codeMapDocumentsDbRoutes,
-  codeMapUccDbRoutes,
-  codeMapPropertiesDbRoutes,
+  masterRealPropApiRoutes,
+  legalsRealPropApiRoutes,
+  partiesRealPropApiRoutes,
+  remarksRealPropApiRoutes,
+  referencesRealPropApiRoutes,
+  masterPersPropApiRoutes,
+  legalsPersPropApiRoutes,
+  partiesPersPropApiRoutes,
+  remarksPersPropApiRoutes,
+  referencesPersPropApiRoutes,
+  countriesCodeMapApiRoutes,
+  statesCodeMapApiRoutes,
+  docTypesCodeMapApiRoutes,
+  propTypesCodeMapApiRoutes,
+  uccTypesCodeMapApiRoutes,
+  masterRealPropDbRoutes,
+  legalsRealPropDbRoutes,
+  partiesRealPropDbRoutes,
+  remarksRealPropDbRoutes,
+  referencesRealPropDbRoutes,
+  masterPersPropDbRoutes,
+  legalsPersPropDbRoutes,
+  partiesPersPropDbRoutes,
+  remarksPersPropDbRoutes,
+  referencesPersPropDbRoutes,
+  countriesCodeMapDbRoutes,
+  statesCodeMapDbRoutes,
+  docTypesCodeMapDbRoutes,
+  uccTypesCodeMapDbRoutes,
+  propTypesCodeMapDbRoutes,
 } = require("./routes");
 
 const app = express();
@@ -49,31 +49,31 @@ app.use(authenticateJWT);
 
 app.use("/auth", authRoutes);
 app.use("/users", usersRoutes);
-app.use("/api/real-property-master", realPropertyMasterApiRoutes);
-app.use("/api/real-property-legals", realPropertyLegalsApiRoutes);
-app.use("/api/real-property-parties", realPropertyPartiesApiRoutes);
-app.use("/api/real-property-remarks", realPropertyRemarksApiRoutes);
-app.use("/api/real-property-references", realPropertyReferencesApiRoutes);
-app.use("/api/personal-property-master", personalPropertyMasterApiRoutes);
-app.use("/api/personal-property-legals", personalPropertyLegalsApiRoutes);
-app.use("/api/personal-property-parties", personalPropertyPartiesApiRoutes);
-app.use("/api/personal-property-remarks", personalPropertyRemarksApiRoutes);
-app.use("/api/personal-property-references", personalPropertyReferencesApiRoutes);
-app.use("/api/code-map-countries", codeMapCountriesApiRoutes);
-app.use("/api/code-map-states", codeMapStatesApiRoutes);
-app.use("/api/code-map-documents", codeMapDocumentsApiRoutes);
-app.use("/api/code-map-properties", codeMapPropertiesApiRoutes);
-app.use("/api/code-map-ucc", codeMapUccApiRoutes);
-// app.use("/db/real-property-master", realPropertyMasterDbRoutes);
-// app.use("/db/real-property-legals", realPropertyLegalsDbRoutes);
-// app.use("/db/real-property-parties", realPropertyPartiesDbRoutes);
-// app.use("/db/real-property-remarks", realPropertyRemarksDbRoutes);
-// app.use("/db/real-property-references", realPropertyReferencesDbRoutes);
-// app.use("/db/personal-property-master", personalPropertyMasterDbRoutes);
-// app.use("/db/personal-property-legals", personalPropertyLegalsDbRoutes);
-// app.use("/db/personal-property-parties", personalPropertyPartiesDbRoutes);
-// app.use("/db/personal-property-remarks", personalPropertyRemarksDbRoutes);
-// app.use("/db/personal-property-references", personalPropertyReferencesDbRoutes);
+app.use("/api/real-property-master", masterRealPropApiRoutes);
+app.use("/api/real-property-legals", legalsRealPropApiRoutes);
+app.use("/api/real-property-parties", partiesRealPropApiRoutes);
+app.use("/api/real-property-remarks", remarksRealPropApiRoutes);
+app.use("/api/real-property-references", referencesRealPropApiRoutes);
+app.use("/api/personal-property-master", masterPersPropApiRoutes);
+app.use("/api/personal-property-legals", legalsPersPropApiRoutes);
+app.use("/api/personal-property-parties", partiesPersPropApiRoutes);
+app.use("/api/personal-property-remarks", remarksPersPropApiRoutes);
+app.use("/api/personal-property-references", referencesPersPropApiRoutes);
+app.use("/api/code-map-countries", countriesCodeMapApiRoutes);
+app.use("/api/code-map-states", statesCodeMapApiRoutes);
+app.use("/api/code-map-documents", docTypesCodeMapApiRoutes);
+app.use("/api/code-map-properties", propTypesCodeMapApiRoutes);
+app.use("/api/code-map-ucc", uccTypesCodeMapApiRoutes);
+// app.use("/db/real-property-master", masterRealPropDbRoutes);
+// app.use("/db/real-property-legals", legalsRealPropDbRoutes);
+// app.use("/db/real-property-parties", partiesRealPropDbRoutes);
+// app.use("/db/real-property-remarks", remarksRealPropDbRoutes);
+// app.use("/db/real-property-references", referencesRealPropDbRoutes);
+// app.use("/db/personal-property-master", masterPersPropDbRoutes);
+// app.use("/db/personal-property-legals", legalsPersPropDbRoutes);
+// app.use("/db/personal-property-parties", partiesPersPropDbRoutes);
+// app.use("/db/personal-property-remarks", remarksPersPropDbRoutes);
+// app.use("/db/personal-property-references", referencesPersPropDbRoutes);
 
 // app.use("/companies", companiesRoutes);
 // app.use("/jobs", jobsRoutes);

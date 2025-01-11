@@ -11,93 +11,93 @@ const usersRoutes = require("./users");
 * routes associated with making external API calls to the ACRIS Real Property API endpoints.
 */
 
-const realPropertyMasterApiRoutes = require("./api/acris/real-property/master");
-const realPropertyLegalsApiRoutes = require("./api/acris/real-property/legals");
-const realPropertyPartiesApiRoutes = require("./api/acris/real-property/parties");
-const realPropertyRemarksApiRoutes = require("./api/acris/real-property/remarks");
-const realPropertyReferencesApiRoutes = require("./api/acris/real-property/references");
+const masterRealPropApiRoutes = require("./api/acris/real-property/masterRealPropApiRoutes");
+const legalsRealPropApiRoutes = require("./api/acris/real-property/legalsRealPropApiRoutes");
+const partiesRealPropApiRoutes = require("./api/acris/real-property/partiesRealPropApiRoutes");
+const remarksRealPropApiRoutes = require("./api/acris/real-property/remarksRealPropApiRoutes");
+const referencesRealPropApiRoutes = require("./api/acris/real-property/referencesRealPropApiRoutes");
 
 /*
 * routes associated with making external API calls to the ACRIS Personal Property API endpoints
 */
 
-const personalPropertyMasterApiRoutes = require("./api/acris/personal-property/master");
-const personalPropertyLegalsApiRoutes = require("./api/acris/personal-property/legals");
-const personalPropertyPartiesApiRoutes = require("./api/acris/personal-property/parties");
-const personalPropertyRemarksApiRoutes = require("./api/acris/personal-property/remarks");
-const personalPropertyReferencesApiRoutes = require("./api/acris/personal-property/references");
+const masterPersPropApiRoutes = require("./api/acris/personal-property/masterPersPropApiRoutes");
+const legalsPersPropApiRoutes = require("./api/acris/personal-property/legalsPersPropApiRoutes");
+const partiesPersPropApiRoutes = require("./api/acris/personal-property/partiesPersPropApiRoutes");
+const remarksPersPropApiRoutes = require("./api/acris/personal-property/remarksPersPropApiRoutes");
+const referencesPersPropApiRoutes = require("./api/acris/personal-property/referencesPersPropApiRoutes");
 
 /*
 * routes associated with making external API calls to the ACRIS Code Mapping API endpoints
 */
 
-const codeMapCountriesApiRoutes = require("./api/acris/code-mappings/countries");
-const codeMapStatesApiRoutes = require("./api/acris/code-mappings/states");
-const codeMapDocumentsApiRoutes = require("./api/acris/code-mappings/documents");
-const codeMapPropertiesApiRoutes = require("./api/acris/code-mappings/properties");
-const codeMapUccApiRoutes = require("./api/acris/code-mappings/ucc");
+const countriesCodeMapApiRoutes = require("./api/acris/code-maps/countriesCodeMapApiRoutes");
+const statesCodeMapApiRoutes = require("./api/acris/code-maps/statesCodeMapApiRoutes");
+const docTypesCodeMapApiRoutes = require("./api/acris/code-maps/docTypesCodeMapApiRoutes");
+const propTypesCodeMapApiRoutes = require("./api/acris/code-maps/propTypesCodeMapApiRoutes");
+const uccTypesCodeMapApiRoutes = require("./api/acris/code-maps/uccTypesCodeMapApiRoutes");
 
 /*
 * routes associated with implementing javascript models that perform CRUD operations using database data that was saved by the user (or admin) from the ACRIS-Real Property API endpoints
 */
 
-const realPropertyMasterDbRoutes = require("./db/acris/real-property/master");
-const realPropertyLegalsDbRoutes = require("./db/acris/real-property/legals");
-const realPropertyPartiesDbRoutes = require("./db/acris/real-property/parties");
-const realPropertyRemarksDbRoutes = require("./db/acris/real-property/remarks");
-const realPropertyReferencesDbRoutes = require("./db/acris/real-property/references");
+const masterRealPropDbRoutes = require("./db/acris/real-property/masterRealPropDbRoutes");
+const legalsRealPropDbRoutes = require("./db/acris/real-property/legalsRealPropDbRoutes");
+const partiesRealPropDbRoutes = require("./db/acris/real-property/partiesRealPropDbRoutes");
+const remarksRealPropDbRoutes = require("./db/acris/real-property/remarksRealPropDbRoutes");
+const referencesRealPropDbRoutes = require("./db/acris/real-property/referencesRealPropDbRoutes");
 
 /*
 * routes associated with implementing javascript models that perform CRUD operations using database data that was saved by the user (or admin) from the ACRIS-Personal Property API endpoints
 */
 
-const personalPropertyMasterDbRoutes = require("./db/acris/personal-property/master");
-const personalPropertyLegalsDbRoutes = require("./db/acris/personal-property/legals");
-const personalPropertyPartiesDbRoutes = require("./db/acris/personal-property/parties");
-const personalPropertyRemarksDbRoutes = require("./db/acris/personal-property/remarks");
-const personalPropertyReferencesDbRoutes = require("./db/acris/personal-property/references");
+const masterPersPropDbRoutes = require("./db/acris/personal-property/masterPersPropDbRoutes");
+const legalsPersPropDbRoutes = require("./db/acris/personal-property/legalsPersPropDbRoutes");
+const partiesPersPropDbRoutes = require("./db/acris/personal-property/partiesPersPropDbRoutes");
+const remarksPersPropDbRoutes = require("./db/acris/personal-property/remarksPersPropDbRoutes");
+const referencesPersPropDbRoutes = require("./db/acris/personal-property/referencesPersPropDbRoutes");
 
 /*
 * routes associated with implementing javascript models that perform CRUD operations using database data that was seeded at the start of the application from the ACRIS Code Mapping API endpoints.
 */
 
-const codeMapCountriesDbRoutes = require("./db/acris/code-mappings/countries");
-const codeMapStatesDbRoutes = require("./db/acris/code-mappings/states");
-const codeMapDocumentsDbRoutes = require("./db/acris/code-mappings/documents");
-const codeMapUccDbRoutes = require("./db/acris/code-mappings/ucc");
-const codeMapPropertiesDbRoutes = require("./db/acris/code-mappings/properties");
+const countriesCodeMapDbRoutes = require("./db/acris/code-maps/countriesCodeMapDbRoutes");
+const statesCodeMapDbRoutes = require("./db/acris/code-maps/statesCodeMapDbRoutes");
+const docTypesCodeMapDbRoutes = require("./db/acris/code-maps/docTypesCodeMapDbRoutes");
+const uccTypesCodeMapDbRoutes = require("./db/acris/code-maps/uccTypesCodeMapDbRoutes");
+const propTypesCodeMapDbRoutes = require("./db/acris/code-maps/propTypesCodeMapDbRoutes");
 
 module.exports = {
     authRoutes,
     usersRoutes,
-    realPropertyMasterApiRoutes,
-    realPropertyLegalsApiRoutes,
-    realPropertyPartiesApiRoutes,
-    realPropertyRemarksApiRoutes,
-    realPropertyReferencesApiRoutes,
-    personalPropertyMasterApiRoutes,
-    personalPropertyLegalsApiRoutes,
-    personalPropertyPartiesApiRoutes,
-    personalPropertyRemarksApiRoutes,
-    personalPropertyReferencesApiRoutes,
-    codeMapCountriesApiRoutes,
-    codeMapStatesApiRoutes,
-    codeMapDocumentsApiRoutes,
-    codeMapPropertiesApiRoutes,
-    codeMapUccApiRoutes,
-    realPropertyMasterDbRoutes,
-    realPropertyLegalsDbRoutes,
-    realPropertyPartiesDbRoutes,
-    realPropertyRemarksDbRoutes,
-    realPropertyReferencesDbRoutes,
-    personalPropertyMasterDbRoutes,
-    personalPropertyLegalsDbRoutes,
-    personalPropertyPartiesDbRoutes,
-    personalPropertyRemarksDbRoutes,
-    personalPropertyReferencesDbRoutes,
-    codeMapCountriesDbRoutes,
-    codeMapStatesDbRoutes,
-    codeMapDocumentsDbRoutes,
-    codeMapUccDbRoutes,
-    codeMapPropertiesDbRoutes,
+    masterRealPropApiRoutes,
+    legalsRealPropApiRoutes,
+    partiesRealPropApiRoutes,
+    remarksRealPropApiRoutes,
+    referencesRealPropApiRoutes,
+    masterPersPropApiRoutes,
+    legalsPersPropApiRoutes,
+    partiesPersPropApiRoutes,
+    remarksPersPropApiRoutes,
+    referencesPersPropApiRoutes,
+    countriesCodeMapApiRoutes,
+    statesCodeMapApiRoutes,
+    docTypesCodeMapApiRoutes,
+    propTypesCodeMapApiRoutes,
+    uccTypesCodeMapApiRoutes,
+    masterRealPropDbRoutes,
+    legalsRealPropDbRoutes,
+    partiesRealPropDbRoutes,
+    remarksRealPropDbRoutes,
+    referencesRealPropDbRoutes,
+    masterPersPropDbRoutes,
+    legalsPersPropDbRoutes,
+    partiesPersPropDbRoutes,
+    remarksPersPropDbRoutes,
+    referencesPersPropDbRoutes,
+    countriesCodeMapDbRoutes,
+    statesCodeMapDbRoutes,
+    docTypesCodeMapDbRoutes,
+    uccTypesCodeMapDbRoutes,
+    propTypesCodeMapDbRoutes,
 };
