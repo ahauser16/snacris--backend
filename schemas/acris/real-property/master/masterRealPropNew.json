@@ -8,7 +8,7 @@
       "type": "string",
       "enum": ["A"]
     },
-    "crfn": { "type": "string", "minLength": 13, "maxLength": 13 },
+    "crfn": { "type": ["string", "null"], "minLength": 13, "maxLength": 13 },
     "recorded_borough": {
       "type": "integer",
       "enum": [1, 2, 3, 4, 5]
@@ -54,7 +54,6 @@
   "required": [
     "document_id",
     "record_type",
-    "crfn",
     "recorded_borough",
     "doc_type",
     "document_date",

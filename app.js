@@ -64,7 +64,7 @@ app.use("/api/code-map-states", statesCodeMapApiRoutes);
 app.use("/api/code-map-documents", docTypesCodeMapApiRoutes);
 app.use("/api/code-map-properties", propTypesCodeMapApiRoutes);
 app.use("/api/code-map-ucc", uccTypesCodeMapApiRoutes);
-// app.use("/db/real-property-master", masterRealPropDbRoutes);
+app.use("/db/real-property-master", masterRealPropDbRoutes);
 // app.use("/db/real-property-legals", legalsRealPropDbRoutes);
 // app.use("/db/real-property-parties", partiesRealPropDbRoutes);
 // app.use("/db/real-property-remarks", remarksRealPropDbRoutes);

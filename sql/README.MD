@@ -131,6 +131,192 @@ Follow the prompts in the terminal. Press Enter to proceed with deleting and rec
 
 - After completing these steps, you should have both the **snacris** and **snacris_test** databases set up with the necessary schema and initial data.
 
+## SQL Table Architecture Notes
+
+Remember, the `document_id` is not a unique identifier for any of the tables and should not be used as such in the `SNACRIS` database. Instead each table will have the `id` as its **primary key**. 
+
+The following is my intended use case. John Doe decides to save five records from five ACRIS datasets to the `acris_real_property_master`, `acris_real_property_legals`, `acris_real_property_parties`, `acris_real_property_references` and `acris_real_property_remarks` sql tables in the `SNACRIS` database. Each of these records have the `document_id` value **"123456789"** which is used to cross reference all records from the five datasets. Then, Jane Doe decides to save the same five records that contain the same `document_id` value **"123456789"** to the database, however, I don't want John Doe to view Jane Doe's records and vice versa. How should I structure my sql tables and join tables given the aforementioned use case description? 
+
+To achieve the use case where John Doe and Jane Doe can save and retrieve their records independently, and cross-reference them using the `document_id` without accessing each other's records, you should use join tables that associate each user's saved records with their username. This way, each user's records are isolated, even if they share the same `document_id`.
+
+**Summary**
+- **Primary Key**: Each table has an `id` column as the primary key.
+- **Foreign Key References**: Use the `id` column for foreign key references in the join tables.
+- **Composite Unique Constraint**: The join tables use a composite unique constraint on `username` and the foreign key to prevent duplicate entries for the same user and document.
+- **master_id**: The `master_id` is used to link related records to the corresponding master record, ensuring referential integrity and efficient querying.
+
+The `master_id` is used to establish a direct relationship between the records in the `acris_real_property_master` table and the related records in the other tables (`acris_real_property_legals`, `acris_real_property_parties`, `acris_real_property_references`, and `acris_real_property_remarks`). This ensures that each related record can be directly linked to a specific master record, which is essential for maintaining referential integrity and for querying related data efficiently.
+
+**Detailed Explanation of master_id**
+1. **Purpose**: The `master_id` serves as a foreign key that references the primary key (`id`) of the `acris_real_property_master` table. This creates a direct link between the master record and its related records in other tables.
+
+2. **Usage**: When a user saves a record, the `master_id` is used to associate the related records (e.g., legals, parties, references, remarks) with the corresponding master record. This allows for efficient querying and ensures that all related records can be easily retrieved based on the master record.
+
+3. **Isolation of User Records**: By using the `master_id` in the join tables, you can ensure that each user's saved records are isolated. The join tables will use the `master_id` to link the user's saved records to the corresponding master record, preventing users from accessing each other's records.
+
+`snacris-acris-real-property-schema.sql`
+```sql
+CREATE TABLE acris_real_property_master (
+    id SERIAL PRIMARY KEY,
+    document_id VARCHAR(16),
+    record_type CHAR(1) NOT NULL,
+    crfn VARCHAR(13),
+    recorded_borough INTEGER,
+    doc_type VARCHAR(8) REFERENCES document_control_codes(doc_type),
+    document_date DATE,
+    document_amt NUMERIC(16, 2),
+    recorded_datetime TIMESTAMP,
+    modified_date DATE,
+    reel_yr INTEGER,
+    reel_nbr INTEGER,
+    reel_pg INTEGER,
+    percent_trans NUMERIC(9, 6),
+    good_through_date DATE
+);
+
+CREATE TABLE acris_real_property_legals (
+    id SERIAL PRIMARY KEY,
+    document_id VARCHAR(16),
+    record_type CHAR(1) NOT NULL,
+    borough INTEGER,
+    block INTEGER,
+    lot INTEGER,
+    easement CHAR(1),
+    partial_lot CHAR(1),
+    air_rights CHAR(1),
+    subterranean_rights CHAR(1),
+    property_type CHAR(2) REFERENCES property_type_codes(property_type),
+    street_number VARCHAR(12),
+    street_name VARCHAR(32),
+    unit_address VARCHAR(7),
+    good_through_date DATE
+);
+
+CREATE TABLE acris_real_property_parties (
+    id SERIAL PRIMARY KEY,
+    document_id VARCHAR(16),
+    record_type CHAR(1) NOT NULL,
+    party_type CHAR(1),
+    name VARCHAR(70),
+    address_1 VARCHAR(60),
+    address_2 VARCHAR(60),
+    country CHAR(2) REFERENCES country_codes(country_code),
+    city VARCHAR(30),
+    state CHAR(2) REFERENCES state_codes(state_code),
+    zip VARCHAR(9),
+    good_through_date DATE
+);
+
+CREATE TABLE acris_real_property_references (
+    id SERIAL PRIMARY KEY,
+    document_id VARCHAR(16),
+    record_type CHAR(1) NOT NULL,
+    reference_by_crfn_ VARCHAR(13),
+    reference_by_doc_id VARCHAR(16),
+    reference_by_reel_year INTEGER,
+    reference_by_reel_borough INTEGER,
+    reference_by_reel_nbr INTEGER,
+    reference_by_reel_page INTEGER,
+    good_through_date DATE
+);
+
+CREATE TABLE acris_real_property_remarks (
+    id SERIAL PRIMARY KEY,
+    document_id VARCHAR(16),
+    record_type CHAR(1) NOT NULL,
+    sequence_number INTEGER,
+    remark_text VARCHAR(232),
+    good_through_date DATE
+);
+```
+
+`snacris-users-schema.sql`
+```sql
+CREATE TABLE users (
+    username VARCHAR(25) PRIMARY KEY,
+    password TEXT NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT NOT NULL CHECK (position('@' IN email) > 1),
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE
+);
+```
+
+`acris-user-join-schema.sql`
+```sql
+-user-join-schema.sql
+
+CREATE TABLE user_saved_real_property_master (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    master_id INTEGER REFERENCES acris_real_property_master(id) ON DELETE CASCADE,
+    UNIQUE (username, master_id)  -- Composite unique constraint to prevent duplicate entries for the same user and document
+);
+
+CREATE TABLE user_saved_real_property_legals (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    legals_id INTEGER REFERENCES acris_real_property_legals(id) ON DELETE CASCADE,
+    UNIQUE (username, legals_id)
+);
+
+CREATE TABLE user_saved_real_property_parties (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    parties_id INTEGER REFERENCES acris_real_property_parties(id) ON DELETE CASCADE,
+    UNIQUE (username, parties_id)
+);
+
+CREATE TABLE user_saved_real_property_references (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    references_id INTEGER REFERENCES acris_real_property_references(id) ON DELETE CASCADE,
+    UNIQUE (username, references_id)
+);
+
+CREATE TABLE user_saved_real_property_remarks (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    remarks_id INTEGER REFERENCES acris_real_property_remarks(id) ON DELETE CASCADE,
+    UNIQUE (username, remarks_id)
+);
+
+CREATE TABLE user_saved_personal_property_master (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    master_id INTEGER REFERENCES acris_personal_property_master(id) ON DELETE CASCADE,
+    UNIQUE (username, master_id)
+);
+
+CREATE TABLE user_saved_personal_property_legals (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    legals_id INTEGER REFERENCES acris_personal_property_legals(id) ON DELETE CASCADE,
+    UNIQUE (username, legals_id)
+);
+
+CREATE TABLE user_saved_personal_property_parties (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    parties_id INTEGER REFERENCES acris_personal_property_parties(id) ON DELETE CASCADE,
+    UNIQUE (username, parties_id)
+);
+
+CREATE TABLE user_saved_personal_property_references (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    references_id INTEGER REFERENCES acris_personal_property_references(id) ON DELETE CASCADE,
+    UNIQUE (username, references_id)
+);
+
+CREATE TABLE user_saved_personal_property_remarks (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    remarks_id INTEGER REFERENCES acris_personal_property_remarks(id) ON DELETE CASCADE,
+    UNIQUE (username, remarks_id)
+);
+```
+
 ### REAL_PROPERTY_MASTER
 #### NYC Open Data URL: http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj
 #### NYS OPEN DATA Name: ACRIS - Real Property Master

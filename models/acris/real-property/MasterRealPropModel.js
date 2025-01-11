@@ -16,11 +16,11 @@ class MasterRealPropModel {
       `INSERT INTO acris_real_property_master
        (document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-       RETURNING document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date`,
+       RETURNING id, document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date`,
       [
         data.document_id,
         data.record_type,
-        data.crfn,
+        data.crfn || null,
         data.recorded_borough,
         data.doc_type,
         data.document_date,
@@ -52,10 +52,10 @@ class MasterRealPropModel {
   static async saveRecordByUser(username, data) {
     const record = await this.saveRecord(data);
     const result = await db.query(
-      `INSERT INTO user_saved_real_property_master (username, document_id)
+      `INSERT INTO user_saved_real_property_master (username, master_id)
        VALUES ($1, $2)
-       RETURNING id, username, document_id, saved_at`,
-      [username, record.document_id]
+       RETURNING id, username, master_id, saved_at`,
+      [username, record.id]
     );
 
     return result.rows[0];

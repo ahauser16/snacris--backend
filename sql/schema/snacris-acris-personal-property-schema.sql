@@ -1,5 +1,6 @@
 CREATE TABLE acris_personal_property_master (
-    document_id VARCHAR(16) PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
+    document_id VARCHAR(16),
     record_type CHAR(1) NOT NULL,
     crfn VARCHAR(13),
     recorded_borough INTEGER,
@@ -20,7 +21,8 @@ CREATE TABLE acris_personal_property_master (
 
 CREATE TABLE acris_personal_property_legals (
     id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_personal_property_master(document_id),
+    master_id INTEGER REFERENCES acris_personal_property_master(id) ON DELETE CASCADE,  -- Use the primary key for reference
+    document_id VARCHAR(16),
     record_type CHAR(1) NOT NULL,
     borough INTEGER,
     block INTEGER,
@@ -38,7 +40,8 @@ CREATE TABLE acris_personal_property_legals (
 
 CREATE TABLE acris_personal_property_parties (
     id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_personal_property_master(document_id),
+    master_id INTEGER REFERENCES acris_personal_property_master(id) ON DELETE CASCADE,  -- Use the primary key for reference
+    document_id VARCHAR(16),
     record_type CHAR(1) NOT NULL,
     party_type CHAR(1),
     name VARCHAR(70),
@@ -53,7 +56,8 @@ CREATE TABLE acris_personal_property_parties (
 
 CREATE TABLE acris_personal_property_references (
     id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_personal_property_master(document_id),
+    master_id INTEGER REFERENCES acris_personal_property_master(id) ON DELETE CASCADE,  -- Use the primary key for reference
+    document_id VARCHAR(16),
     record_type CHAR(1) NOT NULL,
     crfn VARCHAR(13),
     doc_id_ref VARCHAR(16),
@@ -63,14 +67,10 @@ CREATE TABLE acris_personal_property_references (
 
 CREATE TABLE acris_personal_property_remarks (
     id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_personal_property_master(document_id),
+    master_id INTEGER REFERENCES acris_personal_property_master(id) ON DELETE CASCADE,  -- Use the primary key for reference
+    document_id VARCHAR(16),
     record_type CHAR(1) NOT NULL,
     sequence_number INTEGER,
     remark_text VARCHAR(232),
     good_through_date TIMESTAMP
 );
-
-CREATE INDEX idx_acris_personal_property_legals_document_id ON acris_personal_property_legals(document_id);
-CREATE INDEX idx_acris_personal_property_parties_document_id ON acris_personal_property_parties(document_id);
-CREATE INDEX idx_acris_personal_property_references_document_id ON acris_personal_property_references(document_id);
-CREATE INDEX idx_acris_personal_property_remarks_document_id ON acris_personal_property_remarks(document_id);

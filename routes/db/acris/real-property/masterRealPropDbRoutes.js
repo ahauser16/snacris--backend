@@ -66,7 +66,7 @@ router.post("/addRecordByUser", ensureLoggedIn, async function (req, res, next) 
             throw new BadRequestError(errs);
         }
 
-        const record = await MasterRealPropModel.saveRecordByUser(req.user.username, req.body);
+        const record = await MasterRealPropModel.saveRecordByUser(res.locals.user.username, req.body);
         return res.status(201).json({ record });
     } catch (err) {
         return next(err);
