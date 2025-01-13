@@ -7,7 +7,7 @@ CREATE TABLE acris_real_property_master (
     doc_type VARCHAR(8) REFERENCES document_control_codes(doc_type),
     document_date DATE,
     document_amt NUMERIC(16, 2),
-    recorded_datetime TIMESTAMP,
+    recorded_datetime DATE,
     modified_date DATE,
     reel_yr INTEGER,
     reel_nbr INTEGER,

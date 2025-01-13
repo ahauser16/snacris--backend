@@ -3,30 +3,58 @@
   "$id": "http://our.company.com/realPropertyMasterNew.schema.json",
   "type": "object",
   "properties": {
-    "document_id": { "type": "string", "minLength": 16, "maxLength": 16 },
+    "document_id": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 16
+    },
     "record_type": {
       "type": "string",
-      "enum": ["A"]
+      "enum": [
+        "A"
+      ]
     },
-    "crfn": { "type": ["string", "null"], "minLength": 13, "maxLength": 13 },
+    "crfn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 13,
+      "maxLength": 13
+    },
     "recorded_borough": {
       "type": "integer",
-      "enum": [1, 2, 3, 4, 5]
+      "enum": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
     },
     "doc_type": {
       "type": "string",
       "minLength": 1,
       "maxLength": 8
     },
-    "document_date": { "type": "string", "format": "date" },
+    "document_date": {
+      "type": "string",
+      "format": "date"
+    },
     "document_amt": {
       "type": "number",
       "minimum": 0.0,
       "maximum": 999999999999.99,
       "multipleOf": 0.01
     },
-    "recorded_datetime": { "type": "string", "format": "date-time" },
-    "modified_date": { "type": "string", "format": "date" },
+    "recorded_datetime": {
+      "type": "string",
+      "format": "date"
+    },
+    "modified_date": {
+      "type": "string",
+      "format": "date"
+    },
     "reel_yr": {
       "type": "integer",
       "minimum": 0,
@@ -48,7 +76,10 @@
       "minimum": 0,
       "multipleOf": 0.000001
     },
-    "good_through_date": { "type": "string", "format": "date" }
+    "good_through_date": {
+      "type": "string",
+      "format": "date"
+    }
   },
   "additionalProperties": false,
   "required": [

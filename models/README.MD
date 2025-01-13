@@ -21,8 +21,20 @@ The models folder contains files from the last Springboard project such as `comp
 
 Within the `models` folder is the `acris` folder which contains all the models associated with the 15 ACRIS datasets divided into three sub-folders: `real-property`, `personal-property` and `code-maps` which contain the files listed below. 
 
+- [x]  means the model was tested and working in Postman.
+
 `real-property` models
 - `MasterRealPropModel.js`
+- [ ] `saveRecord`
+- [x] `saveRecordByUser`
+- [x] `findAllRecordsByUser`
+- [ ] `findAllRecords`
+- [x] `findRecordFromUserByDocumentId`
+- [ ] `findRecordById`
+- [x] `searchRecordsFromUserBySearchCriteria`
+- [ ] `update`
+- [x] `deleteRecordByUser`
+- [ ] `remove`
 - `LegalsRealPropModel.js`
 - `PartiesRealPropModel.js`
 - `ReferencesRealPropModel.js`

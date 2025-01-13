@@ -11,7 +11,7 @@ class MasterRealPropModel {
 
   //1. Inserts a new record into the acris_real_property_master table using the provided data.
   //2. Returns the inserted record.
-  static async saveRecord(data) {
+  static async createRecord(data) {
     const result = await db.query(
       `INSERT INTO acris_real_property_master
        (document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date)
@@ -43,14 +43,43 @@ class MasterRealPropModel {
    *
    * Returns { id, username, document_id, saved_at }
    * 
-   * Explanation of `saveRecordByUser` Method
-   * The `saveRecordByUser` method is designed to save a record to the `acris_real_property_master` table and then create an association between the user and the saved record in the `user_saved_real_property_master` join table. Here is a detailed explanation of how it works:
-   * Step One - Save the record to `acris_real_property_master`: The `saveRecordByUser` method first calls the `saveRecord` method to insert the record into the `acris_real_property_master` table.  Upon successful execution `saveRecord` returns the saved record.
-  * Step Two - Create an Association in the Join Table: After saving the record, the `saveRecordByUser` method inserts a new entry into the `user_saved_real_property_master` join table which associates the `username` with the `document_id` of the saved record.  Upon successful execution `saveRecordByUser` returns the association record.
+   * Explanation of `createRecordForUser` Method
+   * The `createRecordForUser` method is designed to save a record to the `acris_real_property_master` table and then create an association between the user and the saved record in the `user_saved_real_property_master` join table. Here is a detailed explanation of how it works:
+   * Step One - Save the record to `acris_real_property_master`: The `createRecordForUser` method first calls the `createRecord` method to insert the record into the `acris_real_property_master` table.  Upon successful execution `createRecord` returns the saved record.
+  * Step Two - Create an Association in the Join Table: After saving the record, the `createRecordForUser` method inserts a new entry into the `user_saved_real_property_master` join table which associates the `username` with the `document_id` of the saved record.  Upon successful execution `createRecordForUser` returns the association record.
   **/
 
-  static async saveRecordByUser(username, data) {
-    const record = await this.saveRecord(data);
+  static async createRecordForUser(username, data) {
+    // Check if the record already exists for the user
+    const existingRecord = await db.query(
+      `SELECT usr.master_id
+       FROM user_saved_real_property_master usr
+       JOIN acris_real_property_master arm ON usr.master_id = arm.id
+       WHERE usr.username = $1 AND arm.document_id = $2 AND arm.record_type = $3 AND arm.crfn = $4 AND arm.recorded_borough = $5 AND arm.doc_type = $6 AND arm.document_date = $7 AND arm.document_amt = $8 AND arm.recorded_datetime = $9 AND arm.modified_date = $10 AND arm.reel_yr = $11 AND arm.reel_nbr = $12 AND arm.reel_pg = $13 AND arm.percent_trans = $14 AND arm.good_through_date = $15`,
+      [
+        username,
+        data.document_id,
+        data.record_type,
+        data.crfn || null,
+        data.recorded_borough,
+        data.doc_type,
+        data.document_date,
+        data.document_amt,
+        data.recorded_datetime,
+        data.modified_date,
+        data.reel_yr,
+        data.reel_nbr,
+        data.reel_pg,
+        data.percent_trans,
+        data.good_through_date,
+      ]
+    );
+
+    if (existingRecord.rows.length > 0) {
+      throw new BadRequestError(`Record with document_id: ${data.document_id} already exists for user: ${username}`);
+    }
+
+    const record = await this.createRecord(data);
     const result = await db.query(
       `INSERT INTO user_saved_real_property_master (username, master_id)
        VALUES ($1, $2)
@@ -74,7 +103,7 @@ class MasterRealPropModel {
     const result = await db.query(
       `SELECT arm.document_id, arm.record_type, arm.crfn, arm.recorded_borough, arm.doc_type, arm.document_date, arm.document_amt, arm.recorded_datetime, arm.modified_date, arm.reel_yr, arm.reel_nbr, arm.reel_pg, arm.percent_trans, arm.good_through_date
        FROM acris_real_property_master arm
-       JOIN user_saved_real_property_master usr ON arm.document_id = usr.document_id
+       JOIN user_saved_real_property_master usr ON arm.id = usr.master_id
        WHERE usr.username = $1
        ORDER BY arm.document_id`,
       [username]
@@ -114,12 +143,12 @@ class MasterRealPropModel {
        * Access Control: Only the authenticated user should have access to this function to ensure that users can only view their own records.
        **/
 
-  static async findRecordByIdAndUser(username, document_id) {
+  static async findRecordFromUserByDocumentId(username, document_id) {
     const result = await db.query(
       `SELECT arm.document_id, arm.record_type, arm.crfn, arm.recorded_borough, arm.doc_type, arm.document_date, arm.document_amt, arm.recorded_datetime, arm.modified_date, arm.reel_yr, arm.reel_nbr, arm.reel_pg, arm.percent_trans, arm.good_through_date
-   FROM acris_real_property_master arm
-   JOIN user_saved_real_property_master usr ON arm.document_id = usr.document_id
-   WHERE usr.username = $1 AND arm.document_id = $2`,
+       FROM acris_real_property_master arm
+       JOIN user_saved_real_property_master usr ON arm.id = usr.master_id
+       WHERE usr.username = $1 AND arm.document_id = $2`,
       [username, document_id]
     );
 
@@ -143,7 +172,7 @@ class MasterRealPropModel {
 
   static async findRecordById(document_id, username = null) {
     if (username) {
-      return this.findRecordByIdAndUser(username, document_id);
+      return this.findRecordFromUserByDocumentId(username, document_id);
     } else {
       const result = await db.query(
         `SELECT document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date
@@ -172,11 +201,15 @@ class MasterRealPropModel {
     * The alias `usrpm` refers to the `user_saved_real_property_master` join table.
     **/
 
-  static async searchRecordsByUser(username, searchCriteria) {
+  static async searchRecordsFromUserBySearchCriteria(username, searchCriteria) {
+    if (Object.keys(searchCriteria).length === 0) {
+      throw new BadRequestError("No search criteria provided");
+    }
+
     const { whereClause, values } = genSqlSetWhere(searchCriteria);
     const querySql = `SELECT arpm.document_id, arpm.record_type, arpm.crfn, arpm.recorded_borough, arpm.doc_type, arpm.document_date, arpm.document_amt, arpm.recorded_datetime, arpm.modified_date, arpm.reel_yr, arpm.reel_nbr, arpm.reel_pg, arpm.percent_trans, arpm.good_through_date
                       FROM acris_real_property_master arpm
-                      JOIN user_saved_real_property_master usrpm ON arpm.document_id = usrpm.document_id
+                      JOIN user_saved_real_property_master usrpm ON arpm.id = usrpm.master_id
                       WHERE usrpm.username = $1 AND ${whereClause}
                       ORDER BY arpm.document_id`;
     const result = await db.query(querySql, [username, ...values]);
@@ -187,6 +220,7 @@ class MasterRealPropModel {
 
     return result.rows;
   }
+
 
   /** Update record data with `data`.
    *
@@ -233,26 +267,37 @@ class MasterRealPropModel {
    * Throws NotFoundError if record not found.
    **/
 
-  static async removeByUser(username, document_id) {
+  static async deleteRecordByUser(username, document_id) {
+    // First, find the master_id associated with the document_id
+    const masterResult = await db.query(
+      `SELECT id FROM acris_real_property_master WHERE document_id = $1`,
+      [document_id]
+    );
+
+    const masterRecord = masterResult.rows[0];
+
+    if (!masterRecord) throw new NotFoundError(`No record: ${document_id}`);
+
+    // Delete the record from user_saved_real_property_master
     const result = await db.query(
       `DELETE FROM user_saved_real_property_master
-       WHERE username = $1 AND document_id = $2
-       RETURNING document_id`,
-      [username, document_id]
+       WHERE username = $1 AND master_id = $2
+       RETURNING master_id`,
+      [username, masterRecord.id]
     );
 
     const record = result.rows[0];
 
     if (!record) throw new NotFoundError(`No record: ${document_id} for user: ${username}`);
 
-    return record;
+    return { document_id };
   }
 
   /** Delete given record from database; returns undefined. */
 
-  static async remove(document_id, username = null) {
+  static async deleteRecord(document_id, username = null) {
     if (username) {
-      return this.removeByUser(username, document_id);
+      return this.deleteRecordByUser(username, document_id);
     } else {
       const result = await db.query(
         `DELETE

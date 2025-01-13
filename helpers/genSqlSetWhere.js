@@ -13,20 +13,14 @@ const { BadRequestError } = require("../expressError");
  */
 
 function genSqlSetWhere(searchCriteria) {
-    //Extracts the keys from the `searchCriteria` object and stores them in the keys array. For example, if `searchCriteria` is { doc_type: 'deed', recorded_borough: '1' }, keys will be ['doc_type', 'recorded_borough'].
     const keys = Object.keys(searchCriteria);
 
-    //Checks if the keys array is empty. If it is, it throws a BadRequestError with the message "No search criteria".
     if (keys.length === 0) throw new BadRequestError("No search criteria");
 
-    // Maps over the `keys` array to create an array of SQL conditions. Each condition is a string in the format `"column_name"=$index`, where `column_name` is the key from `searchCriteria` and `index` is the position of the key in the array (starting from 1). For example, if `keys` is `['doc_type', 'recorded_borough']`, `whereCols` will be `['"doc_type"=$1', '"recorded_borough"=$2']`.
     const whereCols = keys.map((colName, idx) =>
-        `"${colName}"=$${idx + 1}`,
+        `"${colName}"=$${idx + 2}`,
     );
 
-    //Returns an object with two properties: `whereClause` and `values`
-    //--> `whereClause`: A string that joins the elements of `whereCols` with " AND ". For example, `"doc_type"=$1 AND "recorded_borough"=$2`.  
-    //--> `values`: An array of values from the `searchCriteria` object. For example, ['deed', 'Manhattan'].
     return {
         whereClause: whereCols.join(" AND "),
         values: Object.values(searchCriteria),
