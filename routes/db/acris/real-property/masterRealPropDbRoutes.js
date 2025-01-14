@@ -4,16 +4,20 @@
 
 const jsonschema = require("jsonschema");
 const express = require("express");
-const moment = require('moment-timezone');
+// const moment = require('moment-timezone');
 
 const { BadRequestError, NotFoundError } = require("../../../../expressError");
 const { ensureAdmin, ensureLoggedIn } = require("../../../../middleware/auth");
+const { processIncomingData, validateData } = require("../../../../middleware/masterRealPropDataProcessing");
+const { checkForDuplicateRecord, createRecordForUser } = require("../../../utils/duplicateRecordCheck");
+
+
 const MasterRealPropModel = require("../../../../models/acris/real-property/MasterRealPropModel");
 const { convertQueryParams } = require("../../../utils/convertQueryParams");
 
-const masterRealPropNewSchema = require("../../../../schemas/acris/real-property/master/masterRealPropNew.json");
-const masterRealPropSearchSchema = require("../../../../schemas/acris/real-property/master/masterRealPropSearch.json");
-const masterRealPropUpdateSchema = require("../../../../schemas/acris/real-property/master/masterRealPropUpdate.json");
+// const masterRealPropNewSchema = require("../../../../schemas/acris/real-property/master/masterRealPropNew.json");
+// const masterRealPropSearchSchema = require("../../../../schemas/acris/real-property/master/masterRealPropSearch.json");
+// const masterRealPropUpdateSchema = require("../../../../schemas/acris/real-property/master/masterRealPropUpdate.json");
 
 const router = new express.Router();
 
@@ -58,89 +62,28 @@ router.post("/addRecordByAdmin", ensureAdmin, async function (req, res, next) {
  * This route allows a user to add a new record to the acris_real_property_master table and associate it with their account. It validates the request body against masterRealPropNewSchema. If validation passes, it saves the record to the database and associates it with the user.
  * 
  * Use Case: This route can be used by a user to manually add a new record to the acris_real_property_master table and associate it with their account.
+ * 
+ * Middleware Functions:
+ *
+ * processIncomingData: Processes the incoming data and attaches it to req.processedData.
+ * validateData: Validates the processed data and proceeds if valid.
+ * normalizeRecord: Normalizes the existing record for comparison.
+ * 
+ * Utility Functions:
+ * checkForDuplicateRecord: Checks for duplicate records and throws an error if a duplicate is found.
+ * createRecordForUser: Creates a new record for the user.
+
+ * Route Handler:
+ * The route handler uses the middleware functions to process and validate the data before checking for duplicates and saving the record.
  */
 
-router.post("/saveDataByUser", ensureLoggedIn, async function (req, res, next) {
+router.post("/saveDataByUser", ensureLoggedIn, processIncomingData, validateData, async function (req, res, next) {
     try {
-        // Log the incoming data before normalization
-        console.log("Incoming data:", req.body);
-
-        // Process the incoming data
-        const processedData = {
-            document_id: req.body.document_id,
-            record_type: req.body.record_type,
-            crfn: req.body.crfn || null,
-            recorded_borough: parseInt(req.body.recorded_borough, 10),
-            doc_type: req.body.doc_type,
-            document_date: moment.tz(req.body.document_date, 'America/New_York').format(),
-            document_amt: parseFloat(req.body.document_amt),
-            recorded_datetime: moment.tz(req.body.recorded_datetime, 'America/New_York').format(),
-            modified_date: moment.tz(req.body.modified_date, 'America/New_York').format(),
-            reel_yr: parseInt(req.body.reel_yr, 10),
-            reel_nbr: parseInt(req.body.reel_nbr, 10),
-            reel_pg: parseInt(req.body.reel_pg, 10),
-            percent_trans: parseFloat(req.body.percent_trans),
-            good_through_date: moment.tz(req.body.good_through_date, 'America/New_York').format()
-        };
-
-        // Log the processed data before validation
-        console.log("processed data:", processedData);
-
-        // Validate the processed data
-        const validator = jsonschema.validate(processedData, masterRealPropNewSchema);
-        if (!validator.valid) {
-            const errs = validator.errors.map(e => e.stack);
-            console.log("Validation errors:", errs);
-            throw new BadRequestError(errs);
-        }
-
-        // Log the data after validation
-        console.log("Data after validation:", processedData);
-
-        // Check for duplicate record
-        try {
-            const existingRecord = await MasterRealPropModel.findRecordFromUserByDocumentId(res.locals.user.username, processedData.document_id);
-            // Log the existing record
-            console.log("Existing record:", existingRecord);
-
-            // Normalize the existing record for comparison
-            const normalizedExistingRecord = {
-                document_id: existingRecord.document_id,
-                record_type: existingRecord.record_type,
-                crfn: existingRecord.crfn,
-                recorded_borough: existingRecord.recorded_borough,
-                doc_type: existingRecord.doc_type,
-                document_date: moment.tz(existingRecord.document_date, 'America/New_York').format(),
-                document_amt: parseFloat(existingRecord.document_amt),
-                recorded_datetime: moment.tz(existingRecord.recorded_datetime, 'America/New_York').format(),
-                modified_date: moment.tz(existingRecord.modified_date, 'America/New_York').format(),
-                reel_yr: parseInt(existingRecord.reel_yr, 10),
-                reel_nbr: parseInt(existingRecord.reel_nbr, 10),
-                reel_pg: parseInt(existingRecord.reel_pg, 10),
-                percent_trans: parseFloat(existingRecord.percent_trans),
-                good_through_date: moment.tz(existingRecord.good_through_date, 'America/New_York').format()
-            };
-
-            // Log the normalized existing record
-            console.log("Normalized existing record:", normalizedExistingRecord);
-
-            // Compare the existing record with the processed data
-            if (JSON.stringify(normalizedExistingRecord) === JSON.stringify(processedData)) {
-                throw new BadRequestError("Record already exists for user.");
-            }
-        } catch (err) {
-            if (err instanceof NotFoundError) {
-                // No existing record found, proceed to save the new record
-                const record = await MasterRealPropModel.createRecordForUser(res.locals.user.username, processedData);
-
-                // Log the data after successfully being saved to the database
-                console.log("Saved record:", record);
-
-                return res.status(201).json({ record });
-            } else {
-                throw err;
-            }
-        }
+        const processedData = req.processedData;
+        const username = res.locals.user.username;
+        await checkForDuplicateRecord(username, processedData);
+        const record = await createRecordForUser(username, processedData);
+        return res.status(201).json({ record });
     } catch (err) {
         return next(err);
     }
