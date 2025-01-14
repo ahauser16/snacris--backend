@@ -39,7 +39,7 @@
     },
     "document_date": {
       "type": "string",
-      "format": "date"
+      "format": "date-time"
     },
     "document_amt": {
       "type": "number",
@@ -49,11 +49,11 @@
     },
     "recorded_datetime": {
       "type": "string",
-      "format": "date"
+      "format": "date-time"
     },
     "modified_date": {
       "type": "string",
-      "format": "date"
+      "format": "date-time"
     },
     "reel_yr": {
       "type": "integer",
@@ -78,7 +78,7 @@
     },
     "good_through_date": {
       "type": "string",
-      "format": "date"
+      "format": "date-time"
     }
   },
   "additionalProperties": false,

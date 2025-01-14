@@ -5,15 +5,15 @@ CREATE TABLE acris_real_property_master (
     crfn VARCHAR(13),
     recorded_borough INTEGER,
     doc_type VARCHAR(8) REFERENCES document_control_codes(doc_type),
-    document_date DATE,
+    document_date TIMESTAMP,
     document_amt NUMERIC(16, 2),
-    recorded_datetime DATE,
-    modified_date DATE,
+    recorded_datetime TIMESTAMP,
+    modified_date TIMESTAMP,
     reel_yr INTEGER,
     reel_nbr INTEGER,
     reel_pg INTEGER,
     percent_trans NUMERIC(9, 6),
-    good_through_date DATE
+    good_through_date TIMESTAMP
 );
 
 CREATE TABLE acris_real_property_legals (
@@ -32,7 +32,7 @@ CREATE TABLE acris_real_property_legals (
     street_number VARCHAR(12),
     street_name VARCHAR(32),
     unit_address VARCHAR(7),
-    good_through_date DATE
+    good_through_date TIMESTAMP
 );
 
 CREATE TABLE acris_real_property_parties (
@@ -48,7 +48,7 @@ CREATE TABLE acris_real_property_parties (
     city VARCHAR(30),
     state CHAR(2) REFERENCES state_codes(state_code),
     zip VARCHAR(9),
-    good_through_date DATE
+    good_through_date TIMESTAMP
 );
 
 CREATE TABLE acris_real_property_references (
@@ -62,7 +62,7 @@ CREATE TABLE acris_real_property_references (
     reference_by_reel_borough INTEGER,
     reference_by_reel_nbr INTEGER,
     reference_by_reel_page INTEGER,
-    good_through_date DATE
+    good_through_date TIMESTAMP
 );
 
 CREATE TABLE acris_real_property_remarks (
@@ -72,5 +72,5 @@ CREATE TABLE acris_real_property_remarks (
     record_type CHAR(1) NOT NULL,
     sequence_number INTEGER,
     remark_text VARCHAR(232),
-    good_through_date DATE
+    good_through_date TIMESTAMP
 );
