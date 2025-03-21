@@ -11,10 +11,11 @@
       - [api ToDos](#api-todos)
     - [Refactor Plan](#refactor-plan)
       - [Planning the Database Structure for ACRIS Datasets](#planning-the-database-structure-for-acris-datasets)
-    - [Cross Referencing Datasets: RealPropertyMaster and RealPropertyParties with DocumentControls](#cross-referencing-datasets-realpropertymaster-and-realpropertyparties-with-documentcontrols)
+    - [Define the Database Schema](#define-the-database-schema)
+    - [Cross Referencing Datasets: RealPropertyMaster with DocumentControls](#cross-referencing-datasets-realpropertymaster-with-documentcontrols)
   - [codebase architecture notes](#codebase-architecture-notes)
     - [Data Flow - User Perspective](#data-flow---user-perspective)
-    - [Code Overview](#code-overview)
+    - [React Jobly Code Overview](#react-jobly-code-overview)
       - [`server.js` overview](#serverjs-overview)
       - [`app.js` overview](#appjs-overview)
       - [`config.js` overview](#configjs-overview)
@@ -44,7 +45,7 @@
 
 ## Refactor Notes
 
-These notes are for how to use this template for my own backend.  Most of the files in this repository
+These notes are for how to use this template for my own backend.  
 
 ### To Do List
 
@@ -54,7 +55,10 @@ These notes are for how to use this template for my own backend.  Most of the fi
 - [x] refactor `jobly-schema.sql` to `snacris-schema.sql` by keeping the `users` table and removing all the table references.  Add a table for each of the 15 ACRIS datasets.  Refer to the `README.MD` file in the `sql` folder for more info
 
 - [X] refactor `jobly-seed.sql` to `snacris-seed.sql` by keeping the `INSERT INTO users (username, password, first_name, last_name, email, is_admin)` reference and removing the `INSERT INTO companies ... ` and `INSERT INTO jobs ... ` data.  Instead I want to include the data from the `DOCUMENT_CONTROL`, `UCC_COLLATERAL`, `PROPERTY_TYPE_RECORD`, `STATE_CODES` and `COUNTRY_TYPE_RECORD` datasets into their respective table.  This will reduce the number of API calls when data is needed, however, you should have a way to check that these datasets do not change or are replaced.  I also seeded the `snacris` and `snacris_test` databases with data from the Real Property datasets such as the current deed to the **Empire State Building**, the deed associated with the **The Wyckoff House Museum** and an assignment of mortgage associated with hundreds of properties with Textron Financial Corporation as the ASSIGNOR/OLD LENDER and CAPITALSOURCE BANK as the ASSIGNEE/NEW LENDER.
+
+- [ ] review how the database is structured and make sure it can be deployed with Supabase
   
+[BACK TO TOC](#snacris-server-backend)
 
 #### models todos
 - [x] keep the `user.js` model as is but create a model for each of the 15 datasets and keep in mind this is where structures and methods are defined that will interact with the database.  
@@ -63,7 +67,35 @@ These notes are for how to use this template for my own backend.  Most of the fi
 Given my use case, where the user will fill out a form that containing input fields that correspond to fields within the five datasets represented by `acris_real_property_master`, `acris_real_property_legals`, `acris_real_property_parties`, `acris_real_property_references` and `acris_real_property_remarks` `sql` tables. When the user submits the form and my server receives their query data my server will make an API call to each dataset and cross reference the records based on the `document_id` value. For example, the user could submit a form to my server that queries the `document_date` and `doc_type` fields associated with the `acris_real_property_master` dataset, the `borough`, `block` and `lot` fields associated with the `acris_real_property_legals` and the `party_type` and `name` fields associated with the `acris_real_property_parties` dataset. The server will construct the three query URLs, send and receive the API responses that contain the results from each API request will need to be cross referenced for a `document_id` that they have in common. The result are records that meet the criteria of the user's search. 
 
 **Approach:**
-- [x] **1. Define Models for Each Dataset:** Create models for `acrisRealPropertyMaster`, `acrisRealPropertyLegals`, `acrisRealPropertyParties`, `acrisRealPropertyReferences`, and `acrisRealPropertyRemarks`.
+**1. Define Models for Each Dataset:** 
+Create models for:
+- [x] `acrisRealPropertyMaster`.  These files are located here: `Backend/models/acris/real-property/MasterRealPropModel.js` and include the following static methods:
+  - createRecord
+  - createRecordForUser
+  - createRecordForAdmin
+  - findAllRecordsByUser
+  - findRecordsByAdmin
+  - findRecordFromUserByDocumentId
+  - findRecordFromAdminByDocumentId
+  - findRecordById
+  - searchRecordsFromUserBySearchCriteria
+  - update
+  - deleteRecordByUser
+  - deleteRecord
+- [ ] Test the routes associated with the methods listed above to ensure they work as expected.
+- [ ] Repeat process above for each of the four Real Property datasets below
+  - [ ] `acrisRealPropertyLegals`
+  - [ ] `acrisRealPropertyParties`
+  - [ ] `acrisRealPropertyReferences`
+  - [ ] `acrisRealPropertyRemarks`
+- [ ] Develop different process for each of the five Code Mapping datasets below taking into account these values do not change often.  They could be saved to the database once and then checked on a daily, weekly or monthly basis.
+  - [ ] `acrisCodeMapCountries`
+  - [ ] `acrisCodeMapDocTypes`
+  - [ ] `acrisCodeMapPropTypes`
+  - [ ] `acrisCodeMapStates`
+  - [ ] `acrisCodeMapUccTypes`
+  
+  
 - [x] **2. Define Methods for API Interaction:** Each model will have methods to fetch data from the 3rd party APIs.
 - [ ] **3. Cross-Reference Data:** Implement a method to cross-reference the data based on `document_id`.
 - [ ] **4. Data Transformation:** Ensure the data is transformed into a format suitable for the front-end and database.
@@ -83,6 +115,8 @@ To handle the design problem of associating saved data with individual users and
   - [ ] `saveToDb` and `saveUserRecord` methods added to `realPropertyMaster.js` model file with documentation.
 **3. Update the Routes:** Split the routes to handle user-specific and admin-specific data retrieval.  Update the routes to handle user-specific data using the join table.
 
+[BACK TO TOC](#snacris-server-backend)
+
 #### schemas todos
 
 - [x] Keep the `userAuth.json`, `userNew.json`, `userRegister.json` and `userUpdate.json` files as they are and create a schema for each ACRIS dataset to be used to validate the API calls in the associated routes.
@@ -94,16 +128,38 @@ To create join tables that associate the `users` table with the various acris ta
 - [x] **Update the Schema Files:** Add the join table definitions to separate schema file for join tables.
 - [x] **Update the `snacris.sql` File:** Include the join table schema file in the `snacris.sql` file.
 
+[BACK TO TOC](#snacris-server-backend)
+
 #### routes todos
-- [ ] The routes folder needs to be broken up into at least two subfolders: `api` and `db`.  The `api` folder will contain all the routes associated with fetching data from 3rd party APIs such as the `ACRIS-real property master` dataset while the `db` folder will contain all the routes that implement methods from the `models` folder which interact with the database.
-- [ ] Define routes to handle the `fetchData` API requests for the 15 ACRIS datasets which involves constructing the query URLs, send those `uery-URLs via GET requests, receive the API response data, and store it in the database.  
+- [x] The routes folder needs to be broken up into at least two subfolders: `api` and `db`.  The `api` folder will contain all the routes associated with fetching data from 3rd party APIs such as the `ACRIS-real property master` dataset while the `db` folder will contain all the routes that implement methods from the `models` folder which interact with the database.
+
+**routes folder hierarchy**
+- routes
+  - api
+    - acris (files fetch data from ACRIS APIs to be saved to the DB)
+      - [x] code-maps (each file only has a "fetchAll" route)
+      - [x] personal-property (each file only has a "fetchRecord" route)
+      - [x] real-property (each file only has a "fetchRecord" route)
+  - db (files fetch *ACRIS data* from DB that was saved by users)
+    - acris
+      - [ ] code-maps (NB create routes that query DB based on basic use cases such as retrieving the code-map values to populate dropdown menus on the front end which the user selects when making a GET request to an ACRIS dataset. These files are empty as placholders.)
+      - personal-property (NB this is too much work for the capstone project)
+      - [x] real-property (NB create routes that query DB based on basic use cases. These files are empty as placholders *except* for `masterRealPropDbRoutes.js`.  You need fo finish testing the routes in this file which implement the methods in `MasterRealPropModel.js`, the data validation in the schemas folder located here: `Backend/schemas/acris/real-property/master` and remember to record your testing in the `PostmanNotes.MD` README file)
+  - utils
+  - jobly (for reference)
+
+- [ ] In additon to defining the routes above think about how best to construct the query URLs, sending those `query-URLs via GET requests with Socrata Query Language (SQL) syntax, receiving the API response data and how to validate and normalize it before displaying it to the user who can then save it to the database.  
 
 - [ ] `realPropertyMaster.js` - the `router.get("/", async function (req, res, next) {` route retrieves records from the database.  I need to consider the following 2 scenarios. There are records in the database that are saved by, and associated with, the user and there are records in the database that are accessible by all users.
 
+[BACK TO TOC](#snacris-server-backend)
 
 #### api ToDos
 - [ ] refactor `api_front_end_to_be_refactored.js` in the `api` folder which is from my chrome extension which made GET requests to the ACRIS API endpoints but now I want to make these requests from the server.  I've included all the other files that `api_front_end_to_be_refactored.js` depends on in a folder named `refactor` within the `api` folder for reference.
-- [x] extract the `fetchFromAcris` method from the `realPropertyMaster` model file and create a new file called `realPropertyMasterApi.js` within a subfolder named `acris` within the `api` folder.  The result of this refactor is that the `realPropertyMaster.js` focuses solely on dtabase operations.  
+
+- [x] extract the `fetchFromAcris` method from the `MasterRealPropModel.js` model file and create the new file called `MasterRealPropApi.js` located here: `Backend/api/acris/real-property/`.  The result of this refactor is that the `MasterRealPropModel.js` file, located here: `Backend/models/acris/real-property/`, focuses solely on database operations.  
+
+[BACK TO TOC](#snacris-server-backend)
 
 ### Refactor Plan
 
@@ -124,526 +180,15 @@ Keep in mind that the `DOCUMENT_CONTROL`, `PROPERTY_TYPE_RECORD`, `STATE_CODES` 
 
 Here is a step-by-step approach to plan and implement the database structure:
 
-[BACK TO TOC](#react-jobly-backend)
+[BACK TO TOC](#snacris-server-backend)
 
-**1. Define the Database Schema**
+### Define the Database Schema
+
+Create a folder called `sql` with a primary file called `snacris.sql` and subfolders named `join`, `schema`, `seed` and `utils`.  There is a more comprehensive `README.MD` located here: `Backend/sql/README.MD`.
 
 Create tables for each dataset, ensuring that the `document_id` field is used as a foreign key to establish relationships between the tables. Here is an example of how you can define the schema for the Real Property datasets:
 
-**Real Property Datasets**
-
-```sql
-CREATE TABLE acris_real_property_master (
-    document_id VARCHAR(16) PRIMARY KEY,
-    record_type CHAR(1) NOT NULL,
-    crfn VARCHAR(13),
-    recorded_borough INTEGER,
-    doc_type VARCHAR(8) REFERENCES document_control(doc_type),
-    document_date DATE,
-    document_amt NUMERIC(16, 2),
-    recorded_datetime TIMESTAMP,
-    modified_date DATE,
-    reel_yr INTEGER,
-    reel_nbr INTEGER,
-    reel_pg INTEGER,
-    percent_trans NUMERIC(9, 6),
-    good_through_date DATE
-);
-
-CREATE TABLE acris_real_property_legals (
-    id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_real_property_master(document_id),
-    record_type CHAR(1) NOT NULL,
-    borough INTEGER,
-    block INTEGER,
-    lot INTEGER,
-    easement CHAR(1),
-    partial_lot CHAR(1),
-    air_rights CHAR(1),
-    subterranean_rights CHAR(1),
-    property_type CHAR(2) REFERENCES property_type_record(property_type),
-    street_number VARCHAR(12),
-    street_name VARCHAR(32),
-    unit_address VARCHAR(7),
-    good_through_date DATE
-);
-
-CREATE TABLE acris_real_property_parties (
-    id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_real_property_master(document_id),
-    record_type CHAR(1) NOT NULL,
-    party_type CHAR(1),
-    name VARCHAR(70),
-    address_1 VARCHAR(60),
-    address_2 VARCHAR(60),
-    country CHAR(2) REFERENCES country_type_record(country_code),
-    city VARCHAR(30),
-    state CHAR(2) REFERENCES state_codes(state_code),
-    zip VARCHAR(9),
-    good_through_date DATE
-);
-
-CREATE TABLE acris_real_property_references (
-    id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_real_property_master(document_id),
-    record_type CHAR(1) NOT NULL,
-    reference_by_crfn VARCHAR(13),
-    reference_by_doc_id VARCHAR(16),
-    reference_by_reel_year INTEGER,
-    reference_by_reel_borough INTEGER,
-    reference_by_reel_nbr INTEGER,
-    reference_by_reel_page INTEGER,
-    good_through_date DATE
-);
-
-CREATE TABLE acris_real_property_remarks (
-    id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_real_property_master(document_id),
-    record_type CHAR(1) NOT NULL,
-    sequence_number INTEGER,
-    remark_text VARCHAR(232),
-    good_through_date DATE
-);
-
-CREATE INDEX idx_acris_real_property_legals_document_id ON acris_real_property_legals(document_id);
-CREATE INDEX idx_acris_real_property_parties_document_id ON acris_real_property_parties(document_id);
-CREATE INDEX idx_acris_real_property_references_document_id ON acris_real_property_references(document_id);
-CREATE INDEX idx_acris_real_property_remarks_document_id ON acris_real_property_remarks(document_id);
-```
-
-**Personal Property Datasets**
-
-```sql
-CREATE TABLE acris_personal_property_master (
-    document_id VARCHAR(16) PRIMARY KEY,
-    record_type CHAR(1) NOT NULL,
-    crfn VARCHAR(13),
-    recorded_borough INTEGER,
-    doc_type VARCHAR(8) REFERENCES document_control(doc_type),
-    document_amt NUMERIC(16, 2),
-    recorded_datetime TIMESTAMP,
-    ucc_collateral VARCHAR(50),
-    fedtax_serial_nbr VARCHAR(50),
-    fedtax_assessment_date DATE,
-    rpttl_nbr INTEGER,
-    modified_date DATE,
-    reel_yr INTEGER,
-    reel_nbr INTEGER,
-    reel_pg INTEGER,
-    file_nbr VARCHAR(50),
-    good_through_date TIMESTAMP
-);
-
-CREATE TABLE acris_personal_property_legals (
-    id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_personal_property_master(document_id),
-    record_type CHAR(1) NOT NULL,
-    borough INTEGER,
-    block INTEGER,
-    lot INTEGER,
-    easement CHAR(1),
-    partial_lot CHAR(1),
-    air_rights CHAR(1),
-    subterranean_rights CHAR(1),
-    property_type CHAR(2) REFERENCES property_type_record(property_type),
-    street_number VARCHAR(12),
-    street_name VARCHAR(32),
-    addr_unit VARCHAR(7),
-    good_through_date TIMESTAMP
-);
-
-CREATE TABLE acris_personal_property_parties (
-    id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_personal_property_master(document_id),
-    record_type CHAR(1) NOT NULL,
-    party_type CHAR(1),
-    name VARCHAR(70),
-    address_1 VARCHAR(60),
-    address_2 VARCHAR(60),
-    country CHAR(2) REFERENCES country_type_record(country_code),
-    city VARCHAR(30),
-    state CHAR(2) REFERENCES state_codes(state_code),
-    zip VARCHAR(9),
-    good_through_date TIMESTAMP
-);
-
-CREATE TABLE acris_personal_property_references (
-    id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_personal_property_master(document_id),
-    record_type CHAR(1) NOT NULL,
-    crfn VARCHAR(13),
-    doc_id_ref VARCHAR(16),
-    file_nbr VARCHAR(50),
-    good_through_date TIMESTAMP
-);
-
-CREATE TABLE acris_personal_property_remarks (
-    id SERIAL PRIMARY KEY,
-    document_id VARCHAR(16) REFERENCES acris_personal_property_master(document_id),
-    record_type CHAR(1) NOT NULL,
-    sequence_number INTEGER,
-    remark_text VARCHAR(232),
-    good_through_date TIMESTAMP
-);
-
-CREATE INDEX idx_acris_personal_property_legals_document_id ON acris_personal_property_legals(document_id);
-CREATE INDEX idx_acris_personal_property_parties_document_id ON acris_personal_property_parties(document_id);
-CREATE INDEX idx_acris_personal_property_references_document_id ON acris_personal_property_references(document_id);
-CREATE INDEX idx_acris_personal_property_remarks_document_id ON acris_personal_property_remarks(document_id);
-```
-
-**CODE MAPPINGS DATASETS**
-
-Create tables for each dataset, ensuring that the `CODE MAPPINGS` datasets (which are smaller) have reference tables that can be used to query the `REAL PROPERTY` and `PERSONAL PROPERTY` datasets (which are larger).
-
-```sql
-CREATE TABLE document_control (
-    id SERIAL PRIMARY KEY,
-    record_type CHAR(1) NOT NULL,
-    doc_type VARCHAR(8) UNIQUE NOT NULL,
-    doc_type_description VARCHAR(30),
-    class_code_description VARCHAR(30),
-    party1_type VARCHAR(20),
-    party2_type VARCHAR(20),
-    party3_type VARCHAR(20)
-);
-
-CREATE TABLE ucc_collateral (
-    id SERIAL PRIMARY KEY,
-    record_type CHAR(1) NOT NULL,
-    ucc_collateral_code CHAR(1) UNIQUE NOT NULL,
-    description VARCHAR(50)
-);
-
-CREATE TABLE property_type_record (
-    id SERIAL PRIMARY KEY,
-    record_type CHAR(1) NOT NULL,
-    property_type CHAR(2) UNIQUE NOT NULL,
-    description VARCHAR(40)
-);
-
-CREATE TABLE state_codes (
-    id SERIAL PRIMARY KEY,
-    record_type CHAR(1) NOT NULL,
-    state_code CHAR(2) UNIQUE NOT NULL,
-    description VARCHAR(20)
-);
-
-CREATE TABLE country_type_record (
-    id SERIAL PRIMARY KEY,
-    record_type CHAR(1) NOT NULL,
-    country_code CHAR(2) UNIQUE NOT NULL,
-    description VARCHAR(20)
-);
-```
-
-[BACK TO TOC](#react-jobly-backend)
-
-**snacris.sql**
-
-```sql
-
-```
-
-
----
----
----
-
-1. Models
-
-Define models for each table in your application. These models will interact with the database and perform CRUD operations.
-
-**Real Property Datasets**
-
-Example for `acris_real_property_master`:
-
-```js
-// models/acrisRealPropertyMaster.js
-"use strict";
-
-const db = require("../db");
-
-class AcrisRealPropertyMaster {
-  static async create(data) {
-    const result = await db.query(
-      `INSERT INTO acris_real_property_master
-       (document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-       RETURNING *`,
-      [
-        data.document_id,
-        data.record_type,
-        data.crfn,
-        data.recorded_borough,
-        data.doc_type,
-        data.document_date,
-        data.document_amt,
-        data.recorded_datetime,
-        data.modified_date,
-        data.reel_yr,
-        data.reel_nbr,
-        data.reel_pg,
-        data.percent_trans,
-        data.good_through_date,
-      ]
-    );
-    return result.rows[0];
-  }
-
-  // Add other CRUD methods as needed
-}
-
-module.exports = AcrisRealPropertyMaster;
-```
-
-Example of `acris_real_property_parties`:
-
-```js
-// models/acrisRealPropertyParties.js
-"use strict";
-
-const db = require("../db");
-
-class AcrisRealPropertyParties {
-  static async create(data) {
-    const result = await db.query(
-      `INSERT INTO acris_real_property_parties
-       (document_id, record_type, party_type, name, address_1, address_2, country, city, state, zip, good_through_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING *`,
-      [
-        data.document_id,
-        data.record_type,
-        data.party_type,
-        data.name,
-        data.address_1,
-        data.address_2,
-        data.country,
-        data.city,
-        data.state,
-        data.zip,
-        data.good_through_date,
-      ]
-    );
-    return result.rows[0];
-  }
-
-  static async getPartyTypeDescription(documentId, partyType) {
-    const result = await db.query(
-      `SELECT dc.party${partyType}_type AS party_type_description
-       FROM acris_real_property_master rpm
-       JOIN document_control dc ON rpm.doc_type = dc.doc_type
-       WHERE rpm.document_id = $1`,
-      [documentId]
-    );
-
-    if (result.rows.length === 0) {
-      throw new Error(`No party type description found for document ID: ${documentId} and party type: ${partyType}`);
-    }
-
-    return result.rows[0].party_type_description;
-  }
-
-  // Add other CRUD methods as needed
-}
-
-module.exports = AcrisRealPropertyParties;
-```
-
-**Personal Property Datasets**
-
-Example for `acris_personal_property_master`:
-
-```js
-// models/acrisPersonalPropertyMaster.js
-"use strict";
-
-const db = require("../db");
-
-class AcrisPersonalPropertyMaster {
-  static async create(data) {
-    const result = await db.query(
-      `INSERT INTO acris_personal_property_master
-       (document_id, record_type, crfn, recorded_borough, doc_type, document_amt, recorded_datetime, ucc_collateral, fedtax_serial_nbr, fedtax_assessment_date, rpttl_nbr, modified_date, reel_yr, reel_nbr, reel_pg, file_nbr, good_through_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-       RETURNING *`,
-      [
-        data.document_id,
-        data.record_type,
-        data.crfn,
-        data.recorded_borough,
-        data.doc_type,
-        data.document_amt,
-        data.recorded_datetime,
-        data.ucc_collateral,
-        data.fedtax_serial_nbr,
-        data.fedtax_assessment_date,
-        data.rpttl_nbr,
-        data.modified_date,
-        data.reel_yr,
-        data.reel_nbr,
-        data.reel_pg,
-        data.file_nbr,
-        data.good_through_date,
-      ]
-    );
-    return result.rows[0];
-  }
-
-  // Add other CRUD methods as needed
-}
-
-module.exports = AcrisPersonalPropertyMaster;
-```
-
-[BACK TO TOC](#react-jobly-backend)
-
-4. Routes
-
-Define routes to handle API requests for each dataset. Use JSON schemas to validate the input data.
-
-**Real Property Datasets**
-
-Example for `acris_real_property_master`:
-```js
-// routes/acrisRealPropertyMaster.js
-"use strict";
-
-const express = require("express");
-const jsonschema = require("jsonschema");
-const AcrisRealPropertyMaster = require("../models/acrisRealPropertyMaster");
-const acrisRealPropertyMasterSchema = require("../schemas/acrisRealPropertyMaster.json");
-const { BadRequestError } = require("../expressError");
-
-const router = new express.Router();
-
-router.post("/", async function (req, res, next) {
-  try {
-    const validator = jsonschema.validate(req.body, acrisRealPropertyMasterSchema);
-    if (!validator.valid) {
-      const errs = validator.errors.map(e => e.stack);
-      throw new BadRequestError(errs);
-    }
-
-    const acrisRecord = await AcrisRealPropertyMaster.create(req.body);
-    return res.status(201).json({ acrisRecord });
-  } catch (err) {
-    return next(err);
-  }
-});
-
-// Add other routes as needed
-
-module.exports = router;
-```
-
-**Personal Property Datasets**
-
-Example for `acris_personal_property_master`:
-
-```js
-// routes/acrisPersonalPropertyMaster.js
-"use strict";
-
-const express = require("express");
-const jsonschema = require("jsonschema");
-const AcrisPersonalPropertyMaster = require("../models/acrisPersonalPropertyMaster");
-const acrisPersonalPropertyMasterSchema = require("../schemas/acrisPersonalPropertyMaster.json");
-const { BadRequestError } = require("../expressError");
-
-const router = new express.Router();
-
-router.post("/", async function (req, res, next) {
-  try {
-    const validator = jsonschema.validate(req.body, acrisPersonalPropertyMasterSchema);
-    if (!validator.valid) {
-      const errs = validator.errors.map(e => e.stack);
-      throw new BadRequestError(errs);
-    }
-
-    const acrisRecord = await AcrisPersonalPropertyMaster.create(req.body);
-    return res.status(201).json({ acrisRecord });
-  } catch (err) {
-    return next(err);
-  }
-});
-
-// Add other routes as needed
-
-module.exports = router;
-```
-
-[BACK TO TOC](#react-jobly-backend)
-
-5. Schemas
-
-Define JSON schemas for validating input data for each dataset.
-
-**Real Property Datasets**
-
-Example for `acris_real_property_master`:
-
-```json
-// schemas/acrisRealPropertyMaster.json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "properties": {
-    "document_id": { "type": "string", "minLength": 16, "maxLength": 16 },
-    "record_type": { "type": "string", "minLength": 1, "maxLength": 1 },
-    "crfn": { "type": "string", "minLength": 13, "maxLength": 13 },
-    "recorded_borough": { "type": "integer" },
-    "doc_type": { "type": "string", "minLength": 1, "maxLength": 8 },
-    "document_date": { "type": "string", "format": "date" },
-    "document_amt": { "type": "number" },
-    "recorded_datetime": { "type": "string", "format": "date-time" },
-    "modified_date": { "type": "string", "format": "date" },
-    "reel_yr": { "type": "integer" },
-    "reel_nbr": { "type": "integer" },
-    "reel_pg": { "type": "integer" },
-    "percent_trans": { "type": "number" },
-    "good_through_date": { "type": "string", "format": "date" }
-  },
-  "required": ["document_id", "record_type"]
-}
-```
-
-**Personal Property Datasets**
-
-Example for `acris_personal_property_master`:
-
-```json
-// schemas/acrisPersonalPropertyMaster.json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "properties": {
-    "document_id": { "type": "string", "minLength": 16, "maxLength": 16 },
-    "record_type": { "type": "string", "minLength": 1, "maxLength": 1 },
-    "crfn": { "type": "string", "minLength": 13, "maxLength": 13 },
-    "recorded_borough": { "type": "integer" },
-    "doc_type": { "type": "string", "minLength": 1, "maxLength": 8 },
-    "document_amt": { "type": "number" },
-    "recorded_datetime": { "type": "string", "format": "date-time" },
-    "ucc_collateral": { "type": "string" },
-    "fedtax_serial_nbr": { "type": "string" },
-    "fedtax_assessment_date": { "type": "string", "format": "date" },
-    "rpttl_nbr": { "type": "integer" },
-    "modified_date": { "type": "string", "format": "date" },
-    "reel_yr": { "type": "integer" },
-    "reel_nbr": { "type": "integer" },
-    "reel_pg": { "type": "integer" },
-    "file_nbr": { "type": "string" },
-    "good_through_date": { "type": "string", "format": "date-time" }
-  },
-  "required": ["document_id", "record_type"]
-}
-```
-
-[BACK TO TOC](#react-jobly-backend)
-
-### Cross Referencing Datasets: RealPropertyMaster and RealPropertyParties with DocumentControls
+### Cross Referencing Datasets: RealPropertyMaster with DocumentControls
 
 **Update the Database Schema**
 
@@ -794,7 +339,7 @@ Create a JSON schema for validating input data for the `ACRIS_REAL_PROPERTY_PART
 **Conclusion**
 By following this approach, you can handle the relationship between the `party_type` field in the `ACRIS_REAL_PROPERTY_PARTIES` table and the `DOCUMENT_CONTROL` table. The function in the model will perform the cross-reference to retrieve the appropriate party type description, ensuring that your application can efficiently query and display the relevant data. This setup allows you to maintain data integrity and optimize query performance by leveraging the relationships between the datasets.
 
-
+[BACK TO TOC](#snacris-server-backend)
 
 ## codebase architecture notes
 
@@ -820,9 +365,9 @@ Finally, the `server.js` file is the entry point for the backend server. It impo
 
 In summary, the backend server application for Jobly handles user registration, authentication, and interactions with the front end through a well-structured flow of data. The `app.js`, `config.js`, `db.js`, and `server.js` files work together with the route files, schema files, and model files to ensure that data is validated, processed, and stored correctly, providing a seamless experience for the user.
 
-[BACK TO TOC](#react-jobly-backend)
+[BACK TO TOC](#snacris-server-backend)
 
-### Code Overview
+### React Jobly Code Overview
 
 #### `server.js` overview
 
@@ -840,7 +385,7 @@ This file contains configuration settings for the application. It loads environm
 
 This file sets up the connection to the PostgreSQL database using the `pg` library. It determines the database URI based on the environment and configures SSL for production. It exports the connected database client for use in other parts of the application.
 
-[BACK TO TOC](#react-jobly-backend)
+[BACK TO TOC](#snacris-server-backend)
 
 #### models overview
 
@@ -858,7 +403,7 @@ This file defines the `Company` model, which contains methods for interacting wi
 
 This file defines the `Job` model, which contains methods for interacting with the `jobs` table in the database. It includes methods for creating, retrieving, updating, and deleting jobs. It also supports filtering job listings based on specific criteria. The model handles the association between jobs and companies, ensuring that job data includes relevant company details.
 
-[BACK TO TOC](#react-jobly-backend)
+[BACK TO TOC](#snacris-server-backend)
 
 #### routes overview
 
@@ -884,7 +429,7 @@ This file defines the company-related routes. It includes routes for creating a 
 ##### `jobs.js` route overview
 This file defines the job-related routes. It includes routes for creating a new job (`POST /`), retrieving all jobs (`GET /`), retrieving a specific job (`GET /:id`), updating a job (`PATCH /:id`), and deleting a job (`DELETE /:id`). These routes validate the input data using JSON schemas and ensure proper authorization using middleware functions.
 
-[BACK TO TOC](#react-jobly-backend)
+[BACK TO TOC](#snacris-server-backend)
 
 #### schemas overview
 
@@ -992,4 +537,4 @@ When a client makes a request to the server, the following sequence occurs:
 3. **Model Interaction**: If the data is valid, the route invokes a method from the corresponding model in the `models` folder to perform the desired operation (e.g., creating a new job, retrieving user information).
 4. **Response**: The route sends the result of the model operation back to the client as a response.
 
-[BACK TO TOC](#react-jobly-backend)
+[BACK TO TOC](#snacris-server-backend)

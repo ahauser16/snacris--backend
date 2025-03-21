@@ -8,9 +8,9 @@ const { sqlForPartialUpdate } = require("../../../helpers/sql");
 /** Related functions for ACRIS Real Property Master. */
 
 class MasterRealPropModel {
-
   //1. Inserts a new record into the acris_real_property_master table using the provided data.
   //2. Returns the inserted record.
+  //Use Case: This function is used when you want to save a new record to the `acris_real_property_master` sql table in the DB.  It is used by the `createRecordForUser` and `createRecordForAdmin` methods below which are used to save user-specific and admin-specific record data respectively.
   static async createRecord(data) {
     const result = await db.query(
       `INSERT INTO acris_real_property_master
@@ -41,44 +41,10 @@ class MasterRealPropModel {
   /** 
    * Save user-specific record data.
    *
-   * Returns { id, username, document_id, saved_at }
-   * 
-   * Explanation of `createRecordForUser` Method
-   * The `createRecordForUser` method is designed to save a record to the `acris_real_property_master` table and then create an association between the user and the saved record in the `user_saved_real_property_master` join table. Here is a detailed explanation of how it works:
-   * Step One - Save the record to `acris_real_property_master`: The `createRecordForUser` method first calls the `createRecord` method to insert the record into the `acris_real_property_master` table.  Upon successful execution `createRecord` returns the saved record.
-  * Step Two - Create an Association in the Join Table: After saving the record, the `createRecordForUser` method inserts a new entry into the `user_saved_real_property_master` join table which associates the `username` with the `document_id` of the saved record.  Upon successful execution `createRecordForUser` returns the association record.
+   * Use Case: This function is used when an authenticated user wants to save a new record to the database associated with their account. For example, a user might want to save a property record to their account for future reference.  It is implemented in the `saveDataByUser` route.
   **/
 
   static async createRecordForUser(username, data) {
-    // Check if the record already exists for the user
-    const existingRecord = await db.query(
-      `SELECT usr.master_id
-       FROM user_saved_real_property_master usr
-       JOIN acris_real_property_master arm ON usr.master_id = arm.id
-       WHERE usr.username = $1 AND arm.document_id = $2 AND arm.record_type = $3 AND arm.crfn = $4 AND arm.recorded_borough = $5 AND arm.doc_type = $6 AND arm.document_date = $7 AND arm.document_amt = $8 AND arm.recorded_datetime = $9 AND arm.modified_date = $10 AND arm.reel_yr = $11 AND arm.reel_nbr = $12 AND arm.reel_pg = $13 AND arm.percent_trans = $14 AND arm.good_through_date = $15`,
-      [
-        username,
-        data.document_id,
-        data.record_type,
-        data.crfn || null,
-        data.recorded_borough,
-        data.doc_type,
-        data.document_date,
-        data.document_amt,
-        data.recorded_datetime,
-        data.modified_date,
-        data.reel_yr,
-        data.reel_nbr,
-        data.reel_pg,
-        data.percent_trans,
-        data.good_through_date,
-      ]
-    );
-
-    if (existingRecord.rows.length > 0) {
-      throw new BadRequestError(`Record with document_id: ${data.document_id} already exists for user: ${username}`);
-    }
-
     const record = await this.createRecord(data);
     const result = await db.query(
       `INSERT INTO user_saved_real_property_master (username, master_id)
@@ -90,13 +56,23 @@ class MasterRealPropModel {
     return result.rows[0];
   }
 
+  // Save admin-specific record data with visibility options for either only users, only admin or both.  For example, an admin might want to save a property record to their account for testing purposes or to investigate a new use case for the application.  It is implemented in the `saveDataByAdmin` route.
+  // Returns { id, admin_username, master_id, visibility, saved_at }
+  static async createRecordForAdmin(adminUsername, data, visibility) {
+    const record = await this.createRecord(data);
+    const result = await db.query(
+      `INSERT INTO admin_saved_real_property_master (admin_username, master_id, visibility)
+       VALUES ($1, $2, $3)
+       RETURNING id, admin_username, master_id, visibility, saved_at`,
+      [adminUsername, record.id, visibility]
+    );
+
+    return result.rows[0];
+  }
+
   /** Find all records saved by a specific user.
-   *
-   * Returns [{ document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }, ...]
    * 
-   * Use Case: This function is used when an authenticated user wants to retrieve all records from the database that are associated with their account. For example, a user might want to view all the property records they have saved.
-   * 
-   * Access Control: Only the authenticated user should have access to this function to ensure that users can only view their own records.
+   * Use Case: This function is used when an authenticated user wants to retrieve all records from the database that are associated with their account. For example, a user might want to view all the property records they have saved.  It is implemented by the `getAllRecordsByUser` route which is protected so only the authenticated user can retrieve their own records.
    **/
 
   static async findAllRecordsByUser(username) {
@@ -120,17 +96,33 @@ class MasterRealPropModel {
    * Access Control: Only an authenticated admin should have access to this function to ensure that sensitive data is protected and only accessible by authorized personnel.
    **/
 
-  static async findAllRecords(username = null) {
+  static async findRecordsByAdmin(username = null, adminUsername = null) {
+    let query = `SELECT arm.document_id, arm.record_type, arm.crfn, arm.recorded_borough, arm.doc_type, arm.document_date, arm.document_amt, arm.recorded_datetime, arm.modified_date, arm.reel_yr, arm.reel_nbr, arm.reel_pg, arm.percent_trans, arm.good_through_date, usr.username, adm.admin_username, adm.visibility
+                 FROM acris_real_property_master arm
+                 LEFT JOIN user_saved_real_property_master usr ON arm.id = usr.master_id
+                 LEFT JOIN admin_saved_real_property_master adm ON arm.id = adm.master_id`;
+    let queryParams = [];
+    let conditions = [];
+
     if (username) {
-      return this.findAllRecordsByUser(username);
-    } else {
-      const result = await db.query(
-        `SELECT document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date
-         FROM acris_real_property_master
-         ORDER BY document_id`
-      );
-      return result.rows;
+      conditions.push(`usr.username = $${queryParams.length + 1}`);
+      queryParams.push(username);
     }
+
+    if (adminUsername) {
+      conditions.push(`adm.admin_username = $${queryParams.length + 1}`);
+      queryParams.push(adminUsername);
+    }
+
+    if (conditions.length > 0) {
+      query += ` WHERE ` + conditions.join(" OR ");
+    }
+
+    query += ` ORDER BY arm.document_id`;
+
+    const result = await db.query(query, queryParams);
+
+    return result.rows;
   }
 
   /** Retrieve a single record associated with a specific user.
@@ -140,6 +132,7 @@ class MasterRealPropModel {
        * Throws NotFoundError if record not found.
        * 
        * Use Case: This function is used when an authenticated user wants to retrieve a single record from the database by referencing the record's document_id value, ensuring that the record is associated with that particular user. For example, a user might want to view the details of a specific property record they have saved.
+       * 
        * Access Control: Only the authenticated user should have access to this function to ensure that users can only view their own records.
        **/
 
@@ -159,6 +152,25 @@ class MasterRealPropModel {
     return record;
   }
 
+  // Find a record associated with a specific admin by document_id.
+  // Returns { document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }
+  // Throws NotFoundError if record not found.
+  static async findRecordFromAdminByDocumentId(adminUsername, document_id) {
+    const result = await db.query(
+      `SELECT arm.document_id, arm.record_type, arm.crfn, arm.recorded_borough, arm.doc_type, arm.document_date, arm.document_amt, arm.recorded_datetime, arm.modified_date, arm.reel_yr, arm.reel_nbr, arm.reel_pg, arm.percent_trans, arm.good_through_date
+       FROM acris_real_property_master arm
+       JOIN admin_saved_real_property_master adm ON arm.id = adm.master_id
+       WHERE adm.admin_username = $1 AND arm.document_id = $2`,
+      [adminUsername, document_id]
+    );
+
+    const record = result.rows[0];
+
+    if (!record) throw new NotFoundError(`No record: ${document_id} for admin: ${adminUsername}`);
+
+    return record;
+  }
+
 
   /** Retrieve records by document_id (admin only).
      *
@@ -170,23 +182,36 @@ class MasterRealPropModel {
      * Access Control: Only an authenticated admin should have access to this function to ensure that sensitive data is protected and only accessible by authorized personnel.
      **/
 
-  static async findRecordById(document_id, username = null) {
+  static async findRecordById(document_id, username = null, adminUsername = null) {
+    let query = `SELECT arm.document_id, arm.record_type, arm.crfn, arm.recorded_borough, arm.doc_type, arm.document_date, arm.document_amt, arm.recorded_datetime, arm.modified_date, arm.reel_yr, arm.reel_nbr, arm.reel_pg, arm.percent_trans, arm.good_through_date, usr.username, adm.admin_username
+                 FROM acris_real_property_master arm
+                 LEFT JOIN user_saved_real_property_master usr ON arm.id = usr.master_id
+                 LEFT JOIN admin_saved_real_property_master adm ON arm.id = adm.master_id
+                 WHERE arm.document_id = $1`;
+    let queryParams = [document_id];
+    let conditions = [];
+
     if (username) {
-      return this.findRecordFromUserByDocumentId(username, document_id);
-    } else {
-      const result = await db.query(
-        `SELECT document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date
-       FROM acris_real_property_master
-       WHERE document_id = $1`,
-        [document_id]
-      );
-
-      const records = result.rows;
-
-      if (records.length === 0) throw new NotFoundError(`No records found with document_id: ${document_id}`);
-
-      return records;
+      conditions.push(`usr.username = $${queryParams.length + 1}`);
+      queryParams.push(username);
     }
+
+    if (adminUsername) {
+      conditions.push(`adm.admin_username = $${queryParams.length + 1}`);
+      queryParams.push(adminUsername);
+    }
+
+    if (conditions.length > 0) {
+      query += ` AND (` + conditions.join(" OR ") + `)`;
+    }
+
+    const result = await db.query(query, queryParams);
+
+    const records = result.rows;
+
+    if (records.length === 0) throw new NotFoundError(`No records found with document_id: ${document_id}`);
+
+    return records;
   }
 
   /** Search records saved by a specific user based on search criteria.

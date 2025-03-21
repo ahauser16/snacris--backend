@@ -6,6 +6,15 @@ CREATE TABLE user_saved_real_property_master (
     UNIQUE (username, master_id)  -- Composite unique constraint to prevent duplicate entries for the same user and document
 );
 
+CREATE TABLE admin_saved_real_property_master (
+    id SERIAL PRIMARY KEY,
+    admin_username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,
+    master_id INTEGER REFERENCES acris_real_property_master(id) ON DELETE CASCADE,
+    visibility VARCHAR(10) NOT NULL CHECK (visibility IN ('admin', 'user', 'all')), -- This defines a column named visibility with a data type of VARCHAR(10) which cannot have `null` values and has the CHECK constraint that restricts values to `admin`, `user`, or `all`.
+    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (admin_username, master_id)
+);
+
 CREATE TABLE user_saved_real_property_legals (
     id SERIAL PRIMARY KEY,
     username VARCHAR(25) REFERENCES users(username) ON DELETE CASCADE,

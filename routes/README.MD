@@ -49,7 +49,7 @@
 - [ ] Create tests for `referencesRealPropApiRoutes`
 - [ ] Create tests for `remarksRealPropApiRoutes`
 
-**db related routes for acris data**
+### database related routes
 
 - [x] `db/acris/code-maps` will have a `js` file for the following datasets: `countriesCodeMapDbRoutes`, `statesCodeMapDbRoutes`, `uccCodeMapDbRoutes`, `docTypesCodeMapDbRoutes` and `propTypesCodeMapDbRoutes`.  
 - [ ] Design `countriesCodeMapDbRoutes.js`
@@ -67,11 +67,11 @@
 
 - [x] `db/acris/real-property` will have a `js` file for the following datasets: `masterRealPropDbRoutes`, `legalsRealPropDbRoutes`, `partiesRealPropDbRoutes`, `referencesRealPropDbRoutes` and `remarksRealPropDbRoutes`.  
 - [x] Design `masterRealPropDbRoutes.js` by analyzing the routes to ensure they meet best practices.  This route file will serve as a template for the `masterPersPropDbRoutes.js` file, however, each other dataset in the Real Property category have different data flow and structure so don't plan on using this as a template for the others.  NB the checklist for the routes below means they were successfully tested using Postman.
-  - [ ] `addRecordByAdmin`
-  - [x] `addRecordByUser`
-  - [x] `fetchAllRecordsByUser`
-  - [ ] `fetchAllRecordsByAdmin`
-  - [x] `fetchRecordFromUserByDocumentId/:document_id`
+  - [x] `saveDataByAdmin`
+  - [x] `saveDataByUser`
+  - [x] `getAllRecordsByUser`
+  - [x] `getRecordsByAdmin`
+  - [x] `getRecordFromUserByDocumentId/:document_id`
   - [ ] `fetchRecordByAdmin/:document_id`
   - [x] `searchSavedUserRecords`
   - [ ] `updateRecordByAdmin/:document_id`
