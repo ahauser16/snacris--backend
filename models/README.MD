@@ -2,6 +2,14 @@
 
 The models folder contains files from the last Springboard project such as `company.js`, `job.js` and `user.js`, which define the structure and methods for interacting with the database. These models encapsulate the logic for creating, reading, updating, and deleting (CRUD) records in the database. For example, the `Job` model includes methods for creating a job, finding jobs with optional filters, retrieving a job by ID, updating job data, and deleting a job.  I chose to keep these files because I'm using the same authentication system as the previous project and as a reference to design my own project.
 
+## Helpful `psql` commands
+
+- To start the PostgreSQL service on WSL Ubuntu, use the following command: `sudo service postgresql start`.
+- To list all the databases associated with your psql account, use the following command after logging into psql: `\l`.
+- To connect to a specific database, such as snacris, use the following command in psql: `\c snacris`.
+- Once connected to a database in psql, use the following command to list all the tables: `\dt`.
+- To list all the data within a table, such as country_codes, while connected to the database, use the following SQL command: `SELECT * FROM country_codes;`
+
 ## Relevant CRUD Operations
 1. Create:
 - **Insert a new record**: Add a new record to the database.

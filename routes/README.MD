@@ -28,7 +28,7 @@
 
 - [x] `api/acris/code-maps` will have a `js` file for the following datasets: `countriesCodeMapApiRoutes`, `statesCodeMapApiRoutes`, `uccTypesCodeMapApiRoutes`, `docTypesCodeMapApiRoutes` and `propTypesCodeMapApiRoutes`.  
 
-- NB --> These code-map api routes won't be made by the user on the front end.  Instead these datasets are rather static and have not changed in years so they were downloaded and seeded into the database. The tests should include the use case where the full dataset is downloaded, compared to the values in the database.  If an update has been made to a dataset then the corresponding sql table should be updated to reflect the update.
+- NB --> These code-map api routes won't be accessed by the user on the front end.  Instead these datasets will populate fields on the front end when the relevant webpage loads via request to the database. The tests should include the use case where the full dataset is downloaded, compared to the values in the database.  If an update has been made to a dataset then the corresponding sql table should be updated to reflect the update.
 - [ ] Create tests for `countriesCodeMapApiRoutes`
 - [ ] Create tests for `statesCodeMapApiRoutes`
 - [ ] Create tests for `uccTypesCodeMapApiRoutes`
