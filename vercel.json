@@ -1,25 +1,9 @@
 {
     "version": 2,
-    "builds": [
+    "rewrites": [
         {
-            "src": "server.js",
-            "use": "@vercel/node"
+            "source": "/(.*)",
+            "destination": "/"
         }
-    ],
-    "routes": [
-        {
-            "src": "/(.*)",
-            "dest": "/"
-        }
-    ],
-    "env": {
-        "DATABASE_URL": "@database-url",
-        "DATABASE_NAME": "@database-name",
-        "DATABASE_PASSWORD": "@database-password",
-        "DATABASE_USERNAME": "@database-username",
-        "JWT_SECRET": "@jwt-secret",
-        "JWT_EXPIRATION_TIME": "@jwt-expiration-time",
-        "JWT_ISSUER": "@jwt-issuer",
-        "JWT_AUDIENCE": "@jwt-audience"
-    }
+    ]
 }
