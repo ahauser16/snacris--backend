@@ -14,9 +14,9 @@ const { ensureAdmin, ensureLoggedIn } = require("../../../../middleware/auth");
 const MasterRealPropModel = require("../../../../models/acris/real-property/MasterRealPropModel");
 const { convertQueryParams } = require("../../../utils/convertQueryParams");
 
-const masterRealPropNewSchema = require("../../../../../schemas/acris/real-property/master/masterRealPropNew.json");
-const masterRealPropSearchSchema = require("../../../../../schemas/acris/real-property/master/masterRealPropSearch.json");
-const masterRealPropUpdateSchema = require("../../../../../schemas/acris/real-property/master/masterRealPropUpdate.json");
+const masterRealPropNewSchema = require("../../../../schemas/acris/real-property/master/masterRealPropNew.json");
+const masterRealPropSearchSchema = require("../../../../schemas/acris/real-property/master/masterRealPropSearch.json");
+const masterRealPropUpdateSchema = require("../../../../schemas/acris/real-property/master/masterRealPropUpdate.json");
 
 const router = new express.Router();
 
