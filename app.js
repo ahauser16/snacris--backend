@@ -8,6 +8,7 @@ const morgan = require("morgan");
 const {
   authRoutes,
   usersRoutes,
+  queryAcrisAddressParcel,
   masterRealPropApiRoutes,
   legalsRealPropApiRoutes,
   partiesRealPropApiRoutes,
@@ -45,14 +46,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(morgan("tiny"));
-app.get("/", (req, res) => {
-  res.send("Hello, World!");
-}
-);
-app.use(authenticateJWT);
 
+app.get("/", (req, res) => { res.send("Hello, World!") });
+
+app.use(authenticateJWT);
 app.use("/auth", authRoutes);
 app.use("/users", usersRoutes);
+app.use("/queryAcrisAddressParcel", queryAcrisAddressParcel);
 app.use("/api/real-property-master", masterRealPropApiRoutes);
 app.use("/api/real-property-legals", legalsRealPropApiRoutes);
 app.use("/api/real-property-parties", partiesRealPropApiRoutes);
