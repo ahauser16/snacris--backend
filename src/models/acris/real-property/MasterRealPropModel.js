@@ -2,8 +2,8 @@
 
 const db = require("../../../db");
 const { NotFoundError, BadRequestError } = require("../../../expressError");
-const { genSqlSetWhere } = require("../../../helpers/genSqlSetWhere");
-const { sqlForPartialUpdate } = require("../../../helpers/sql");
+const { genSqlSetWhere } = require("../../../src/helpers/genSqlSetWhere");
+const { sqlForPartialUpdate } = require("../../../src/helpers/sql");
 
 /** Related functions for ACRIS Real Property Master. */
 

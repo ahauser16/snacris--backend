@@ -1,7 +1,7 @@
 const moment = require("moment-timezone");
 const jsonschema = require("jsonschema");
 const { BadRequestError } = require("../expressError");
-const masterRealPropNewSchema = require("../schemas/acris/real-property/master/masterRealPropNew.json");
+const masterRealPropNewSchema = require("../../schemas/acris/real-property/master/masterRealPropNew.json");
 
 function processIncomingData(req, res, next) {
     try {
