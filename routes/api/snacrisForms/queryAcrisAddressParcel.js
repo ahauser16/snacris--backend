@@ -4,8 +4,43 @@
 
 const express = require("express");
 const LegalsRealPropApi = require("../../../api/acris/real-property/LegalsRealPropApi");
+const { transformForUrl } = require("../../../api/utils");
 
 const router = new express.Router();
+
+/**
+ * Filters records to include only unique properties based on specific keys.
+ *
+ * @param {Array} records - The array of record objects.
+ * @returns {Array} - An array of unique objects containing only the specified keys.
+ */
+function findUniqueProperties(records) {
+    const uniqueRecords = [];
+    const seen = new Set();
+
+    for (let record of records) {
+        // Extract only the relevant keys
+        const filteredRecord = {
+            borough: record.borough,
+            block: record.block,
+            lot: record.lot,
+            street_number: record.street_number,
+            street_name: record.street_name,
+        };
+
+        // Create a unique identifier string for the record
+        const identifier = JSON.stringify(filteredRecord);
+
+        // Add the record to the result if it hasn't been seen before
+        if (!seen.has(identifier)) {
+            seen.add(identifier);
+            uniqueRecords.push(filteredRecord);
+        }
+    }
+
+    return uniqueRecords;
+}
+
 
 /** GET /fetchRecord => { records: [...] }
  *
@@ -57,9 +92,9 @@ router.get("/fetchRecord", async function (req, res, next) {
         if (borough) queryParams.borough = borough;
         if (block) queryParams.block = block;
         if (lot) queryParams.lot = lot;
-        if (street_number) queryParams.street_number = street_number;
-        if (street_name) queryParams.street_name = street_name;
-        if (unit) queryParams.unit = unit;
+        if (street_number) queryParams.street_number = transformForUrl(street_number);
+        if (street_name) queryParams.street_name = transformForUrl(street_name);
+        if (unit) queryParams.unit = transformForUrl(unit);
 
         // Ensure at least one valid parameter is provided
         if (Object.keys(queryParams).length === 0) {
@@ -68,7 +103,11 @@ router.get("/fetchRecord", async function (req, res, next) {
 
         // Fetch data from the ACRIS API
         const records = await LegalsRealPropApi.fetchFromAcris(queryParams);
-        return res.json({ records });
+
+        // Find unique properties
+        const uniqueRecords = findUniqueProperties(records);
+
+        return res.json({ records: uniqueRecords });
     } catch (err) {
         return next(err);
     }
