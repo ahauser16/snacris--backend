@@ -11,6 +11,7 @@ const usersRoutes = require("./users");
 * routes associated with specific webpages that make single/multiple external API calls to the ACRIS Real Property, Personal Property and/or Code Mapping API endpoints.
 */
 const queryAcrisAddressParcel = require("./api/snacrisForms/queryAcrisAddressParcel");
+const queryAcrisDocIdCrfn = require("./api/snacrisForms/queryAcrisDocIdCrfn");
 
 /*
 * routes associated with making external API calls to the ACRIS Real Property API endpoints.
@@ -76,6 +77,7 @@ module.exports = {
     authRoutes,
     usersRoutes,
     queryAcrisAddressParcel,
+    queryAcrisDocIdCrfn,
     masterRealPropApiRoutes,
     legalsRealPropApiRoutes,
     partiesRealPropApiRoutes,
