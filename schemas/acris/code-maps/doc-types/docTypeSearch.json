@@ -1,0 +1,50 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "record_type": {
+            "type": "string",
+            "description": "‘D’ for Document control type record",
+            "maxLength": 1
+        },
+        "doc__type": {
+            "type": "string",
+            "description": "Doc type code (≤8 characters)",
+            "maxLength": 8
+        },
+        "doc__type_description": {
+            "type": "string",
+            "description": "Document type description (≤30 characters)",
+            "maxLength": 30
+        },
+        "class_code_description": {
+            "type": "string",
+            "description": "Document class description (≤30 characters)",
+            "maxLength": 30
+        },
+        "party1_type": {
+            "type": "string",
+            "description": "Party type 1 (≤20 characters)",
+            "maxLength": 20
+        },
+        "party2_type": {
+            "type": "string",
+            "description": "Party type 2 (≤20 characters)",
+            "maxLength": 20
+        },
+        "party3_type": {
+            "type": "string",
+            "description": "Party type 3 (≤20 characters)",
+            "maxLength": 20
+        }
+    },
+    "required": [
+        "record_type",
+        "doc__type",
+        "doc__type_description",
+        "class_code_description",
+        "party1_type",
+        "party2_type",
+        "party3_type"
+    ]
+}

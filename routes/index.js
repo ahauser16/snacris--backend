@@ -8,10 +8,17 @@ const authRoutes = require("./auth");
 const usersRoutes = require("./users");
 
 /*
-* routes associated with specific webpages that make single/multiple external API calls to the ACRIS Real Property, Personal Property and/or Code Mapping API endpoints.
+* routes associated with specific webpages that make single/multiple external API calls to the ACRIS Real Property or Personal Property.
 */
 const queryAcrisAddressParcel = require("./api/snacrisForms/queryAcrisAddressParcel");
 const queryAcrisDocIdCrfn = require("./api/snacrisForms/queryAcrisDocIdCrfn");
+const queryAcrisPartyName = require("./api/snacrisForms/queryAcrisPartyName");
+
+/*
+* routes associated with specific webpages that make single calls to the SNACRIS database for code maps associated with the Document Control Codes, Property Type Codes, UCC Codes, State (USA) Codes and Country Code datasets that I seeded the database from the original ACRIS datasets.
+*/
+
+const getDocTypeCodeMap = require("./db/acris/code-maps/docTypesCodeMapDbRoutes");
 
 /*
 * routes associated with making external API calls to the ACRIS Real Property API endpoints.
@@ -78,6 +85,8 @@ module.exports = {
     usersRoutes,
     queryAcrisAddressParcel,
     queryAcrisDocIdCrfn,
+    queryAcrisPartyName,
+    getDocTypeCodeMap,
     masterRealPropApiRoutes,
     legalsRealPropApiRoutes,
     partiesRealPropApiRoutes,

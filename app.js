@@ -80,6 +80,12 @@ app.use("/db/real-property-master", masterRealPropDbRoutes);
 // app.use("/db/personal-property-parties", partiesPersPropDbRoutes);
 // app.use("/db/personal-property-remarks", remarksPersPropDbRoutes);
 // app.use("/db/personal-property-references", referencesPersPropDbRoutes);
+// app.use("/db/personal-property-references", referencesPersPropDbRoutes);
+// app.use("/db/code-map-countries", countriesCodeMapDbRoutes);
+// app.use("/db/code-map-states", statesCodeMapDbRoutes);
+app.use("/db/code-map-documents", docTypesCodeMapDbRoutes);
+// app.use("/db/code-map-properties", propTypesCodeMapDbRoutes);
+// app.use("/db/code-map-ucc", uccTypesCodeMapDbRoutes);
 
 // app.use("/companies", companiesRoutes);
 // app.use("/jobs", jobsRoutes);
