@@ -2,24 +2,48 @@
 
 /** Routes for ACRIS Real Property Master database operations. */
 
-const jsonschema = require("jsonschema");
 const express = require("express");
-const { BadRequestError, NotFoundError } = require("../../../../expressError");
+const { NotFoundError } = require("../../../../expressError");
 const DocTypesCodeMapModel = require("../../../../models/acris/code-maps/DocTypesCodeMapModel");
-const docTypeSearch = require("../../../../schemas/acris/code-maps/doc-types/docTypeSearch.json");
 const router = new express.Router();
 
 router.get("/getDocTypeCodeMap", async function (req, res, next) {
     try {
-        const query = req.query;
-
-        const docControlCodes = await DocTypesCodeMapModel.findAllRecords(query);
+        // Fetch all document control codes
+        const docControlCodes = await DocTypesCodeMapModel.findAllRecords();
 
         if (!docControlCodes || docControlCodes.length === 0) {
             throw new NotFoundError("No document type codes found.");
         }
 
-        return res.json({ docControlCodes });
+        // Organize the data into four arrays based on class_code_description
+        const organizedDocControlCodes = {
+            deedsAndOtherConveyances: [],
+            mortgagesAndInstruments: [],
+            uccAndFederalLiens: [],
+            otherDocuments: [],
+        };
+
+        for (const code of docControlCodes) {
+            switch (code.class_code_description) {
+                case "DEEDS AND OTHER CONVEYANCES":
+                    organizedDocControlCodes.deedsAndOtherConveyances.push(code);
+                    break;
+                case "MORTGAGES & INSTRUMENTS":
+                    organizedDocControlCodes.mortgagesAndInstruments.push(code);
+                    break;
+                case "UCC AND FEDERAL LIENS":
+                    organizedDocControlCodes.uccAndFederalLiens.push(code);
+                    break;
+                case "OTHER DOCUMENTS":
+                    organizedDocControlCodes.otherDocuments.push(code);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        return res.json({ docControlCodes: organizedDocControlCodes });
     } catch (err) {
         return next(err);
     }

@@ -22,12 +22,20 @@ const router = new express.Router();
 router.get("/fetchRecord", async function (req, res, next) {
     try {
         console.log("Received request with query parameters:", req.query);
+        
         // Extract query parameters from the request
-        const { document_date,
+        const { 
+            document_date,
             recorded_borough,
             doc_type,
             name,
-            party_type } = req.query;
+            party_type,
+            masterDataset,
+            lotDataset,
+            partiesDataset,
+            referencesDataset,
+            remarksDataset
+        } = req.query;
 
         // Convert dataset flags to booleans
         const datasets = {
