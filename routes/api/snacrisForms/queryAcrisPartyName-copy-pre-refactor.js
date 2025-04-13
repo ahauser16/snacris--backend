@@ -95,6 +95,42 @@ router.get("/fetchRecord", async function (req, res, next) {
         // let records = [];
         let masterRecords = [];
         let partiesRecords = [];
+        let lotRecords = [];
+        let referenceRecords = [];
+        let remarkRecords = [];
+
+        // Helper function to fetch data and handle errors
+        // async function fetchDataset(apiMethod, datasetName) {
+        //     try {
+        //         const datasetRecords = await apiMethod(queryParams);
+        //         if (datasetRecords.length === 0) {
+        //             console.warn(`No records found for ${datasetName}`);
+        //             records.push({ dataFound: false, dataset: datasetName });
+        //         } else {
+        //             records.push(...datasetRecords);
+        //         }
+        //     } catch (err) {
+        //         console.error(`Error fetching data from ${datasetName}:`, err.message);
+        //         records.push({ dataFound: false, dataset: datasetName, error: err.message });
+        //     }
+        // }
+
+        // Fetch data from the ACRIS API based on the selected datasets
+        // if (datasets.masterDataset) {
+        //     await fetchDataset(MasterRealPropApi.fetchFromAcris, "masterDataset");
+        // }
+        // if (datasets.lotDataset) {
+        //     await fetchDataset(LegalsRealPropApi.fetchFromAcris, "lotDataset");
+        // }
+        // if (datasets.partiesDataset) {
+        //     await fetchDataset(PartiesRealPropApi.fetchFromAcris, "partiesDataset");
+        // }
+        // if (datasets.referencesDataset) {
+        //     await fetchDataset(ReferencesRealPropApi.fetchFromAcris, "referencesDataset");
+        // }
+        // if (datasets.remarksDataset) {
+        //     await fetchDataset(RemarksRealPropApi.fetchFromAcris, "remarksDataset");
+        // }
 
         //Fetch data from the "Primary Datasets"
         if (primaryDatasets.masterDataset) {
@@ -111,45 +147,28 @@ router.get("/fetchRecord", async function (req, res, next) {
                 partiesRecords.push({ dataFound: false, dataset: "partiesDataset" });
             }
         }
-
-        // `primaryRecords` should only include records from `masterRecords` and `partiesRecords` that contain the same `document_id` value.  If a record in `masterRecords` has a `document_id` that is not present in `partiesRecords`, it should be excluded from `primaryRecords`. Similarly, if a record in `partiesRecords` has a `document_id` that is not present in `masterRecords`, it should be excluded from `primaryRecords`.
-        let primaryRecords = [...masterRecords, ...partiesRecords];
-
-        //extract the `document_id` values from the `primaryRecords` results.  This will be used to filter the records from the secondary datasets.
-        // `primaryRecordDocumentIds` should be an array of unique `document_id` values from the `primaryRecords` results.
-        let primaryRecordDocumentIds = [];
-
-        let lotRecords = [];
-        let referenceRecords = [];
-        let remarkRecords = [];
         //Fetch data from the "Secondary Datasets"
-        if (secondaryDatasets.lotDataset) {
-            lotRecords = await LegalsRealPropApi.fetchFromAcris(masterQueryParams);
-            if (lotRecords.length === 0) {
-                console.warn("No records found for lotDataset");
-                lotRecords.push({ dataFound: false, dataset: "lotDataset" });
-            }
-        }
-        if (secondaryDatasets.referencesDataset) {
-            referenceRecords = await ReferencesRealPropApi.fetchFromAcris(masterQueryParams);
-            if (referenceRecords.length === 0) {
-                console.warn("No records found for referencesDataset");
-                referenceRecords.push({ dataFound: false, dataset: "referencesDataset" });
-            }
-        }
-        if (secondaryDatasets.remarksDataset) {
-            remarkRecords = await RemarksRealPropApi.fetchFromAcris(masterQueryParams);
-            if (remarkRecords.length === 0) {
-                console.warn("No records found for remarksDataset");
-                remarkRecords.push({ dataFound: false, dataset: "remarksDataset" });
-            }
-        }
-
-        // `secondaryRecords` should only include records from `lotRecords`, `referenceRecords`, and `remarkRecords` that contain the same `document_id` values that were in the `primaryRecordDocumentIds` array.  
-        let secondaryRecords = [...lotRecords, ...referenceRecords, ...remarkRecords];
-
-        // records should only include records from `primaryRecords` and `secondaryRecords` that, through previous searching and filtering, contain the same `document_id` values.  The data should be combined in such a way that the final result contains all relevant information from both `primaryRecords` and `secondaryRecords` into a single record object that has a unique `document_id`.
-        let records = [...primaryRecords, ...secondaryRecords];
+        // if (secondaryDatasets.lotDataset) {
+        //     lotRecords = await LegalsRealPropApi.fetchFromAcris(masterQueryParams);
+        //     if (lotRecords.length === 0) {
+        //         console.warn("No records found for lotDataset");
+        //         lotRecords.push({ dataFound: false, dataset: "lotDataset" });
+        //     }
+        // }
+        // if (secondaryDatasets.referencesDataset) {
+        //     referenceRecords = await ReferencesRealPropApi.fetchFromAcris(masterQueryParams);
+        //     if (referenceRecords.length === 0) {
+        //         console.warn("No records found for referencesDataset");
+        //         referenceRecords.push({ dataFound: false, dataset: "referencesDataset" });
+        //     }
+        // }
+        // if (secondaryDatasets.remarksDataset) {
+        //     remarkRecords = await RemarksRealPropApi.fetchFromAcris(masterQueryParams);
+        //     if (remarkRecords.length === 0) {
+        //         console.warn("No records found for remarksDataset");
+        //         remarkRecords.push({ dataFound: false, dataset: "remarksDataset" });
+        //     }
+        // }
 
 
         // Fetch data from the ACRIS API

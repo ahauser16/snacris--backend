@@ -14,6 +14,10 @@ class MasterRealPropApi {
      * Returns [{ document_id, record_type, crfn, recorded_borough, doc_type, document_date, document_amt, recorded_datetime, modified_date, reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date }]
      **/
 
+    static function constructMasterUrl(query) {
+
+    }
+
     static async fetchFromAcris(query) {
         try {
           // Construct the URL with query parameters
