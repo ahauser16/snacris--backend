@@ -66,14 +66,14 @@ router.get("/fetchRecord", async function (req, res, next) {
         // Validate and construct query parameters
         //const queryParams = {};
         const masterQueryParams = {};
-        const partiesQueryParams = {};
         if (document_date_range) masterQueryParams.document_date_range = (document_date_range);
         if (document_date_start) masterQueryParams.document_date_start = (document_date_start);
         if (document_date_end) masterQueryParams.document_date_end = (document_date_end);
-        
+
         if (recorded_borough) masterQueryParams.recorded_borough = recorded_borough;
         if (doc_type) masterQueryParams.doc_type = transformForUrl(doc_type);
 
+        const partiesQueryParams = {};
         if (name) partiesQueryParams.name = transformForUrl(name);
         if (party_type) partiesQueryParams.party_type = (party_type);
 
@@ -94,16 +94,20 @@ router.get("/fetchRecord", async function (req, res, next) {
         // Initialize empty arrays to hold the records returned from each dataset
         // let records = [];
         let masterRecords = [];
-        let partiesRecords = [];
 
         //Fetch data from the "Primary Datasets"
         if (primaryDatasets.masterDataset) {
+            console.log("masterQueryParams:", masterQueryParams);
             masterRecords = await MasterRealPropApi.fetchFromAcris(masterQueryParams);
+            console.log("masterRecords after fetchFromAcris:", masterRecords);
             if (masterRecords.length === 0) {
                 console.warn("No records found for masterDataset");
                 masterRecords.push({ dataFound: false, dataset: "masterDataset" });
             }
         }
+
+        // Initialize empty arrays to hold the records returned from each dataset
+        let partiesRecords = [];
         if (primaryDatasets.partiesDataset) {
             partiesRecords = await PartiesRealPropApi.fetchFromAcris(partiesQueryParams);
             if (partiesRecords.length === 0) {
