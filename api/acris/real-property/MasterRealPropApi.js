@@ -45,7 +45,7 @@ class MasterRealPropApi {
     const conditions = [];
 
     // Add conditions for each parameter if provided
-    if (document_id) conditions.push(`document_id='${document_id}'`);
+    if (document_id) conditions.push(`upper(document_id)=upper('${document_id}')`);
     if (crfn) conditions.push(`crfn='${crfn}'`);
     if (recorded_borough) conditions.push(`recorded_borough='${recorded_borough}'`);
     if (doc_type) conditions.push(`doc_type='${doc_type}'`);

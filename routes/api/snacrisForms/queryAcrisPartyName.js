@@ -26,7 +26,7 @@ router.get("/fetchRecord", async function (req, res, next) {
         // Extract query parameters from the request
         const {
             //Master Dataset
-            //document_date,
+            //document_date, --> the three document_date fields below are used to target the `document_date` column name at the Real Property Master API endpoint.
             document_date_range,
             document_date_start,
             document_date_end,
