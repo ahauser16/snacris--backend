@@ -23,144 +23,136 @@ router.get("/fetchRecord", async function (req, res, next) {
     try {
         console.log("Received request with query parameters:", req.query);
 
-        // Extract query parameters from the request
-        const {
-            //Master Dataset
-            //document_date, --> the three document_date fields below are used to target the `document_date` column name at the Real Property Master API endpoint.
-            document_date_range,
-            document_date_start,
-            document_date_end,
-            recorded_borough,
-            doc_type,
-            //Parties Dataset
-            name,
-            party_type,
-            //Primary & Secondary Dataset 
-            masterDataset,
-            lotDataset,
-            partiesDataset,
-            referencesDataset,
-            remarksDataset
-        } = req.query;
+        // Extract searchTerms, primaryApiSources, and secondaryApiSources from the request query.
+        const { searchTerms, primaryApiSources, secondaryApiSources } = req.query;
 
-        // const datasets = {
-        //     masterDataset: masterDataset === "true",
-        //     partiesDataset: partiesDataset === "true",
-        //     lotDataset: lotDataset === "true",
-        //     referencesDataset: referencesDataset === "true",
-        //     remarksDataset: remarksDataset === "true",
-        // }
-
-        // Convert Primary & Secondary Dataset flags to booleans
+        // Extracting Primary Dataset Flags - `primaryDatasets` contains boolean values indicating the Master Dataset (masterDataset) and Parties Dataset (partiesDataset) should be queried if the boolean values from the Front End are `true`.
         const primaryDatasets = {
-            masterDataset: masterDataset === "true",
-            partiesDataset: partiesDataset === "true",
+            //see queryAcrisPartyName.MD for details on the dataset flags syntax
+            masterDataset: primaryApiSources?.masterDataset === "true",
+            partiesDataset: primaryApiSources?.partiesDataset === "true",
         };
-        // Convert Primary & Secondary Dataset flags to booleans
+
+        // Extracting Secondary Dataset Flags - `secondaryDatasets` that contains boolean values indicating whether the Lot Dataset (`lotDataset`), References Dataset (`referencesDataset`), and Remarks Dataset (`remarksDataset`) should be queried if the boolean values from the Front End are `true`.
         const secondaryDatasets = {
-            lotDataset: lotDataset === "true",
-            referencesDataset: referencesDataset === "true",
-            remarksDataset: remarksDataset === "true",
+            //see queryAcrisPartyName.MD for details on the dataset flags syntax
+            lotDataset: secondaryApiSources?.lotDataset === "true",
+            referencesDataset: secondaryApiSources?.referencesDataset === "true",
+            remarksDataset: secondaryApiSources?.remarksDataset === "true",
         };
 
-        // Validate and construct query parameters
-        //const queryParams = {};
+        // Validate and construct query parameters for Master and Parties datasets
         const masterQueryParams = {};
-        if (document_date_range) masterQueryParams.document_date_range = (document_date_range);
-        if (document_date_start) masterQueryParams.document_date_start = (document_date_start);
-        if (document_date_end) masterQueryParams.document_date_end = (document_date_end);
+        if (searchTerms?.document_date_range)
+            masterQueryParams.document_date_range = searchTerms.document_date_range;
+        if (searchTerms?.document_date_start)
+            masterQueryParams.document_date_start = searchTerms.document_date_start;
+        if (searchTerms?.document_date_end)
+            masterQueryParams.document_date_end = searchTerms.document_date_end;
+        if (searchTerms?.recorded_borough)
+            masterQueryParams.recorded_borough = searchTerms.recorded_borough;
 
-        if (recorded_borough) masterQueryParams.recorded_borough = recorded_borough;
-        if (doc_type) masterQueryParams.doc_type = transformForUrl(doc_type);
+        if (searchTerms?.doc_type)
+            masterQueryParams.doc_type = transformForUrl(searchTerms.doc_type);
+        //example of data coming in where the user wants to search for a document class:
+        //party_type: '1',
+        //doc_type: 'doc-type-default',
+        //doc_class: 'DEEDS AND OTHER CONVEYANCES'
+        //if this happens you need to query the database for all of the `doc_type` values associated with the `doc_class`
+
+        //example of data coming in where the user wants to search for a document type:
+        //party_type: '1',
+        //doc_type: 'DEED',
+        //doc_class: 'DEEDS AND OTHER CONVEYANCES'
 
         const partiesQueryParams = {};
-        if (name) partiesQueryParams.name = transformForUrl(name);
-        if (party_type) partiesQueryParams.party_type = (party_type);
+        if (searchTerms?.name)
+            partiesQueryParams.name = transformForUrl(searchTerms.name);
+        if (searchTerms?.party_type)
+            partiesQueryParams.party_type = searchTerms.party_type;
 
-        // Ensure at least one valid parameter associated with the Real Property Master dataset is provided
+        // Ensure at least one valid parameter for Master and Parties datasets
         if (Object.keys(masterQueryParams).length === 0) {
-            return res.status(400).json({ error: "At least one query parameter for the Master Dataset is required." });
+            return res.status(400).json({
+                error:
+                    "At least one query parameter for the Master Dataset is required.",
+            });
         }
-        // Ensure at least one valid parameter associated with the Real Property Parties dataset is provided
         if (Object.keys(partiesQueryParams).length === 0) {
-            return res.status(400).json({ error: "At least one query parameter for the Parties Dataset is required." });
+            return res.status(400).json({
+                error:
+                    "At least one query parameter for the Parties Dataset is required.",
+            });
         }
 
         // Ensure at least one dataset is selected
         if (!Object.values(primaryDatasets).some((value) => value)) {
-            return res.status(400).json({ error: "At least one dataset must be selected." });
+            return res
+                .status(400)
+                .json({ error: "At least one dataset must be selected." });
         }
 
-        // Initialize empty arrays to hold the records returned from each dataset
-        // let records = [];
+        // Initialize arrays to hold records
         let masterRecords = [];
+        let partyRecords = [];
+        let masterRecordsDocumentIds = [];
 
-        //Fetch data from the "Primary Datasets"
+        // Fetch data from the Master dataset and save it to `masterRecords` while initializing the `masterRecordsDocumentIds` array that contains extracted `document_id` values from the `masterRecords` array.
         if (primaryDatasets.masterDataset) {
-            console.log("masterQueryParams:", masterQueryParams);
-            masterRecords = await MasterRealPropApi.fetchFromAcris(masterQueryParams);
-            console.log("masterRecords after fetchFromAcris:", masterRecords);
-            if (masterRecords.length === 0) {
-                console.warn("No records found for masterDataset");
-                masterRecords.push({ dataFound: false, dataset: "masterDataset" });
+            try {
+                console.log(
+                    "Fetching Master Dataset with query params:",
+                    masterQueryParams
+                );
+                masterRecords = await MasterRealPropApi.fetchFromAcris(masterQueryParams);
+                console.log("Fetched Master Records:", masterRecords.length);
+
+                // Extract document_id values from masterRecords
+                masterRecordsDocumentIds = masterRecords.map(record => record.document_id);
+                console.log("Master Records Document IDs:", masterRecordsDocumentIds);
+
+            } catch (err) {
+                console.error("Error fetching Master Dataset:", err.message);
+                masterRecords.push({
+                    dataFound: false,
+                    dataset: "masterDataset",
+                    error: err.message,
+                });
             }
         }
 
-        // Initialize empty arrays to hold the records returned from each dataset
-        let partiesRecords = [];
+        // Fetch data from the Parties dataset
         if (primaryDatasets.partiesDataset) {
-            partiesRecords = await PartiesRealPropApi.fetchFromAcris(partiesQueryParams);
-            if (partiesRecords.length === 0) {
-                console.warn("No records found for partiesDataset");
-                partiesRecords.push({ dataFound: false, dataset: "partiesDataset" });
+            try {
+                console.log("Fetching Parties Dataset with query params:", partiesQueryParams);
+                partyRecords = await PartiesRealPropApi.fetchFromAcris(partiesQueryParams, masterRecordsDocumentIds);
+                console.log("Fetched Parties Records:", partyRecords.length);
+            } catch (err) {
+                console.error("Error fetching Parties Dataset:", err.message);
+                partyRecords.push({
+                    dataFound: false,
+                    dataset: "partiesDataset",
+                    error: err.message,
+                });
             }
         }
 
-        // `primaryRecords` should only include records from `masterRecords` and `partiesRecords` that contain the same `document_id` value.  If a record in `masterRecords` has a `document_id` that is not present in `partiesRecords`, it should be excluded from `primaryRecords`. Similarly, if a record in `partiesRecords` has a `document_id` that is not present in `masterRecords`, it should be excluded from `primaryRecords`.
-        let primaryRecords = [...masterRecords, ...partiesRecords];
+        // Combine Master and Parties records into primaryRecords
+        const primaryRecords = [...masterRecords, ...partyRecords];
 
-        //extract the `document_id` values from the `primaryRecords` results.  This will be used to filter the records from the secondary datasets.
-        // `primaryRecordDocumentIds` should be an array of unique `document_id` values from the `primaryRecords` results.
-        let primaryRecordDocumentIds = [];
+        // Extract unique document IDs from primaryRecords
+        const primaryRecordDocumentIds = [
+            ...new Set(primaryRecords.map((record) => record.document_id)),
+        ];
 
-        let lotRecords = [];
-        let referenceRecords = [];
-        let remarkRecords = [];
-        //Fetch data from the "Secondary Datasets"
-        if (secondaryDatasets.lotDataset) {
-            lotRecords = await LegalsRealPropApi.fetchFromAcris(masterQueryParams);
-            if (lotRecords.length === 0) {
-                console.warn("No records found for lotDataset");
-                lotRecords.push({ dataFound: false, dataset: "lotDataset" });
-            }
-        }
-        if (secondaryDatasets.referencesDataset) {
-            referenceRecords = await ReferencesRealPropApi.fetchFromAcris(masterQueryParams);
-            if (referenceRecords.length === 0) {
-                console.warn("No records found for referencesDataset");
-                referenceRecords.push({ dataFound: false, dataset: "referencesDataset" });
-            }
-        }
-        if (secondaryDatasets.remarksDataset) {
-            remarkRecords = await RemarksRealPropApi.fetchFromAcris(masterQueryParams);
-            if (remarkRecords.length === 0) {
-                console.warn("No records found for remarksDataset");
-                remarkRecords.push({ dataFound: false, dataset: "remarksDataset" });
-            }
-        }
+        // Log the results
+        console.log("Primary Records:", primaryRecords.length);
+        console.log("Primary Record Document IDs:", primaryRecordDocumentIds.length);
 
-        // `secondaryRecords` should only include records from `lotRecords`, `referenceRecords`, and `remarkRecords` that contain the same `document_id` values that were in the `primaryRecordDocumentIds` array.  
-        let secondaryRecords = [...lotRecords, ...referenceRecords, ...remarkRecords];
-
-        // records should only include records from `primaryRecords` and `secondaryRecords` that, through previous searching and filtering, contain the same `document_id` values.  The data should be combined in such a way that the final result contains all relevant information from both `primaryRecords` and `secondaryRecords` into a single record object that has a unique `document_id`.
-        let records = [...primaryRecords, ...secondaryRecords];
-
-
-        // Fetch data from the ACRIS API
-        console.log("Fetched master records:", masterRecords, "Fetched parties records:", partiesRecords);
-
-        return res.json({ records });
+        // Return the primary records as the response
+        return res.json({ primaryRecords });
     } catch (err) {
+        console.error("Error in queryAcrisPartyName route:", err.message);
         return next(err);
     }
 });

@@ -1,4 +1,4 @@
-# Dev Notes 4/8/25
+# `queryAcrisPartyName` route Dev Notes
 
 this is a series of notes about developing the `queryAcrisPartyName` route that receives data from the user on the front end application that allows the user to "Search By Name". This is an attempt to copy the behavior of the ACRIS website's Search By Party Name website located here: `https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName`.
 
@@ -8,15 +8,13 @@ Then I need to package or normalize the response from the Real Property ACRIS da
 
 ## [Table of Contents](#table-of-contents)
 
-- [Dev Notes 4/8/25](#dev-notes-4825)
+- [`queryAcrisPartyName` route Dev Notes](#queryacrispartyname-route-dev-notes)
   - [Table of Contents](#table-of-contents)
   - [Data Sent From Frontend](#data-sent-from-frontend)
   - [Data Received On Backend](#data-received-on-backend)
   - [How Do I want to "normalize" the data now that I received it?](#how-do-i-want-to-normalize-the-data-now-that-i-received-it)
-  - [To Dos](#to-dos)
+  - [Overall Plan](#overall-plan)
     - [Incoming Data Normalization](#incoming-data-normalization)
-    - [Full `queryAcrisPartyName` route flow (prompt syntax)](#full-queryacrispartyname-route-flow-prompt-syntax)
-    - [Full `queryAcrisPartyName` route flow (response to prompt #1)](#full-queryacrispartyname-route-flow-response-to-prompt-1)
     - [Revised Refactor Plan (prompt 2 / edited \& used as prompt 3)](#revised-refactor-plan-prompt-2--edited--used-as-prompt-3)
     - [Revised Refactor Plan (response 3)](#revised-refactor-plan-response-3)
       - [Strengths of Your Plan](#strengths-of-your-plan)
@@ -24,6 +22,10 @@ Then I need to package or normalize the response from the Real Property ACRIS da
       - [Steps to Accomplish the Refactor](#steps-to-accomplish-the-refactor)
   - [Front End Data received...now what (prompt 1)](#front-end-data-receivednow-what-prompt-1)
   - [Front End Data received...now what (response 1)](#front-end-data-receivednow-what-response-1)
+    - [Frontend and Backend testing notes](#frontend-and-backend-testing-notes)
+      - [Background](#background)
+      - [4/18/25 (Test A)](#41825-test-a)
+      - [4/18/25 (Test B)](#41825-test-b)
 
 ## Data Sent From Frontend
 
@@ -32,9 +34,9 @@ The data sent by the `SearchByPartyNameForm` looks like this in the browser's co
 ```json
 {
   "name": "empire",
-  "document_date_range": "last-7-days",
-  "document_date_start": "2025-04-01",
-  "document_date_end": "2025-04-08",
+  "document_date_range": "last-1-year",
+  "document_date_start": "2024-04-16",
+  "document_date_end": "2025-04-16",
   "recorded_borough": "3",
   "party_type": "1",
   "doc_type": "DEED",
@@ -44,11 +46,12 @@ The data sent by the `SearchByPartyNameForm` looks like this in the browser's co
 
 ```json
 {
-  "masterDataset": true,
-  "lotDataset": true,
-  "partiesDataset": true,
-  "referencesDataset": true,
-  "remarksDataset": true
+  "primaryApiSources": { "masterDataset": "true", "partiesDataset": "true" },
+  "secondaryApiSources": {
+    "lotDataset": "false",
+    "referencesDataset": "false",
+    "remarksDataset": "false"
+  }
 }
 ```
 
@@ -56,30 +59,36 @@ The data sent by the `SearchByPartyNameForm` looks like this in the browser's co
 
 ## Data Received On Backend
 
-The data received by the server looks like this:
+data received from frontend:
 
 ```bash
+Started on http://localhost:3001
+User authenticated: { username: 'april152025', isAdmin: false, iat: 1744758092 }
 Received request with query parameters: {
   searchTerms: {
-    name: 'empire',
-    document_date_range: 'last-7-days',
-    document_date_start: '2025-04-08',
-    document_date_end: '2025-04-15',
+    name: 'EMPIRE',
+    document_date_range: 'last-1-year',
+    document_date_start: '2024-04-16',
+    document_date_end: '2025-04-16',
     recorded_borough: '3',
     party_type: '1',
-    doc_type: 'DEED',
+    doc_type: 'doc-type-default',
     doc_class: 'DEEDS AND OTHER CONVEYANCES'
   },
   primaryApiSources: { masterDataset: 'true', partiesDataset: 'true' },
   secondaryApiSources: {
-    lotDataset: 'true',
-    referencesDataset: 'true',
-    remarksDataset: 'true'
+    lotDataset: 'false',
+    referencesDataset: 'false',
+    remarksDataset: 'false'
   }
 }
 ```
 
-The URL is being sent from the front end looks like this: `GET /queryAcrisPartyName/fetchRecord?searchTerms[name]=empire&searchTerms[document_date_range]=last-7-days&searchTerms[document_date_start]=2025-04-08&searchTerms[document_date_end]=2025-04-15&searchTerms[recorded_borough]=3&searchTerms[party_type]=1&searchTerms[doc_type]=DEED&searchTerms[doc_class]=DEEDS+AND+OTHER+CONVEYANCES&primaryApiSources[masterDataset]=true&primaryApiSources[partiesDataset]=true&secondaryApiSources[lotDataset]=true&secondaryApiSources[referencesDataset]=true&secondaryApiSources[remarksDataset]=true`
+backend route:
+
+```bash
+GET /queryAcrisPartyName/fetchRecord?searchTerms[name]=EMPIRE&searchTerms[document_date_range]=last-1-year&searchTerms[document_date_start]=2024-04-16&searchTerms[document_date_end]=2025-04-16&searchTerms[recorded_borough]=3&searchTerms[party_type]=1&searchTerms[doc_type]=doc-type-default&searchTerms[doc_class]=DEEDS+AND+OTHER+CONVEYANCES&primaryApiSources[masterDataset]=true&primaryApiSources[partiesDataset]=true&secondaryApiSources[lotDataset]=false&secondaryApiSources[referencesDataset]=false&secondaryApiSources[remarksDataset]=false 400 76 - 7.802 ms
+```
 
 [Back to TOC](#table-of-contents)
 
@@ -99,7 +108,7 @@ The URL is being sent from the front end looks like this: `GET /queryAcrisPartyN
 
 [Back to TOC](#table-of-contents)
 
-## To Dos
+## Overall Plan
 
 You need to figure out the process for (1) normalizing and sorting the incoming data, (2) making the _primary_ API calls, (3) making the _secondary_ API calls, (4) cross referencing the results from the _primary_ and _secondary_ API calls, (5) normalizing and sorting the response data and (6) sending it back to the front end.
 
@@ -134,21 +143,14 @@ The results of these two API GET requests contain records that can be cross-refe
 So referring to our Example Data above I need to refactor the code that validates and constructs the query parameters to achieve the following:
 
 - [x] Refactor the `datasets` object into two objects named `primaryDatasets` and `secondaryDatasets` which will be used in the `fetchDataset` function. The Primary Datasets will be retrieved, cross referenced using their `document_id` values and then the Secondary Datasets will be queried using those cross-referenced `document_id` values, the response will be normalized and sent back to the user.
-- [ ] I need to write a function that accepts the `document_date_range`, `document_date_start` and `document_date_end` as parameters and returns the appropriate values to query the `document_date` endpoint in the Query URL in the `MasterRealPropApi` component.
+- [x] I need to write a refactor my code so it accepts the `document_date_range`, `document_date_start` and `document_date_end` as parameters and returns the appropriate values to query the `document_date` endpoint in the Query URL in the `MasterRealPropApi` component.
   - Background: `document_date` is a field that most of the time will query the Master dataset as a range which is why the Example Data contains the keys: `document_date_range`, `document_date_start` and `document_date_end`. The `document_date_start` and `document_date_end` values are received with the syntax: '2025-04-06' and '2025-04-13' and represent the actual starting and ending date range values whereas the `document_date_range` represents the type of date range that was submitted by the form such as `"last-7-days"`, `"last-30-days"`, `"last-90-days"`, `"last-1-year"`, `"last-2-years"`, `"last-5-years"`, `"custom-date-range"` and `"to-current-date-default"`.
 - [x] Refactor the `queryParams` object by creating two new variables: `masterQueryParams` and `partiesQueryParams`.
-- [ ] Validate and construct the query parameters for each object.
-- [x] Refactor the `records` array by replacing it with five new arrays named `masterRecords`, `partiesRecords`, `lotRecords`, `referenceRecords` and `remarkRecords`.
-- [ ] Refactor `fetchDataset` to push results to either the `masterRecords`, `partiesRecords`, `lotRecords`, `referenceRecords` or `remarkRecords` arrays based on the value of the `masterDataset`, `lotDataset`, `partiesDataset`, `referencesDataset` and `remarksDataset` request object.
-- [ ] Refactor the `masterDataset`, `lotDataset`, `partiesDataset`, `referencesDataset` and `remarksDataset` request object to use the values "primary" and "secondary" instead of boolean values.
+- [x] Validate and construct the query parameters for each object.
+- [x] Refactor the `records` array by replacing it with five new arrays named `masterRecords`, `partyRecords`, `lotRecords`, `referenceRecords` and `remarkRecords`.
+- [x] Refactor `fetchDataset` to push results to either the `masterRecords`, `partyRecords`, `lotRecords`, `referenceRecords` or `remarkRecords` arrays based on the value of the `masterDataset`, `lotDataset`, `partiesDataset`, `referencesDataset` and `remarksDataset` request object.
 
 [Back to TOC](#table-of-contents)
-
-### Full `queryAcrisPartyName` route flow (prompt syntax)
-
-[INTENTIONALLY OMMITTED]
-
-### Full `queryAcrisPartyName` route flow (response to prompt #1)
 
 ### Revised Refactor Plan (prompt 2 / edited & used as prompt 3)
 
@@ -166,7 +168,7 @@ The `constructMasterUrl` and `constructPartiesUrl` should construct the `url` us
 
 Initially, I wanted to create a function called "createDocumentDateSocrataSyntax" in the `MasterRealPropApi` file that accepts `document_date_range`, `document_date_start` and `document_date_end` parameters and returns a string of text representing a SoQL syntax that queries a range using the start date value: `document_date_start` and the end date value: `document_date_end` for the column `document_date`, however, I think it would be more efficient to have a utility function called "alterSearch" that generates SoQL syntax depending on whether the query parameters specify (i) a range of values associated with `document_date` (derived from the values of `document_date_range`, `document_date_start` and `document_date_end`) and any other column name such as `document_id`, `recorded_borough`, `doc_type`, (ii) an exact value associated with a column name, (iii) a list of values associated with a column name, (iv) wildcard queries (e.g. `name like 'empire%'`) and (v) Null/Not Null Queries (e.g., `document_amt is not null`).
 
-The results of the `MasterRealPropApi` API call should be saved to `masterRecords` and the results of the `PartiesRealPropApi` API call should be saved to `partiesRecords`. Then I want to create a function called "combineMasterPartyRecords" which combines the `masterRecords` and `partiesRecords` records into a variable called `primaryRecords` and cross references those records so that `primaryRecords` only includes records from `masterRecords` and `partiesRecords` that contain the same `document_id` value. For example, if a record in `masterRecords` has a `document_id` that is not present in `partiesRecords`, it should be excluded from `primaryRecords`. Similarly, if a record in `partiesRecords` has a `document_id` that is not present in `masterRecords`, it should be excluded from `primaryRecords`. As part of the "combineMasterPartyRecords" function I want to populate a variable called `primaryRecordDocumentIds` which is an array of unique `document_id` values derived from the `primaryRecords` results. The `primaryRecordDocumentIds` values will be used by the `LegalsRealPropApi`, `ReferencesRealPropApi` and `RemarksRealPropApi` to make separate API GET requests for records that contain the `document_id` values from the `primaryRecordDocumentIds` array and the results of those requests will be pushed to the `lotRecords`, `referenceRecords` and `remarkRecords` arrays, respectively. In order to achieve this behavior a new function called "fetchSecondaryDataFromAcris" will need to be created in the `LegalsRealPropApi`, `ReferencesRealPropApi` and `RemarksRealPropApi` files that (1) will only accept an array of `document_id` values as its sole parameter, (2) constructs a query URL using SoQL syntax with the `$where` parameter containing the `document_id` values from the array and sends the `url` and request using axios in the same way that `fetchFromAcris` does. Alternatively it may be a good idea to create a separate utility function that constructs the `SoQL` URL based on the values in `primaryRecordDocumentIds` to be used by `LegalsRealPropApi`, `ReferencesRealPropApi` and `RemarksRealPropApi` when they make their API GET requests using the "fetchSecondaryDataFromAcris". Keep in mind if records are not received from the "fetchSecondaryDataFromAcris" function then an object should be created with a property called "search-status" with a value of "none found" such as the code snippet:
+The results of the `MasterRealPropApi` API call should be saved to `masterRecords` and the results of the `PartiesRealPropApi` API call should be saved to `partyRecords`. Then I want to create a function called "combineMasterPartyRecords" which combines the `masterRecords` and `partyRecords` records into a variable called `primaryRecords` and cross references those records so that `primaryRecords` only includes records from `masterRecords` and `partyRecords` that contain the same `document_id` value. For example, if a record in `masterRecords` has a `document_id` that is not present in `partyRecords`, it should be excluded from `primaryRecords`. Similarly, if a record in `partyRecords` has a `document_id` that is not present in `masterRecords`, it should be excluded from `primaryRecords`. As part of the "combineMasterPartyRecords" function I want to populate a variable called `primaryRecordDocumentIds` which is an array of unique `document_id` values derived from the `primaryRecords` results. The `primaryRecordDocumentIds` values will be used by the `LegalsRealPropApi`, `ReferencesRealPropApi` and `RemarksRealPropApi` to make separate API GET requests for records that contain the `document_id` values from the `primaryRecordDocumentIds` array and the results of those requests will be pushed to the `lotRecords`, `referenceRecords` and `remarkRecords` arrays, respectively. In order to achieve this behavior a new function called "fetchSecondaryDataFromAcris" will need to be created in the `LegalsRealPropApi`, `ReferencesRealPropApi` and `RemarksRealPropApi` files that (1) will only accept an array of `document_id` values as its sole parameter, (2) constructs a query URL using SoQL syntax with the `$where` parameter containing the `document_id` values from the array and sends the `url` and request using axios in the same way that `fetchFromAcris` does. Alternatively it may be a good idea to create a separate utility function that constructs the `SoQL` URL based on the values in `primaryRecordDocumentIds` to be used by `LegalsRealPropApi`, `ReferencesRealPropApi` and `RemarksRealPropApi` when they make their API GET requests using the "fetchSecondaryDataFromAcris". Keep in mind if records are not received from the "fetchSecondaryDataFromAcris" function then an object should be created with a property called "search-status" with a value of "none found" such as the code snippet:
 
 ```js
 if (response.data.length === 0) {
@@ -324,7 +326,7 @@ router.get("/fetchRecord", async function (req, res, next) {
     // Initialize empty arrays to hold the records returned from each dataset
     // let records = [];
     let masterRecords = [];
-    let partiesRecords = [];
+    let partyRecords = [];
 
     //Fetch data from the "Primary Datasets"
     if (primaryDatasets.masterDataset) {
@@ -335,16 +337,16 @@ router.get("/fetchRecord", async function (req, res, next) {
       }
     }
     if (primaryDatasets.partiesDataset) {
-      partiesRecords = await PartiesRealPropApi.fetchFromAcris(
+      partyRecords = await PartiesRealPropApi.fetchFromAcris(
         partiesQueryParams
       );
-      if (partiesRecords.length === 0) {
+      if (partyRecords.length === 0) {
         console.warn("No records found for partiesDataset");
-        partiesRecords.push({ dataFound: false, dataset: "partiesDataset" });
+        partyRecords.push({ dataFound: false, dataset: "partiesDataset" });
       }
     }
 
-    let primaryRecords = [...masterRecords, ...partiesRecords];
+    let primaryRecords = [...masterRecords, ...partyRecords];
 
     let primaryRecordDocumentIds = [];
 
@@ -393,7 +395,7 @@ router.get("/fetchRecord", async function (req, res, next) {
       "Fetched master records:",
       masterRecords,
       "Fetched parties records:",
-      partiesRecords
+      partyRecords
     );
 
     return res.json({ records });
@@ -729,7 +731,7 @@ GET /queryAcrisPartyName/fetchRecord?searchTerms[name]=EMPIRE&searchTerms[docume
 
    - [ ] Use `constructMasterUrl` and `constructPartiesUrl` to construct URLs for primary datasets.
    - [ ] Use `fetchSecondaryDataFromAcris` to fetch data for secondary datasets.
-   - [ ] Cross-reference `masterRecords` and `partiesRecords` to create `primaryRecords`.
+   - [ ] Cross-reference `masterRecords` and `partyRecords` to create `primaryRecords`.
    - [ ] Use `primaryRecordDocumentIds` to fetch data for secondary datasets.
    - [ ] Combine `primaryRecords` and `secondaryRecords` into records.
 
@@ -753,7 +755,7 @@ GET /queryAcrisPartyName/fetchRecord?searchTerms[name]=EMPIRE&searchTerms[docume
 @workspace I submitted my `PartyNameSearchForm` form-component from my front end application and it was received by my `queryAcrisPartyName` route with the data formatted and full route syntax below. Now I need to refactor my `queryAcrisPartyName` route's code below to interpret this data from the front end (the "User Request"), configure certain variables as explained more below and then make API calls using the `MasterRealPropApi`, `LegalsRealPropApi`, `PartiesRealPropApi`, `RemarksRealPropApi` or `ReferencesRealPropApi` components. based on those configurations. I need your help with refactoring my code below to achieve the aforementioned behavior and details below.
 
 Background on configuration required: the values of my `primaryDatasets` values (`masterDataset` and
-`partiesDataset`) and `secondaryDatasets` (`lotDataset`, `referencesDataset`, `remarksDataset`) variables. These values will be used to instruct my `queryAcrisPartyName` route to make API calls, or to not make API calls, using the `MasterRealPropApi`, `LegalsRealPropApi`, `PartiesRealPropApi`, `RemarksRealPropApi` or `ReferencesRealPropApi` components. For example, referring to the User Request data below, `primaryApiSources: { masterDataset: 'true', partiesDataset: 'true' }` will instruct my `queryAcrisPartyName` route to send an API request using `MasterRealPropApi` and `PartiesRealPropApi`. Furthermore, `secondaryApiSources: { lotDataset: 'false', referencesDataset: 'false', remarksDataset: 'false' }` will instruct my `queryAcrisPartyName` route to NOT send an API request using`LegalsRealPropApi`, `RemarksRealPropApi` or `ReferencesRealPropApi`. The `searchTerms` object's key/value pairs will be used to construct the query URL for the `primaryApiSources` whose values are `true` which in this case is the `MasterRealPropApi` and `PartiesRealPropApi` because `primaryApiSources: { masterDataset: 'true', partiesDataset: 'true' }`. I want the `masterQueryParams` to be populated with query parameters: `document_date_range`, `document_date_start`, `document_date_end`, `recorded_borough` and `doc_type`. I want the `partiesQueryParams` to be populated with `name` and `party_type`. I also want to keep the validation logic below for these parameters and the conditional logic that ensures at least one valid parameter associated with the Real Property Master dataset, at least one valid parameter associated with the Real Property Parties dataset is provided and that at least one dataset is selected. Then I want to initialize the `masterRecords` array and make the API call with `MasterRealPropApi.fetchFromAcris` using the `masterQueryParams` query parameters and handle the response or any errors from the API call. Then I want to initialize the `partiesRecords` array and make the API call with `PartiesRealPropApi.fetchFromAcris` using the `partiesQueryParams` query parameters. There is more to the behavior that I want to implement in the `queryAcrisPartyName` backend route but I need your help achieving the aforementioned behavior with the code below.
+`partiesDataset`) and `secondaryDatasets` (`lotDataset`, `referencesDataset`, `remarksDataset`) variables. These values will be used to instruct my `queryAcrisPartyName` route to make API calls, or to not make API calls, using the `MasterRealPropApi`, `LegalsRealPropApi`, `PartiesRealPropApi`, `RemarksRealPropApi` or `ReferencesRealPropApi` components. For example, referring to the User Request data below, `primaryApiSources: { masterDataset: 'true', partiesDataset: 'true' }` will instruct my `queryAcrisPartyName` route to send an API request using `MasterRealPropApi` and `PartiesRealPropApi`. Furthermore, `secondaryApiSources: { lotDataset: 'false', referencesDataset: 'false', remarksDataset: 'false' }` will instruct my `queryAcrisPartyName` route to NOT send an API request using`LegalsRealPropApi`, `RemarksRealPropApi` or `ReferencesRealPropApi`. The `searchTerms` object's key/value pairs will be used to construct the query URL for the `primaryApiSources` whose values are `true` which in this case is the `MasterRealPropApi` and `PartiesRealPropApi` because `primaryApiSources: { masterDataset: 'true', partiesDataset: 'true' }`. I want the `masterQueryParams` to be populated with query parameters: `document_date_range`, `document_date_start`, `document_date_end`, `recorded_borough` and `doc_type`. I want the `partiesQueryParams` to be populated with `name` and `party_type`. I also want to keep the validation logic below for these parameters and the conditional logic that ensures at least one valid parameter associated with the Real Property Master dataset, at least one valid parameter associated with the Real Property Parties dataset is provided and that at least one dataset is selected. Then I want to initialize the `masterRecords` array and make the API call with `MasterRealPropApi.fetchFromAcris` using the `masterQueryParams` query parameters and handle the response or any errors from the API call. Then I want to initialize the `partyRecords` array and make the API call with `PartiesRealPropApi.fetchFromAcris` using the `partiesQueryParams` query parameters. There is more to the behavior that I want to implement in the `queryAcrisPartyName` backend route but I need your help achieving the aforementioned behavior with the code below.
 
 data received from frontend:
 
@@ -871,21 +873,17 @@ router.get("/fetchRecord", async function (req, res, next) {
 
     // Ensure at least one valid parameter associated with the Real Property Master dataset is provided
     if (Object.keys(masterQueryParams).length === 0) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "At least one query parameter for the Master Dataset is required.",
-        });
+      return res.status(400).json({
+        error:
+          "At least one query parameter for the Master Dataset is required.",
+      });
     }
     // Ensure at least one valid parameter associated with the Real Property Parties dataset is provided
     if (Object.keys(partiesQueryParams).length === 0) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "At least one query parameter for the Parties Dataset is required.",
-        });
+      return res.status(400).json({
+        error:
+          "At least one query parameter for the Parties Dataset is required.",
+      });
     }
 
     // Ensure at least one dataset is selected
@@ -911,19 +909,19 @@ router.get("/fetchRecord", async function (req, res, next) {
     }
 
     // Initialize empty arrays to hold the records returned from each dataset
-    let partiesRecords = [];
+    let partyRecords = [];
     if (primaryDatasets.partiesDataset) {
-      partiesRecords = await PartiesRealPropApi.fetchFromAcris(
+      partyRecords = await PartiesRealPropApi.fetchFromAcris(
         partiesQueryParams
       );
-      if (partiesRecords.length === 0) {
+      if (partyRecords.length === 0) {
         console.warn("No records found for partiesDataset");
-        partiesRecords.push({ dataFound: false, dataset: "partiesDataset" });
+        partyRecords.push({ dataFound: false, dataset: "partiesDataset" });
       }
     }
 
-    // `primaryRecords` should only include records from `masterRecords` and `partiesRecords` that contain the same `document_id` value.  If a record in `masterRecords` has a `document_id` that is not present in `partiesRecords`, it should be excluded from `primaryRecords`. Similarly, if a record in `partiesRecords` has a `document_id` that is not present in `masterRecords`, it should be excluded from `primaryRecords`.
-    let primaryRecords = [...masterRecords, ...partiesRecords];
+    // `primaryRecords` should only include records from `masterRecords` and `partyRecords` that contain the same `document_id` value.  If a record in `masterRecords` has a `document_id` that is not present in `partyRecords`, it should be excluded from `primaryRecords`. Similarly, if a record in `partyRecords` has a `document_id` that is not present in `masterRecords`, it should be excluded from `primaryRecords`.
+    let primaryRecords = [...masterRecords, ...partyRecords];
 
     //extract the `document_id` values from the `primaryRecords` results.  This will be used to filter the records from the secondary datasets.
     // `primaryRecordDocumentIds` should be an array of unique `document_id` values from the `primaryRecords` results.
@@ -977,7 +975,7 @@ router.get("/fetchRecord", async function (req, res, next) {
       "Fetched master records:",
       masterRecords,
       "Fetched parties records:",
-      partiesRecords
+      partyRecords
     );
 
     return res.json({ records });
@@ -1217,6 +1215,8 @@ class PartiesRealPropApi {
 module.exports = PartiesRealPropApi;
 ```
 
+[Back to TOC](#table-of-contents)
+
 ## Front End Data received...now what (response 1)
 
 **Here is a potential refactor plan:**
@@ -1226,23 +1226,27 @@ module.exports = PartiesRealPropApi;
    - Extracted `searchTerms`, `primaryApiSources`, and `secondaryApiSources` from the request query.
    - Used optional chaining (`?.`) to safely access nested properties.
    - Extracting Primary Dataset Flags and Extracting Secondary Dataset Flags
-     - (A) Dataset Selection: The `primaryDatasets` and `secondaryDatasets` objects are used to decide which datasets to query.  For example, if `primaryDatasets.masterDataset` is true, the code will query the Master Dataset using the `MasterRealPropApi` component.  If `secondaryDatasets.lotDataset` is true, the code will query the Lot Dataset using the LegalsRealPropApi component.
+     - (A) Dataset Selection: The `primaryDatasets` and `secondaryDatasets` objects are used to decide which datasets to query. For example, if `primaryDatasets.masterDataset` is true, the code will query the Master Dataset using the `MasterRealPropApi` component. If `secondaryDatasets.lotDataset` is true, the code will query the Lot Dataset using the LegalsRealPropApi component.
      - (B) Conditional API Calls: Later in the code, these flags are checked to conditionally make API calls. For example:
+
 ```js
 if (primaryDatasets.masterDataset) {
-    masterRecords = await MasterRealPropApi.fetchFromAcris(masterQueryParams);
+  masterRecords = await MasterRealPropApi.fetchFromAcris(masterQueryParams);
 }
 if (secondaryDatasets.lotDataset) {
-    lotRecords = await LegalsRealPropApi.fetchFromAcris(masterQueryParams);
-}
-```
-     - (C) Error Handling: The code ensures that at least one dataset is selected by checking the values of `primaryDatasets` and `secondaryDatasets`. If none are selected, it returns an error:
-```js
-if (!Object.values(primaryDatasets).some((value) => value)) {
-    return res.status(400).json({ error: "At least one dataset must be selected." });
+  lotRecords = await LegalsRealPropApi.fetchFromAcris(masterQueryParams);
 }
 ```
 
+     - (C) Error Handling: The code ensures that at least one dataset is selected by checking the values of `primaryDatasets` and `secondaryDatasets`. If none are selected, it returns an error:
+
+```js
+if (!Object.values(primaryDatasets).some((value) => value)) {
+  return res
+    .status(400)
+    .json({ error: "At least one dataset must be selected." });
+}
+```
 
 1. Validate Query Parameters:
 
@@ -1256,7 +1260,7 @@ if (!Object.values(primaryDatasets).some((value) => value)) {
 
 4. Combine Records:
 
-- Combined `masterRecords` and `partiesRecords` into a single `primaryRecords` array.
+- Combined `masterRecords` and `partyRecords` into a single `primaryRecords` array.
 - Extracted unique `document_id` values from `primaryRecords` for further processing.
 
 5. Return Response:
@@ -1326,20 +1330,16 @@ router.get("/fetchRecord", async function (req, res, next) {
 
     // Ensure at least one valid parameter for Master and Parties datasets
     if (Object.keys(masterQueryParams).length === 0) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "At least one query parameter for the Master Dataset is required.",
-        });
+      return res.status(400).json({
+        error:
+          "At least one query parameter for the Master Dataset is required.",
+      });
     }
     if (Object.keys(partiesQueryParams).length === 0) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "At least one query parameter for the Parties Dataset is required.",
-        });
+      return res.status(400).json({
+        error:
+          "At least one query parameter for the Parties Dataset is required.",
+      });
     }
 
     // Ensure at least one dataset is selected
@@ -1351,7 +1351,7 @@ router.get("/fetchRecord", async function (req, res, next) {
 
     // Initialize arrays to hold records
     let masterRecords = [];
-    let partiesRecords = [];
+    let partyRecords = [];
 
     // Fetch data from the Master dataset
     if (primaryDatasets.masterDataset) {
@@ -1381,13 +1381,13 @@ router.get("/fetchRecord", async function (req, res, next) {
           "Fetching Parties Dataset with query params:",
           partiesQueryParams
         );
-        partiesRecords = await PartiesRealPropApi.fetchFromAcris(
+        partyRecords = await PartiesRealPropApi.fetchFromAcris(
           partiesQueryParams
         );
-        console.log("Fetched Parties Records:", partiesRecords);
+        console.log("Fetched Parties Records:", partyRecords);
       } catch (err) {
         console.error("Error fetching Parties Dataset:", err.message);
-        partiesRecords.push({
+        partyRecords.push({
           dataFound: false,
           dataset: "partiesDataset",
           error: err.message,
@@ -1396,7 +1396,7 @@ router.get("/fetchRecord", async function (req, res, next) {
     }
 
     // Combine Master and Parties records into primaryRecords
-    const primaryRecords = [...masterRecords, ...partiesRecords];
+    const primaryRecords = [...masterRecords, ...partyRecords];
 
     // Extract unique document IDs from primaryRecords
     const primaryRecordDocumentIds = [
@@ -1422,11 +1422,11 @@ module.exports = router;
 
 1. Restart the Backend Server:
 
-- Restart your backend server to apply the changes.
+- [x] Restart your backend server to apply the changes.
 
 2. Test the Route in Postman:
 
-- Use the following URL to test the route:
+- [x] Use the following URL to test the route:
 
 ```js
 http://localhost:3001/queryAcrisPartyName/fetchRecord?searchTerms[name]=EMPIRE&searchTerms[document_date_range]=last-1-year&searchTerms[document_date_start]=2024-04-16&searchTerms[document_date_end]=2025-04-16&searchTerms[recorded_borough]=3&searchTerms[party_type]=1&searchTerms[doc_type]=doc-type-default&primaryApiSources[masterDataset]=true&primaryApiSources[partiesDataset]=true&secondaryApiSources[lotDataset]=false&secondaryApiSources[referencesDataset]=false&secondaryApiSources[remarksDataset]=false
@@ -1437,6 +1437,513 @@ http://localhost:3001/queryAcrisPartyName/fetchRecord?searchTerms[name]=EMPIRE&s
 If the API calls succeed, you should receive a JSON response with the primaryRecords array.
 If any API call fails, the response will include an error object in the corresponding dataset's records.
 
-**Next Steps**
+[Back to TOC](#table-of-contents)
 
-- Once this refactor is complete and tested, you can proceed to implement the logic for fetching secondary datasets (`lotDataset`, `referencesDataset`, `remarksDataset`) and cross-referencing records based on `document_id`.
+### Frontend and Backend testing notes 
+
+#### Background
+
+The following test is for my Front End route called "partyNameSearch" and my Back End route called `queryAcrisPartyName` which is an attempt to copy a search feature for the NYC Department of Finance's website called "ACRIS" which stands for Automated City Record Indexing System.  The homepage for the DOF that launches ACRIS is located here: [https://www.nyc.gov/site/finance/property/acris.page#](https://www.nyc.gov/site/finance/property/acris.page#) and the **Search By Party Name** feature I'm attempting to copy is located here: [https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName](https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName).  
+
+ACRIS contains public land record data for all of New York City such as deeds, mortgages, leases and any other document that is directly associated with real property.  One of the search feature's of ACRIS is to search for records that are associated with a property owner's `name` with the option to cross-reference `name` with: (i) a date range for `document_date` (e.g. within 7 days from the current date, within 30 days from the current date, custom range, etc.), (ii) a `document_class` representing four categories each of which contains a list of unique `document_type` (e.g. "DEEDS & OTHER CONVEYANCES", "MORTGAGES & INSTRUMENTS", "UCC & FEDERAL LIENS" & "OTHER DOCUMENTS"), (iii) a `party_type` representing the role of that party that is mapped to each `document_type` and (iv) a `recorded_borough` representing one of the five NYC Boroughs/NYS Counties where the document was recorded.  
+
+The ACRIS data is available hosted by [NYC Open Data](https://opendata.cityofnewyork.us/) comprised of 15 API endpoints that are grouped in three major categories (5 endpoints per category): Real Property, Personal Property and Code Maps.  The Real Property and Personal Property categories each represent a full dataset that follow the same schema where each of their 5 datasets are referred to as: (i) Master, (ii) Party, (iii) Lot, (iv) Remarks and (v) References and can be cross referenced with each other using the unique identifying value: `document_id`.  For example, a specific deed will have its own `document_id` and if you wanted all the information associated with that deed using the NYC Open Data APIs then you would need to send a GET request to the Real Property-Master, Real Property-Party, Real Property-Lot, Real Property-Remarks and Real Property-References API endpoints.  The Code Maps category's five datasets represent codes and data structures that are used to query the Real Property and Personal Property datasets such as arrays of countries and states of the U.S. and arrays of document classes, document types and party types.  I've included the link to each API's NYC Open Data webpage below as a reference.
+
+Real Property:
+- [Master](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj)
+- [Party](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Legals/8h5j-fqxa)
+- [Lot](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Parties/636b-3b5g)
+- [References](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-References/pwkr-dpni)
+- [Remarks](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Remarks/9p4w-7npp)
+
+Personal Property:
+- [Master](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Master/sv7x-dduq)
+- [Party](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2)
+- [Lot](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Parties/nbbg-wtuz)
+- [References](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-References/6y3e-jcrc)
+- [Remarks](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Remarks/fuzi-5ks9)
+  
+Code Maps:
+- [Document Control Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Document-Control-Codes/7isb-wh4c/about_data)
+- [UCC Collateral Codes](https://data.cityofnewyork.us/City-Government/ACRIS-UCC-Collateral-Codes/q9kp-jvxv/about_data)
+- [Property Types Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Property-Types-Codes/94g4-w6xz/about_data)
+- [State Codes](https://data.cityofnewyork.us/City-Government/ACRIS-State-Codes/5c9e-33xj/about_data)
+- [Country Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Country-Codes/j2iz-mwzu/about_data)
+
+In order to copy the ACRIS **Search By Party Name** feature I have a Front End webpage (e.g. http://localhost:3000/partyNameSearch) sending search terms associated with the Real Property Master and Real Property Parties datasets to my Backend route (e.g. http://localhost:3001/queryAcrisPartyName/fetchRecord?searchTerms[...]=...).  
+
+- [x] I make an API GET request to the [Real Property Master API](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj) with the `masterQueryParams`: `recorded_borough`, `doc_type`, `document_date_start` and `document_date_end` (two date type values representing a range search query of the `document_type` column).
+- [x] I save the resulting records to the `masterRecords` array while creating the array-type variable `masterRecordsDocumentIds` containing the `document_id` value of each record in `masterRecords`.  
+
+**For example, I searched on the ACRIS website using the search criteria:**
+- `name`: "EMPIRE"
+- `document_date`: "last-1-year"
+- `party_type`: "1"
+- `recorded_borough`: "3" (Brooklyn)
+- `document_class`: DEEDS AND OTHER CONVEYANCES
+  - NB: to simulate the search on my end I must search for the `doc_type` values: "DEED", "MEMORANDUM OF LEASE" and "CONDO DECLARATION"
+
+
+**and got the 9 records with the Document Ids:**
+```bash
+Master Records Document IDs (with names and document dates for context): [
+  '2024051000620001', //(EMPIRE ADAR LLC, 5/2/2024)
+  '2024042600136001', //(EMPIRE HOLDINGS I LLC, 4/18/2024)
+  '2025040900070001', //(EMPIRE HOLDINGS II, LLC, 4/3/2025)<--this record will not show up in my search because the datasets are not updated for the month of April 2025 (see Test Summary below).
+  '2024112600954001', //(EMPIRE REALTY HOLDINGS LLC, 11/19/2024)
+  '2025021800719001', //(EMPIRE STATE DAIRY LLC, 1/30/2025)
+  '2024092300336001', //(EMPIRE STATE DAIRYY LLC, 6/7/2023 <--note these three rows below refer to the same `document_id` ...)
+  '2024092300336001', //(...but as it turns out they have different `lot` data (e.g. lot = 1001, 1002, 1003)...)
+  '2024092300336001', //(...so you will only see one record listed in my replicated-search)
+  '2025040900509001', //(EMPIRE STATE GRAND COUNCIL ANCIENT AND ACCEPTED SC, 4/3/2025) <--this record will not show up in my search because the datasets are not updated for the month of April 2025 (see Test Summary below).
+
+]
+```
+
+**I replicated the search above using my Backend server and Postman using the query:** `https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=name LIKE '%25EMPIRE%25' AND party_type='1' AND document_id IN ('2024051000620001',  '2024042600136001',  '2025040900070001',  '2024112600954001',  '2025021800719001',  '2024092300336001',  '2024092300336001',  '2024092300336001',  '2025040900509001')`
+
+**And got the 5 results:**
+- note that `2024092300336001` shows up once below but three times when I used ACRIS because it was recorded against three different properties which you would only know if you cross referenced the `lot` dataset
+- note that `2025040900070001` and `2025040900509001` did not show up in my replicated-search due to the datasets not being updated for the month of April 2025 (my search date is 4/19/25)
+- this means my replicated-test was "successful" even though it did not match my experience on ACRIS.  It was even more helpful because it exposed how the datasets are not updated frequently backend and how a document with a unique `document_id` is displayed multiple times depending on how many properties it was recorded.
+```json
+[
+    {
+        "document_id": "2025021800719001",
+        "record_type": "P",
+        "party_type": "1",
+        "name": "EMPIRE STATE DAIRY LLC",
+        "address_1": "C/O: BUSHBURG PROPERTIES",
+        "address_2": "3611 14TH AVENUE, SUITE 215",
+        "country": "US",
+        "city": "BROOKLYN",
+        "state": "NY",
+        "zip": "11218",
+        "good_through_date": "2025-02-28T00:00:00.000"
+    },
+    {
+        "document_id": "2024112600954001",
+        "record_type": "P",
+        "party_type": "1",
+        "name": "EMPIRE REALTY HOLDINGS LLC",
+        "address_1": "4003 HAHN AVE",
+        "country": "US",
+        "city": "BETHPAGE",
+        "state": "NY",
+        "zip": "11714",
+        "good_through_date": "2024-12-31T00:00:00.000"
+    },
+    {
+        "document_id": "2024092300336001",
+        "record_type": "P",
+        "party_type": "1",
+        "name": "EMPIRE STATE DAIRYY LLC",
+        "address_1": "3611 14TH AVENUE",
+        "address_2": "SUITE 215",
+        "country": "US",
+        "city": "BROOKLYN",
+        "state": "NY",
+        "zip": "11218",
+        "good_through_date": "2024-09-30T00:00:00.000"
+    },
+    {
+        "document_id": "2024051000620001",
+        "record_type": "P",
+        "party_type": "1",
+        "name": "EMPIRE ADAR LLC",
+        "address_1": "C/O: ELI FIXLER, ESQ",
+        "address_2": "1507 AVENUE M",
+        "country": "US",
+        "city": "BROOKLYN",
+        "state": "NY",
+        "zip": "11230",
+        "good_through_date": "2024-05-31T00:00:00.000"
+    },
+    {
+        "document_id": "2024042600136001",
+        "record_type": "P",
+        "party_type": "1",
+        "name": "EMPIRE HOLDINGS I LLC",
+        "address_1": "183 WILSON ST, SUITE 133",
+        "country": "US",
+        "city": "BROOKLYN",
+        "state": "NY",
+        "zip": "11211",
+        "good_through_date": "2024-04-30T00:00:00.000"
+    }
+]
+```
+
+**Test Summary**
+I had to create this new test due to rethinking how I want to cross reference the results of the two API calls to RP Master and RP Party datasets and given how those datasets are kept up to date, or rather, how they are **NOT** kept up to date.  The former issue is when I make an API call to the RP Party dataset with minimal query data such as `name` and `party_type` I receive thousands of records so I need to first make the call to RP Master, extract their `document_id` values from each record and include them in the subsequent call to RP Party API.  However, the Real Property datasets are not kept up to date on a daily basis.  I find that, as of today 4/19/25, there are no records for the month of April (from 4/1/25 to 4/19/25) so I needed to run a new test that would provide enough data and not an empty dataset when I query records from the "last-7-days".
+
+
+- [ ] Then I use `masterRecordsDocumentIds` and the `partiesQueryParams` values from `name` and `party_type` to make a subsequent API GET request to the [Real Property Party API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) using `PartiesRealPropApi.fetchFromAcris` and save the resulting records to `partyRecords`.
+  - **PROMPT ON HOW TO PROCEED**.  This poses a design decision that I'm not sure which is the best route to take.  I need your help on how to best approach refactoring my code.  Currently my `PartiesRealPropApi.fetchFromAcris` method only accepts `partiesQueryParams` as its parameter and calls the `constructPartiesUrl` function to construct the query URL that is used to make the API call.  However, in addition to `partiesQueryParams`, now I want to pass `masterRecordsDocumentIds` to `PartiesRealPropApi.fetchFromAcris` to achieve the following search behavior.  I want the query URL to be constructed in such a way so the API GET request queries the dataset for records that contain the key/value pairs contained in `partiesQueryParams` (such as `name` AND `party_type`) that also have any of the `document_id` values from `masterRecordsDocumentIds`. Since `masterRecordsDocumentIds` is an additional paraqmeter to `PartiesRealPropApi.fetchFromAcris`, I think I will need to create a new method to construct the query URL instead of `constructPartiesUrl`, which only accounts for the `partiesQueryParams`, when both `masterRecordsDocumentIds` and `partiesQueryParams` are passed to `PartiesRealPropApi.fetchFromAcris`.  The new method should be named `constructPartiesUrlCrossRefMaster` that is called by `fetchFromAcris`, however, I don't know if this is a good refactor plan.  I want you to review my aforementioned refactor plan based on the query url behavior and provide advise on how to proceed.
+  - **AI RESPONSE ON HOW TO PROCEED**.  *Your plan to create a new method constructPartiesUrlCrossRefMaster to handle the additional masterRecordsDocumentIds parameter is a good approach. It allows you to keep the existing constructPartiesUrl method focused on simpler queries while introducing a new method for more complex cross-referenced queries. This separation of concerns makes the code easier to maintain and extend.*
+    - Here’s a detailed review and advice on how to proceed:
+      1. Create `constructPartiesUrlCrossRefMaster`:
+         - This method will construct a query URL that includes both `partiesQueryParams` and `masterRecordsDocumentIds`.
+         - It will use Socrata Query Language (SoQL) syntax to combine conditions with `AND` and `OR`.
+      2. Update `fetchFromAcris`:
+         - Modify `fetchFromAcris` to accept an optional `masterRecordsDocumentIds` parameter.
+         - If `masterRecordsDocumentIds` is provided, call `constructPartiesUrlCrossRefMaster` instead of `constructPartiesUrl`.
+      3. Construct the Query URL:
+         - Use the `$where` parameter to combine conditions from `partiesQueryParams` and `masterRecordsDocumentIds`.
+         - Use the `in` operator to match `document_id` values from `masterRecordsDocumentIds`.
+      4. Example Constructed URL (given):
+         - `masterRecordsDocumentIds`: `[ '2025031900711001', '2025031901074001', '2025032600533001', '2025032400772001', '2025032400882001' ]`
+         - `partiesQueryParams`: `{ name: 'EMPIRE', party_type: '1' }`
+      5. The constructed URL would look like this:
+         - `https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=name LIKE '%25EMPIRE%25' AND party_type='1' AND document_id IN ('2025031900711001', '2025031901074001', '2025032600533001', '2025032400772001', '2025032400882001')`
+
+**Refactored Code**
+
+1. Add `constructPartiesUrlCrossRefMaster`
+
+```js
+static constructPartiesUrlCrossRefMaster(partiesQueryParams, masterRecordsDocumentIds) {
+    const conditions = [];
+
+    // Add conditions from partiesQueryParams
+    if (partiesQueryParams.name) {
+        conditions.push(`name LIKE '%${encodeURIComponent(partiesQueryParams.name)}%'`);
+    }
+    if (partiesQueryParams.party_type) {
+        conditions.push(`party_type='${partiesQueryParams.party_type}'`);
+    }
+
+    // Add condition for masterRecordsDocumentIds
+    if (masterRecordsDocumentIds && masterRecordsDocumentIds.length > 0) {
+        const documentIdsCondition = `document_id IN (${masterRecordsDocumentIds.map(id => `'${id}'`).join(", ")})`;
+        conditions.push(documentIdsCondition);
+    }
+
+    // Construct the $where clause
+    const whereClause = conditions.length > 0 ? `$where=${encodeURIComponent(conditions.join(" AND "))}` : "";
+
+    // Construct the full URL
+    const url = `${API_ENDPOINTS.realPropertyParties}?${whereClause}`;
+    return url;
+}
+```
+
+2. Update `fetchFromAcris`
+
+```js
+static async fetchFromAcris(partiesQueryParams, masterRecordsDocumentIds = null) {
+    try {
+        let url;
+
+        // Use the appropriate URL construction method
+        if (masterRecordsDocumentIds) {
+            url = this.constructPartiesUrlCrossRefMaster(partiesQueryParams, masterRecordsDocumentIds);
+        } else {
+            url = this.constructPartiesUrl(partiesQueryParams);
+        }
+
+        console.log("Constructed URL:", url);
+
+        // Make the GET request to the NYC Open Data API
+        const response = await axios.get(url, {
+            headers: {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
+            },
+        });
+
+        // Handle case where no records are found
+        if (response.data.length === 0) {
+            throw new NotFoundError(`No records found for query: ${JSON.stringify(partiesQueryParams)}`);
+        }
+
+        return response.data;
+    } catch (err) {
+        console.error("Error fetching data from ACRIS API:", err.message);
+        throw new Error("Failed to fetch data from ACRIS API");
+    }
+}
+```
+
+3. Update the Route
+
+In your `queryAcrisPartyName` route, pass both `partiesQueryParams` and `masterRecordsDocumentIds` to `fetchFromAcris`:
+```js
+// Fetch data from the Parties dataset
+if (primaryDatasets.partiesDataset) {
+    try {
+        console.log("Fetching Parties Dataset with query params:", partiesQueryParams);
+        partyRecords = await PartiesRealPropApi.fetchFromAcris(partiesQueryParams, masterRecordsDocumentIds);
+        console.log("Fetched Parties Records:", partyRecords.length);
+    } catch (err) {
+        console.error("Error fetching Parties Dataset:", err.message);
+        partyRecords.push({
+            dataFound: false,
+            dataset: "partiesDataset",
+            error: err.message,
+        });
+    }
+}
+```
+
+
+- [ ] This request will return any records that have a matching `document_id` from the array of `masterRecordsDocumentIds` AND a matching search term for both `name` AND `party_type` which will be saved to the `partyRecords` array and the `document_id` values from those results will be saved to `partyRecordsDocumentIdsCrossRef`.  
+   - This is necessary because before I implemented the aformentioned logic in item 2 & 3 when I performed my [Test B](#41825-test-b), the `masterRecords` results contained 5 records and the `partyRecords` results contained 1,000 records.  I thought I could make the two API calls independently and cross reference the results afterward but I do not think this is an efficient way to make API calls and handle the results.  Also, the 2nd call may not have even contained all matching records since 1,000 is the limit to what that API can send back.  TODO: Ask Ian if there is a better way to query the Real Property datasets and cross reference the results.  For example, instead of returning the actual records from the [Real Property Party API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) GET request I could only handle the `document_id` values, cross reference those values with the results of the [Real Property Party API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) GET request, construct more specific query URLs, and then make another GET request to each API for the records.  This approach would double the number of API requests but the size of data would be much smaller.
+- [ ] Then I will need to combine `masterRecords` and `partyRecords` into a new array called `primaryRecords` and filter out any records that do not have a `document_id` value in the `masterRecordsDocumentIds` array AND the `partyRecordsDocumentIds` array.  
+
+
+
+For example, for the test below I sent a GET request to the [Real Property Master API](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj) with the `searchTerms` and values: `recorded_borough`, `doc_type`, `document_date_start` and `document_date_end`
+
+
+use data from the [Document Control Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Document-Control-Codes/7isb-wh4c/about_data) API which will allow my user to sea
+
+#### 4/18/25 (Test A)
+
+```bash
+Started on http://localhost:3001
+User authenticated: { username: 'april152025', isAdmin: false, iat: 1744758092 }
+Received request with query parameters: {
+  searchTerms: {
+    name: 'EMPIRE',
+    document_date_range: 'last-1-year',
+    document_date_start: '2024-04-16',
+    document_date_end: '2025-04-16',
+    recorded_borough: '3',
+    party_type: '1',
+    doc_type: 'DEED',
+    doc_class: 'DEEDS AND OTHER CONVEYANCES'
+  },
+  primaryApiSources: { masterDataset: 'true', partiesDataset: 'true' },
+  secondaryApiSources: {
+    lotDataset: 'false',
+    referencesDataset: 'false',
+    remarksDataset: 'false'
+  }
+}
+```
+
+Then my `queryAcrisPartyName` route took the `searchTerms` data from my Front End's GET request and populated the `masterQueryParams` and `partiesQueryParams` objects which were used to make subsequent API calls to the Real Property Master and Real Property Parties API datasets using `MasterRealPropApi` and `PartiesRealPropApi` components, respectively.
+
+Keep in mind after receiving the `searchTerms` data and sending the followup API requests I checked that at least one valid parameter was received from the front end for each of the Real Property Master and the Real Property Parties API calls. I also made sure that at least one dataset was selected from the `primaryDatasets` backend variable which is populated with configuration data from the front end's `primaryApiSources` object.
+
+The `MasterRealPropApi` was used to fetch data with query params, and constructed the query URL, as shown below.
+
+Console message: `MasterRealPropApi` fetched data using query params:
+
+```bash
+Fetching Master Dataset with query params: {
+  document_date_range: 'last-1-year',
+  document_date_start: '2024-04-16',
+  document_date_end: '2025-04-16',
+  recorded_borough: '3',
+  doc_type: 'DEED'
+}
+```
+
+Console message: `MasterRealPropApi` constructed query url (via `constructMasterUrl` utility function):
+
+```bash
+constructMasterUrl created: https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$where=recorded_borough='3' AND doc_type='DEED' AND document_date between '2024-04-16' and '2025-04-16'
+```
+
+The response from the `MasterRealPropApi` call contained 1,000 records:
+Console message:
+
+```
+Number of Records Returned: 1000
+Fetched Master Records: 1000
+```
+
+Then, the `PartiesRealPropApi` was used to fetch data with query params, and constructed the query URL, as shown below.
+
+Console message: `PartiesRealPropApi` fetched data using query params:
+
+```bash
+Fetching Parties Dataset with query params: {
+  name: 'EMPIRE',
+  party_type: '1'
+}
+```
+
+Console message: `PartiesRealPropApi` constructed query url (via `constructPartiesUrl` utility function):
+
+```bash
+constructPartiesUrl created: https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=party_type%3D'1'%20AND%20name%20LIKE%20'%25EMPIRE%25'
+```
+
+The response from the `PartiesRealPropApi` call contained 1,000 records:
+Console message:
+
+```
+Number of Records Returned: 1000
+Fetched Parties Records: 1000
+```
+
+The combined number of "Primary Records" was 2,000 and the total number of unique Document IDs was 1,992.
+
+Due to the large amount of data I'm going to attempt another test but this time only request records from the last 30 days with the same search criteria as last time.
+
+#### 4/18/25 (Test B)
+
+I successfully received the data below from my front end application using the backend route: `queryAcrisPartyName`.
+
+```bash
+User authenticated: { username: 'april152025', isAdmin: false, iat: 1744758092 }
+Received request with query parameters: {
+  searchTerms: {
+    name: 'EMPIRE',
+    document_date_range: 'last-30-days',
+    document_date_start: '2025-03-19',
+    document_date_end: '2025-04-18',
+    recorded_borough: '3',
+    party_type: '1',
+    doc_type: 'DEED',
+    doc_class: 'DEEDS AND OTHER CONVEYANCES'
+  },
+  primaryApiSources: { masterDataset: 'true', partiesDataset: 'true' },
+  secondaryApiSources: {
+    lotDataset: 'false',
+    referencesDataset: 'false',
+    remarksDataset: 'false'
+  }
+}
+```
+
+Then my `queryAcrisPartyName` route took the `searchTerms` data from my Front End's GET request and populated the `masterQueryParams` and `partiesQueryParams` objects which were used to make subsequent API calls to the Real Property Master and Real Property Parties API datasets using `MasterRealPropApi` and `PartiesRealPropApi` components, respectively.
+
+Keep in mind after receiving the `searchTerms` data and sending the followup API requests I checked that at least one valid parameter was received from the front end for each of the Real Property Master and the Real Property Parties API calls. I also made sure that at least one dataset was selected from the `primaryDatasets` backend variable which is populated with configuration data from the front end's `primaryApiSources` object.
+
+The `MasterRealPropApi` was used to fetch data with query params, and constructed the query URL, as shown below.
+
+Console message: `MasterRealPropApi` fetched data using query params:
+
+```bash
+Fetching Master Dataset with query params: {
+  document_date_range: 'last-30-days',
+  document_date_start: '2025-03-19',
+  document_date_end: '2025-04-18',
+  recorded_borough: '3',
+  doc_type: 'DEED'
+}
+```
+
+Console message: `MasterRealPropApi` constructed query url (via `constructMasterUrl` utility function):
+
+```bash
+constructMasterUrl created: https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$where=recorded_borough='3' AND doc_type='DEED' AND document_date between '2025-03-19' and '2025-04-18'
+```
+
+The response from the `MasterRealPropApi` call contained 5 records:
+Console message:
+
+```
+Fetched Master Records: 5
+Records Returned: [
+  {
+    document_id: '2025031900711001',
+    record_type: 'A',
+    crfn: '2025000077510',
+    recorded_borough: '3',
+    doc_type: 'DEED',
+    document_date: '2025-03-19T00:00:00.000',
+    document_amt: '0',
+    recorded_datetime: '2025-03-20T00:00:00.000',
+    modified_date: '2025-03-20T00:00:00.000',
+    reel_yr: '0',
+    reel_nbr: '0',
+    reel_pg: '0',
+    percent_trans: '100',
+    good_through_date: '2025-03-31T00:00:00.000'
+  },
+  {
+    document_id: '2025031901074001',
+    record_type: 'A',
+    crfn: '2025000086181',
+    recorded_borough: '3',
+    doc_type: 'DEED',
+    document_date: '2025-03-19T00:00:00.000',
+    document_amt: '950000',
+    recorded_datetime: '2025-03-31T00:00:00.000',
+    modified_date: '2025-03-31T00:00:00.000',
+    reel_yr: '0',
+    reel_nbr: '0',
+    reel_pg: '0',
+    percent_trans: '100',
+    good_through_date: '2025-03-31T00:00:00.000'
+  },
+  {
+    document_id: '2025032600533001',
+    record_type: 'A',
+    crfn: '2025000086370',
+    recorded_borough: '3',
+    doc_type: 'DEED',
+    document_date: '2025-03-20T00:00:00.000',
+    document_amt: '0',
+    recorded_datetime: '2025-03-31T00:00:00.000',
+    modified_date: '2025-03-31T00:00:00.000',
+    reel_yr: '0',
+    reel_nbr: '0',
+    reel_pg: '0',
+    percent_trans: '100',
+    good_through_date: '2025-03-31T00:00:00.000'
+  },
+  {
+    document_id: '2025032400772001',
+    record_type: 'A',
+    crfn: '2025000081591',
+    recorded_borough: '3',
+    doc_type: 'DEED',
+    document_date: '2025-03-24T00:00:00.000',
+    document_amt: '0',
+    recorded_datetime: '2025-03-25T00:00:00.000',
+    modified_date: '2025-03-25T00:00:00.000',
+    reel_yr: '0',
+    reel_nbr: '0',
+    reel_pg: '0',
+    percent_trans: '100',
+    good_through_date: '2025-03-31T00:00:00.000'
+  },
+  {
+    document_id: '2025032400882001',
+    record_type: 'A',
+    crfn: '2025000086322',
+    recorded_borough: '3',
+    doc_type: 'DEED',
+    document_date: '2025-03-24T00:00:00.000',
+    document_amt: '0',
+    recorded_datetime: '2025-03-31T00:00:00.000',
+    modified_date: '2025-03-31T00:00:00.000',
+    reel_yr: '0',
+    reel_nbr: '0',
+    reel_pg: '0',
+    percent_trans: '100',
+    good_through_date: '2025-03-31T00:00:00.000'
+  }
+]
+```
+
+Then, the `PartiesRealPropApi` was used to fetch data with query params, and constructed the query URL, as shown below.
+
+Console message: `PartiesRealPropApi` fetched data using query params:
+
+```bash
+Fetching Parties Dataset with query params: { name: 'EMPIRE', party_type: '1' }
+```
+
+Console message: `PartiesRealPropApi` constructed query url (via `constructPartiesUrl` utility function):
+
+```bash
+constructPartiesUrl created: https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=party_type%3D'1'%20AND%20name%20LIKE%20'%25EMPIRE%25'
+```
+
+The response from the `PartiesRealPropApi` call contained 1,000 records:
+Console message:
+
+```
+Fetched Parties Records: 1000
+```
+
+The combined number of "Primary Records" was 1,005 and the total number of unique Document IDs was 998.
+
+[Back to TOC](#table-of-contents)

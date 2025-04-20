@@ -84,7 +84,7 @@ class MasterRealPropApi {
     try {
       // Construct the URL with query parameters
       const url = this.constructMasterUrl(query);
-      console.log("Constructed URL:", url);
+      console.log("constructMasterUrl created:", url);
 
       // Make the GET request to the NYC Open Data API
       const response = await axios.get(url, {
@@ -98,7 +98,7 @@ class MasterRealPropApi {
       //console.log("Full Response Object:", response);
 
       // Log the response data specifically
-      // console.log("Response Data:", response.data);
+      //console.log("Records Returned from MasterRealPropApi:", response.data);
 
       // Handle case where no records are found
       if (response.data.length === 0) {
