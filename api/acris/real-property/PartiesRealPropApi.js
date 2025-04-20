@@ -8,21 +8,123 @@ const API_ENDPOINTS = require("../../apiEndpoints");
 
 class PartiesRealPropApi {
     /**
-     * Constructs a SoQL query URL for the Real Property Parties dataset.
+     * Constructs a SoQL query URL for the Real Property Parties dataset (simple query).
      *
      * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @param {Array} masterRecordsDocumentIds - Array of document IDs to cross-reference.
+     * @param {string} [partiesQueryParams.document_id] - Document ID.
+     * @param {string} [partiesQueryParams.record_type] - Record type.
+     * @param {string} [partiesQueryParams.party_type] - Party type.
+     * @param {string} [partiesQueryParams.name] - Party name.
+     * @param {string} [partiesQueryParams.address_1] - Address line 1.
+     * @param {string} [partiesQueryParams.address_2] - Address line 2.
+     * @param {string} [partiesQueryParams.country] - Country.
+     * @param {string} [partiesQueryParams.city] - City.
+     * @param {string} [partiesQueryParams.state] - State.
+     * @param {string} [partiesQueryParams.zip] - ZIP code.
+     * @param {string} [partiesQueryParams.good_through_date] - Good through date.
      * @returns {string} - Constructed SoQL query URL.
      */
+    static constructPartiesUrl(partiesQueryParams) {
+        const conditions = [];
+
+        // Add conditions from partiesQueryParams
+        if (partiesQueryParams.document_id) {
+            conditions.push(`document_id='${partiesQueryParams.document_id}'`);
+        }
+        if (partiesQueryParams.record_type) {
+            conditions.push(`record_type='${partiesQueryParams.record_type}'`);
+        }
+        if (partiesQueryParams.party_type) {
+            conditions.push(`party_type='${partiesQueryParams.party_type}'`);
+        }
+        if (partiesQueryParams.name) {
+            conditions.push(`name LIKE '%25${partiesQueryParams.name}%25'`);
+        }
+        if (partiesQueryParams.address_1) {
+            conditions.push(`address_1='${partiesQueryParams.address_1}'`);
+        }
+        if (partiesQueryParams.address_2) {
+            conditions.push(`address_2='${partiesQueryParams.address_2}'`);
+        }
+        if (partiesQueryParams.country) {
+            conditions.push(`country='${partiesQueryParams.country}'`);
+        }
+        if (partiesQueryParams.city) {
+            conditions.push(`city='${partiesQueryParams.city}'`);
+        }
+        if (partiesQueryParams.state) {
+            conditions.push(`state='${partiesQueryParams.state}'`);
+        }
+        if (partiesQueryParams.zip) {
+            conditions.push(`zip='${partiesQueryParams.zip}'`);
+        }
+        if (partiesQueryParams.good_through_date) {
+            conditions.push(`good_through_date='${partiesQueryParams.good_through_date}'`);
+        }
+
+        // Construct the $where clause
+        const whereClause = conditions.length > 0 ? `$where=${conditions.join(" AND ")}` : "";
+
+        // Construct the full URL
+        const url = `${API_ENDPOINTS.realPropertyParties}?${whereClause}`;
+        return url;
+    }
+
+    /**
+     * Constructs a SoQL query URL for the Real Property Parties dataset (cross-referenced with Master dataset).
+     *
+     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
+     * @param {string} [partiesQueryParams.document_id] - Document ID.
+     * @param {string} [partiesQueryParams.record_type] - Record type.
+     * @param {string} [partiesQueryParams.party_type] - Party type.
+     * @param {string} [partiesQueryParams.name] - Party name.
+     * @param {string} [partiesQueryParams.address_1] - Address line 1.
+     * @param {string} [partiesQueryParams.address_2] - Address line 2.
+     * @param {string} [partiesQueryParams.country] - Country.
+     * @param {string} [partiesQueryParams.city] - City.
+     * @param {string} [partiesQueryParams.state] - State.
+     * @param {string} [partiesQueryParams.zip] - ZIP code.
+     * @param {string} [partiesQueryParams.good_through_date] - Good through date.
+     * @param {Array<string>} masterRecordsDocumentIds - Array of document IDs to cross-reference.
+     * @returns {string} - Constructed SoQL query URL.
+     */
+    
     static constructPartiesUrlCrossRefMaster(partiesQueryParams, masterRecordsDocumentIds) {
         const conditions = [];
 
         // Add conditions from partiesQueryParams
-        if (partiesQueryParams.name) {
-            conditions.push(`name LIKE '%${encodeURIComponent(partiesQueryParams.name)}%'`);
+        if (partiesQueryParams.document_id) {
+            conditions.push(`document_id='${partiesQueryParams.document_id}'`);
+        }
+        if (partiesQueryParams.record_type) {
+            conditions.push(`record_type='${partiesQueryParams.record_type}'`);
         }
         if (partiesQueryParams.party_type) {
             conditions.push(`party_type='${partiesQueryParams.party_type}'`);
+        }
+        if (partiesQueryParams.name) {
+            conditions.push(`name LIKE '%25${partiesQueryParams.name}%25'`);
+        }
+        if (partiesQueryParams.address_1) {
+            conditions.push(`address_1='${partiesQueryParams.address_1}'`);
+        }
+        if (partiesQueryParams.address_2) {
+            conditions.push(`address_2='${partiesQueryParams.address_2}'`);
+        }
+        if (partiesQueryParams.country) {
+            conditions.push(`country='${partiesQueryParams.country}'`);
+        }
+        if (partiesQueryParams.city) {
+            conditions.push(`city='${partiesQueryParams.city}'`);
+        }
+        if (partiesQueryParams.state) {
+            conditions.push(`state='${partiesQueryParams.state}'`);
+        }
+        if (partiesQueryParams.zip) {
+            conditions.push(`zip='${partiesQueryParams.zip}'`);
+        }
+        if (partiesQueryParams.good_through_date) {
+            conditions.push(`good_through_date='${partiesQueryParams.good_through_date}'`);
         }
 
         // Add condition for masterRecordsDocumentIds
@@ -32,32 +134,7 @@ class PartiesRealPropApi {
         }
 
         // Construct the $where clause
-        const whereClause = conditions.length > 0 ? `$where=${encodeURIComponent(conditions.join(" AND "))}` : "";
-
-        // Construct the full URL
-        const url = `${API_ENDPOINTS.realPropertyParties}?${whereClause}`;
-        return url;
-    }
-
-    /**
-     * Constructs a SoQL query URL for the Real Property Parties dataset (simple query).
-     *
-     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @returns {string} - Constructed SoQL query URL.
-     */
-    static constructPartiesUrl(partiesQueryParams) {
-        const conditions = [];
-
-        // Add conditions from partiesQueryParams
-        if (partiesQueryParams.name) {
-            conditions.push(`name LIKE '%${encodeURIComponent(partiesQueryParams.name)}%'`);
-        }
-        if (partiesQueryParams.party_type) {
-            conditions.push(`party_type='${partiesQueryParams.party_type}'`);
-        }
-
-        // Construct the $where clause
-        const whereClause = conditions.length > 0 ? `$where=${encodeURIComponent(conditions.join(" AND "))}` : "";
+        const whereClause = conditions.length > 0 ? `$where=${conditions.join(" AND ")}` : "";
 
         // Construct the full URL
         const url = `${API_ENDPOINTS.realPropertyParties}?${whereClause}`;
@@ -66,8 +143,20 @@ class PartiesRealPropApi {
 
     /**
      * Fetch data from the ACRIS Real Property Parties dataset.
+     *
      * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @param {Array|null} masterRecordsDocumentIds - Array of document IDs to cross-reference (optional).
+     * @param {string} [partiesQueryParams.document_id] - Document ID.
+     * @param {string} [partiesQueryParams.record_type] - Record type.
+     * @param {string} [partiesQueryParams.party_type] - Party type.
+     * @param {string} [partiesQueryParams.name] - Party name.
+     * @param {string} [partiesQueryParams.address_1] - Address line 1.
+     * @param {string} [partiesQueryParams.address_2] - Address line 2.
+     * @param {string} [partiesQueryParams.country] - Country.
+     * @param {string} [partiesQueryParams.city] - City.
+     * @param {string} [partiesQueryParams.state] - State.
+     * @param {string} [partiesQueryParams.zip] - ZIP code.
+     * @param {string} [partiesQueryParams.good_through_date] - Good through date.
+     * @param {Array<string>|null} masterRecordsDocumentIds - Array of document IDs to cross-reference (optional).
      * @returns {Array} - Fetched records.
      */
     static async fetchFromAcris(partiesQueryParams, masterRecordsDocumentIds = null) {
@@ -81,7 +170,7 @@ class PartiesRealPropApi {
                 url = this.constructPartiesUrl(partiesQueryParams);
             }
 
-            console.log("Constructed URL:", url);
+            console.log("PartiesRealPropApi Constructed URL:", url);
 
             // Make the GET request to the NYC Open Data API
             const response = await axios.get(url, {

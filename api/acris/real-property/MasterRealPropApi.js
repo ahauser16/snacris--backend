@@ -13,7 +13,7 @@ class MasterRealPropApi {
      *
      * @param {Object} params - Optional query parameters.
      * @param {string} [params.document_id] - Document ID.
-     * @param {string} [params.crfn] - CRFN.
+     * @param {string} [params.crfn] - City Register Filing Number.
      * @param {string} [params.recorded_borough] - Recorded borough.
      * @param {string} [params.doc_type] - Document type.
      * @param {string} [params.document_date_start] - Start date for document_date range.
@@ -48,13 +48,19 @@ class MasterRealPropApi {
     if (document_id) conditions.push(`upper(document_id)=upper('${document_id}')`);
     if (crfn) conditions.push(`crfn='${crfn}'`);
     if (recorded_borough) conditions.push(`recorded_borough='${recorded_borough}'`);
-    if (doc_type) conditions.push(`doc_type='${doc_type}'`);
+
+    // Handle `doc_type` as a single value or an array
+    if (doc_type) {
+      if (Array.isArray(doc_type)) {
+        const docTypeCondition = `doc_type IN (${doc_type.map(type => `'${type}'`).join(", ")})`;
+        conditions.push(docTypeCondition);
+      } else {
+        conditions.push(`doc_type='${doc_type}'`);
+      }
+    }
 
     // Format document_date_start and document_date_end to YYYYMMDD
     if (document_date_start && document_date_end) {
-      // const formattedStart = document_date_start.replace(/-/g, ""); // Convert YYYY-MM-DD to YYYYMMDD
-      // const formattedEnd = document_date_end.replace(/-/g, "");     // Convert YYYY-MM-DD to YYYYMMDD
-      // conditions.push(`document_date between '${formattedStart}' and '${formattedEnd}'`);
       conditions.push(`document_date between '${document_date_start}' and '${document_date_end}'`);
     }
 

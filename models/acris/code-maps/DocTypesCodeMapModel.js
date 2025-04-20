@@ -72,6 +72,28 @@ class DocTypesCodeMapModel {
         return result.rows;
     }
 
+    /**
+     * Retrieve all `doc_type` values for a given `class_code_description`.
+     *
+     * @param {string} doc_class - The class_code_description value.
+     * @returns {Array<string>} - An array of `doc_type` values.
+     * @throws {NotFoundError} - If no `doc_type` values are found for the given `doc_class`.
+     */
+    static async getDocTypesByClass(doc_class) {
+        const result = await db.query(
+            `SELECT doc_type
+             FROM document_control_codes
+             WHERE class_code_description = $1`,
+            [doc_class]
+        );
+
+        if (result.rows.length === 0) {
+            throw new NotFoundError(`No doc_type values found for class: ${doc_class}`);
+        }
+
+        return result.rows.map(row => row.doc_type);
+    }
+
     /** Update a record with `data`.
      *
      * This is a partial update, so only the fields provided in `data` will be updated.
@@ -83,27 +105,27 @@ class DocTypesCodeMapModel {
      * Throws NotFoundError if not found.
      */
     static async updateRecord(doc_type, data) {
-        const { setCols, values } = sqlForPartialUpdate(data, {
-            doc_type_description: "doc_type_description",
-            class_code_description: "class_code_description",
-            party1_type: "party1_type",
-            party2_type: "party2_type",
-            party3_type: "party3_type",
-        });
+    const { setCols, values } = sqlForPartialUpdate(data, {
+        doc_type_description: "doc_type_description",
+        class_code_description: "class_code_description",
+        party1_type: "party1_type",
+        party2_type: "party2_type",
+        party3_type: "party3_type",
+    });
 
-        const docTypeIdx = "$" + (values.length + 1);
+    const docTypeIdx = "$" + (values.length + 1);
 
-        const querySql = `UPDATE document_control_codes
+    const querySql = `UPDATE document_control_codes
                       SET ${setCols}
                       WHERE doc_type = ${docTypeIdx}
                       RETURNING id, record_type, doc_type, doc_type_description, class_code_description, party1_type, party2_type, party3_type`;
-        const result = await db.query(querySql, [...values, doc_type]);
-        const record = result.rows[0];
+    const result = await db.query(querySql, [...values, doc_type]);
+    const record = result.rows[0];
 
-        if (!record) throw new NotFoundError(`No record found for doc_type: ${doc_type}`);
+    if (!record) throw new NotFoundError(`No record found for doc_type: ${doc_type}`);
 
-        return record;
-    }
+    return record;
+}
 
     /** Delete a record by doc_type.
      *
@@ -112,18 +134,18 @@ class DocTypesCodeMapModel {
      * Throws NotFoundError if not found.
      */
     static async deleteRecord(doc_type) {
-        const result = await db.query(
-            `DELETE
+    const result = await db.query(
+        `DELETE
        FROM document_control_codes
        WHERE doc_type = $1
        RETURNING doc_type`,
-            [doc_type]
-        );
+        [doc_type]
+    );
 
-        const record = result.rows[0];
+    const record = result.rows[0];
 
-        if (!record) throw new NotFoundError(`No record found for doc_type: ${doc_type}`);
-    }
+    if (!record) throw new NotFoundError(`No record found for doc_type: ${doc_type}`);
+}
 }
 
 module.exports = DocTypesCodeMapModel;
