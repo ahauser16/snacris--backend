@@ -16,13 +16,13 @@ router.get("/fetchRecord", async function (req, res, next) {
         console.log("Received request with query parameters:", req.query);
 
         // Extract search terms and dataset flags from the request query
-        const { masterSearchTerms, partySearchTerms, lotSearchTerms, primaryApiSources, secondaryApiSources } = req.query;
+        const { masterSearchTerms, partySearchTerms, legalsSearchTerms, primaryApiSources, secondaryApiSources } = req.query;
 
         // Extracting Primary Dataset Flags
         const primaryDatasets = {
             masterDataset: primaryApiSources?.masterDataset === "true",
             partiesDataset: primaryApiSources?.partiesDataset === "true",
-            lotDataset: primaryApiSources?.lotDataset === "true",
+            legalsDataset: primaryApiSources?.legalsDataset === "true",
         };
 
         // Extracting Secondary Dataset Flags
@@ -64,15 +64,15 @@ router.get("/fetchRecord", async function (req, res, next) {
         if (partySearchTerms?.party_type)
             partiesQueryParams.party_type = partySearchTerms.party_type;
 
-        // Construct query parameters for Lot dataset
-        const lotQueryParams = {};
-        if (lotSearchTerms?.borough)
-            lotQueryParams.borough = lotSearchTerms.borough;
+        // Construct query parameters for Legals dataset
+        const legalsQueryParams = {};
+        if (legalsSearchTerms?.borough)
+            legalsQueryParams.borough = legalsSearchTerms.borough;
 
         // Initialize arrays to hold records
         let masterRecords = [];
         let partyRecords = [];
-        let lotRecords = [];
+        let legalsRecords = [];
         let masterRecordsDocumentIds = [];
 
         // Fetch data from the Master dataset
@@ -111,24 +111,24 @@ router.get("/fetchRecord", async function (req, res, next) {
             }
         }
 
-        // Fetch data from the Lot dataset
-        if (primaryDatasets.lotDataset) {
+        // Fetch data from the Legals dataset
+        if (primaryDatasets.legalsDataset) {
             try {
-                console.log("Fetching Lot Dataset with query params:", lotQueryParams);
-                lotRecords = await LegalsRealPropApi.fetchFromAcris(lotQueryParams);
-                console.log("Fetched Lot Records:", lotRecords.length);
+                console.log("Fetching Legals Dataset with query params:", legalsQueryParams);
+                legalsRecords = await LegalsRealPropApi.fetchFromAcris(legalsQueryParams);
+                console.log("Fetched Legals Records:", legalsRecords.length);
             } catch (err) {
-                console.error("Error fetching Lot Dataset:", err.message);
-                lotRecords.push({
+                console.error("Error fetching Legals Dataset:", err.message);
+                legalsRecords.push({
                     dataFound: false,
-                    dataset: "lotDataset",
+                    dataset: "legalsDataset",
                     error: err.message,
                 });
             }
         }
 
-        // Combine Master, Parties, and Lot records into primaryRecords
-        const primaryRecords = [...masterRecords, ...partyRecords, ...lotRecords];
+        // Combine Master, Parties, and Legals records into primaryRecords
+        const primaryRecords = [...masterRecords, ...partyRecords, ...legalsRecords];
 
         // Extract unique document IDs from primaryRecords
         const primaryRecordDocumentIds = [
