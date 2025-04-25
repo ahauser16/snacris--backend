@@ -44,8 +44,14 @@ const {
 } = require("./routes");
 
 const app = express();
+const origin = ["https://react-jobly-frontend-b97y.onrender.com"]
+if (process.env.NODE_ENV === "development") {
+  origin.push("http://localhost:3000");
+}
+app.use(cors({
+  origin,
+}));
 
-app.use(cors());
 app.use(express.json());
 app.use(morgan("tiny"));
 

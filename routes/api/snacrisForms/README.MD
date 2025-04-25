@@ -26,6 +26,7 @@ Then I need to package or normalize the response from the Real Property ACRIS da
       - [Strengths of Your Plan](#strengths-of-your-plan)
       - [Potential Issues and Suggestions](#potential-issues-and-suggestions)
       - [Steps to Accomplish the Refactor](#steps-to-accomplish-the-refactor)
+  - [techniques to think about](#techniques-to-think-about)
   - [Front End Data received...now what (prompt 1)\[ARCHIVED\]](#front-end-data-receivednow-what-prompt-1archived)
   - [Front End Data received...now what (response 1)\[ARCHIVED\]](#front-end-data-receivednow-what-response-1archived)
     - [Frontend and Backend testing notes](#frontend-and-backend-testing-notes)
@@ -559,6 +560,16 @@ GET /queryAcrisPartyName/fetchRecord?searchTerms[name]=EMPIRE&searchTerms[docume
    - [ ] Write integration tests for the `queryAcrisPartyName` route.
 
 [Back to TOC](#table-of-contents)
+
+## techniques to think about
+
+Overengineering
+GraphQL
+
+Victor 5:09 PM
+EDA (Event driven architecture) 
+— offloading requests from the HTTP request
+Optimistic prediction (imagining ahead of time what users are searching for)
 
 ## Front End Data received...now what (prompt 1)[ARCHIVED]
 
