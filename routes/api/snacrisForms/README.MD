@@ -139,8 +139,28 @@ Step 1: Determine the Query Order
 - Goal: Minimize the number of API calls and the size of responses.
 - Approach:
   - Use the dataset with the smallest number of matches as the starting point.
-  - Perform a $select=count(*) query for each dataset to determine the number of matching records.
+  - Perform a `$select=count(*)` query for each dataset to determine the number of matching records.
   - Order the datasets by the number of matches and query the smallest dataset first.
+
+Step 1: ToDos:
+- [x] write a function called `constructMasterUrlCountRec` that accepts the same parameters as `constructMasterUrl` and creates a query URL to the same endpoint but uses SoQL syntax to return the number of matching records instead of the records themselves (e.g. `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=count(*)&$where=doc_type='DEED'`).
+- [x] write a function called `fetchCountFromAcris` in `MasterRealPropApi` that accepts the `masterQueryParams`, uses `constructMasterUrlCountRec` to construct the query URL that finds the `count` of matching records and makes the `axios` GET request.  I've constructed and tested a URL which looks like this: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=count(*)&$where=doc_type='DEED'` and returns the response in the format: `[{"count": "5776"}]`.  I want  `fetchCountFromAcris` to handle the response by returning the key value pair: `masterRecordCount: 5776`.  Keep in mind I want the data type of `count` to be tested and have error handling that checks if the string data type, when converted to a number, is in fact a number. 
+- Postman testing notes:
+  - I tested the `constructMasterUrlCountRec` and `fetchCountFromAcris` functions above in Postman.  In order to expose or integrate the API call into the backend I created the new route in `masterRealPropApiRoutes.js` called "/fetchRecordCount".  I tested the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?document_id=FT_3160005545216` which returned a 200 OK status code and the the json: `{ "records": { "masterRecordCount": 1 }}`.
+  - Then I tested the same "/fetchRecordCount" route assuming that the `masterSearchTerms` were `document_date_range: 'custom-date-range', document_date_start: '2025-02-01',document_date_end: '2025-03-31', doc_type: 'DEED', doc_class: 'DEEDS AND OTHER CONVEYANCES'` using the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and I successfully received the json: `{ "records": { "masterRecordCount": 5776 }}`.  
+  - I tested the original "fetchRecord" route assuming the `masterSearchTerms` were: `document_date_range: 'custom-date-range', document_date_start: '2025-02-01',document_date_end: '2025-03-31', doc_type: 'DEED', doc_class: 'DEEDS AND OTHER CONVEYANCES'` using the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecord?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and I received 1,000 records.
+
+- [ ] write a function called `constructPartiesUrlCountRec` that accepts the same parameters as `constructPartiesUrl` and creates a query URL to the same endpoint but uses SoQL syntax to return the number of matching records instead of the records themselves (e.g. `https://data.cityofnewyork.us/resource/636b-3b5g.json?$select=count(*)&$where=name like '%25EMPIRE%25' AND party_type='1'`).
+- [ ] write a function called `fetchCountFromAcris` in `PartiesRealPropApi` that accepts the `partiesQueryParams`, uses `constructPartiesUrlCountRec` to construct the query URL that finds the `count` of matching records and makes the `axios` GET request.  I've constructed and tested a URL which looks like this: `https://data.cityofnewyork.us/resource/636b-3b5g.json?$select=count(*)&$where=name like '%25EMPIRE%25' AND party_type='1'` and returns the response in the format: `[{"count": "15000"}]`.  I want  `fetchCountFromAcris` to handle the response by returning the key value pair: `partiesRecordCount: 5776`.  Keep in mind I want the data type of `count` to be tested and have error handling that checks if the string data type, when converted to a number, is in fact a number. 
+
+
+- [x] write a function called `constructLegalsUrl`. 
+- [ ] write a function called `constructLegalsUrlCountRec` that accepts the same parameters as `constructLegalsUrl` and creates a query URL to the same endpoint but uses SoQL syntax to return the number of matching records instead of the records themselves (e.g. `https://data.cityofnewyork.us/resource/8h5j-fqxa.json?$select=count(*)&$where=borough='3'`).
+- [ ] write a function called `fetchCountFromAcris` in `LegalsRealPropApi` that accepts the `legalsQueryParams`, uses `constructLegalsUrlCountRec` to construct the query URL that finds the `count` of matching records and makes the `axios` GET request.  I've constructed and tested a URL which looks like this: `https://data.cityofnewyork.us/resource/8h5j-fqxa.json?$select=count(*)&$where=borough='3'` and returns the response in the format: `[{"count": "12000"}]`.  I want  `fetchCountFromAcris` to handle the response by returning the key value pair: `legalsRecordCount: 12,000`.  Keep in mind I want the data type of `count` to be tested and have error handling that checks if the string data type, when converted to a number, is in fact a number. 
+
+
+- [ ] write a function called `determineFetchOrder` which receives the `masterRecordCount`, `legalsRecordCount` and `partiesRecordCount` and compares each .
+
 
 Step 2: Retrieve `document_id` Values
 - Goal: Reduce the size of responses and focus on cross-referencing.

@@ -81,6 +81,17 @@ class MasterRealPropApi {
   }
 
   /**
+   * Constructs a SoQL query URL to count matching records in the Real Property Master dataset.
+   *
+   * @param {Object} params - Optional query parameters (same as constructMasterUrl).
+   * @returns {string} - Constructed SoQL query URL for counting records.
+   */
+  static constructMasterUrlCountRec(params = {}) {
+    const baseUrl = this.constructMasterUrl(params);
+    return `${baseUrl}&$select=count(*)`;
+  }
+
+  /**
    * Fetch data from the ACRIS Real Property Master dataset.
    * @param {Object} query - Query parameters.
    * @returns {Array} - Fetched records.
@@ -115,6 +126,45 @@ class MasterRealPropApi {
     } catch (err) {
       console.error("Error fetching data from ACRIS API:", err.message);
       throw new Error("Failed to fetch data from ACRIS API");
+    }
+  }
+
+  /**
+ * Fetch the count of matching records from the ACRIS Real Property Master dataset.
+ *
+ * @param {Object} query - Query parameters.
+ * @returns {Object} - An object containing the count of matching records.
+ * @throws {Error} - If the count is not a valid number or if the API call fails.
+ */
+  static async fetchCountFromAcris(query) {
+    try {
+      // Construct the URL for counting records
+      const url = this.constructMasterUrlCountRec(query);
+      console.log("constructMasterUrlCountRec created:", url);
+
+      // Make the GET request to the NYC Open Data API
+      const response = await axios.get(url, {
+        headers: {
+          "Content-Type": "application/json",
+          "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
+        },
+      });
+
+      // Validate the response
+      if (!response.data || response.data.length === 0 || !response.data[0].count) {
+        throw new NotFoundError(`No count found for query: ${JSON.stringify(query)}`);
+      }
+
+      // Parse and validate the count
+      const count = Number(response.data[0].count);
+      if (isNaN(count)) {
+        throw new Error("Invalid count value received from ACRIS API");
+      }
+
+      return { masterRecordCount: count };
+    } catch (err) {
+      console.error("Error fetching count from ACRIS API:", err.message);
+      throw new Error("Failed to fetch count from ACRIS API");
     }
   }
 }
