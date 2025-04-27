@@ -179,51 +179,77 @@ class MasterRealPropApi {
       throw new Error("Failed to fetch count from ACRIS API");
     }
   }
-
-/**
+  
+  /**
    * Fetch all `document_id` values from the ACRIS Real Property Master dataset using pagination.
    *
    * @param {Object} query - Query parameters.
-   * @returns {Array<string>} - Array of all `document_id` values.
+   * @returns {Object} - An object containing:
+   *   - `masterRecordsDocumentIds`: Array of unique `document_id` values.
+   *   - `masterRecordsDocumentIds_Duplicates`: Array of duplicate `document_id` values.
    */
-static async fetchDocIdsFromAcris(query) {
-  try {
-    const limit = 1000; // API record limit per request
-    let offset = 0;
-    let hasMoreRecords = true;
-    const masterRecordsDocumentIds = [];
+  static async fetchDocIdsFromAcris(query) {
+    try {
+      const limit = 1000; // API record limit per request
+      let offset = 0;
+      let hasMoreRecords = true;
+      // const masterRecordsDocumentIds = new Set(); 
+      const masterRecordsDocumentIds = []; // Use an array to store all `document_id` values
+      const masterRecordsDocumentIds_Duplicates = []; // To store duplicate `document_id` values
+      const seenDocumentIds = new Set(); // To track all `document_id` values seen so far
 
-    while (hasMoreRecords) {
-      // Construct the URL with pagination parameters
-      const url = `${this.constructMasterUrlSelectDocIds(query)}&$limit=${limit}&$offset=${offset}`;
-      console.log("fetchDocIdsFromAcris URL:", url);
+      while (hasMoreRecords) {
+        // Construct the URL with pagination parameters
+        const url = `${this.constructMasterUrlSelectDocIds(query)}&$limit=${limit}&$offset=${offset}`;
+        console.log("fetchDocIdsFromAcris URL:", url);
 
-      // Make the GET request to the NYC Open Data API
-      const response = await axios.get(url, {
-        headers: {
-          "Content-Type": "application/json",
-          "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-        },
-      });
+        // Make the GET request to the NYC Open Data API
+        const response = await axios.get(url, {
+          headers: {
+            "Content-Type": "application/json",
+            "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
+          },
+        });
 
-      // Add `document_id` values to the set
-      const records = response.data;
-      records.forEach(record => masterRecordsDocumentIds.push(record.document_id));
+        // Add `document_id` values to the sets
+        const records = response.data;
+        records.forEach(record => {
+          const documentId = record.document_id;
+          if (seenDocumentIds.has(documentId)) {
+            // If already seen, add to duplicates
+            masterRecordsDocumentIds_Duplicates.push(documentId);
+          } else {
+            // Otherwise, add to seen and unique IDs
+            seenDocumentIds.add(documentId);
+            // masterRecordsDocumentIds.add(documentId);
+            masterRecordsDocumentIds.push(documentId);
+          }
+        });
 
-      // Check if there are more records to fetch
-      if (records.length < limit) {
-        hasMoreRecords = false;
-      } else {
-        offset += limit;
+        // Check if there are more records to fetch
+        if (records.length < limit) {
+          hasMoreRecords = false;
+        } else {
+          offset += limit;
+        }
       }
-    }
 
-    return Array.from(masterRecordsDocumentIds);
-  } catch (err) {
-    console.error("Error fetching document IDs from ACRIS API:", err.message);
-    throw new Error("Failed to fetch document IDs from ACRIS API");
+      // Debugging logs
+      // console.log("Unique Document IDs:", Array.from(masterRecordsDocumentIds));
+      console.log("Unique Document IDs:", Array.from(seenDocumentIds));
+      console.log("Duplicate Document IDs:", masterRecordsDocumentIds_Duplicates);
+
+      return {
+        // masterRecordsDocumentIds: Array.from(masterRecordsDocumentIds),
+        // masterRecordsDocumentIds_Duplicates: masterRecordsDocumentIds_Duplicates || [],
+        masterRecordsDocumentIds,
+        masterRecordsDocumentIds_Duplicates,
+      };
+    } catch (err) {
+      console.error("Error fetching document IDs from ACRIS API:", err.message);
+      throw new Error("Failed to fetch document IDs from ACRIS API");
+    }
   }
-}
 
 }
 

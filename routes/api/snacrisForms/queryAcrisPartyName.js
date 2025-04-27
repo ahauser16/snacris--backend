@@ -73,7 +73,7 @@ router.get("/fetchRecord", async function (req, res, next) {
         let masterRecords = [];
         let partyRecords = [];
         let legalsRecords = [];
-        let masterRecordsDocumentIds = [];
+        // let masterRecordsDocumentIds = [];
 
         // Fetch data from the Master dataset
         if (primaryDatasets.masterDataset) {

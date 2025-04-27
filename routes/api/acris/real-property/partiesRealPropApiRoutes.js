@@ -11,15 +11,10 @@ const router = new express.Router();
  *
  * Fetch data from the ACRIS-Real Property Parties dataset based on user-data sent from the frontend.
  *
- * * Returns [{ document_id,record_type,party_type,name,address_1,address_2,country,city,state,zip,good_through_date }]
+ * Returns [{ document_id, record_type, party_type, name, address_1, address_2, country, city, state, zip, good_through_date }]
  *
  * Authorization required: none
- * 
- * Technical Explanation: This route fetches data from the ACRIS-Real Property Parties API based on the query parameters provided.  It constructs the URL using URLSearchParams and makes a GET request to the API.  It returns the fetched records.
- * 
- * Use Case: This route is used to fetch data from the the ACRIS-Real Property Parties API based on user-provided query parameters. The server can then cross-reference this data with other datasets.
- **/
-
+ */
 router.get("/fetchRecord", async function (req, res, next) {
     try {
         const query = req.query;
@@ -30,11 +25,49 @@ router.get("/fetchRecord", async function (req, res, next) {
     }
 });
 
+/** GET /fetchDocIdsCrossRefMasterDocIds => { partiesDocIdsCrossRefMaster: [...] }
+ *
+ * Fetch `document_id` values from the ACRIS-Real Property Parties dataset cross-referenced with Master dataset.
+ *
+ * Expects `masterRecordsDocumentIds` to be passed as a JSON array in the query.
+ *
+ * Returns [{ document_id }]
+ *
+ * Authorization required: none
+ */
+router.get("/fetchDocIdsCrossRefMasterDocIds", async function (req, res, next) {
+    try {
+        const query = req.query;
+        const masterRecordsDocumentIds = JSON.parse(query.masterRecordsDocumentIds || "[]"); 
+        console.log("Parsed masterRecordsDocumentIds:", masterRecordsDocumentIds); // Debug log
+        const partiesDocIdsCrossRefMaster = await PartiesRealPropApi.fetchDocIdsFromAcrisCrossRefMaster(query, masterRecordsDocumentIds);
+        return res.json({ partiesDocIdsCrossRefMaster });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+/** GET /fetchRecordCount => { count: { partiesRecordCount: number } }
+ *
+ * Fetch the count of matching records from the ACRIS-Real Property Parties dataset.
+ *
+ * Authorization required: none
+ */
 router.get("/fetchRecordCount", async function (req, res, next) {
     try {
         const query = req.query;
         const count = await PartiesRealPropApi.fetchCountFromAcris(query);
         return res.json({ count });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+router.get("/fetchDocIds", async function (req, res, next) {
+    try {
+        const query = req.query;
+        const { partiesRecordsDocumentIds, partiesRecordsDocumentIds_Duplicates } = await PartiesRealPropApi.fetchDocIdsFromAcris(query);
+        return res.json({ partiesRecordsDocumentIds, partiesRecordsDocumentIds_Duplicates });
     } catch (err) {
         return next(err);
     }

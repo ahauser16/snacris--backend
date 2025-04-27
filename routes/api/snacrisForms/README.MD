@@ -28,11 +28,17 @@ Then I need to package or normalize the response from the Real Property ACRIS da
           - [Notes](#notes)
         - [Step 2: Retrieve `document_id` Values](#step-2-retrieve-document_id-values)
           - [`fetchDocIdsFromAcris` Dev Notes](#fetchdocidsfromacris-dev-notes)
-          - [ChatGPT Digression: pagination vs batch requests vs throttling](#chatgpt-digression-pagination-vs-batch-requests-vs-throttling)
-          - [Dev Notes](#dev-notes)
         - [Step 3: Cross-Reference `document_id` Values](#step-3-cross-reference-document_id-values)
+          - [1. Determine the NYC Open Data API's Query URL Character Limit](#1-determine-the-nyc-open-data-apis-query-url-character-limit)
+          - [2. Refactor `constructPartiesUrlCrossRefMasterSelectDocIds`](#2-refactor-constructpartiesurlcrossrefmasterselectdocids)
+          - [3. Refactor `fetchDocIdsFromAcrisCrossRefMaster`](#3-refactor-fetchdocidsfromacriscrossrefmaster)
+          - [4. Test the Refactored Methods](#4-test-the-refactored-methods)
+          - [5. Handle Edge Cases](#5-handle-edge-cases)
+          - [6. Example Workflow](#6-example-workflow)
+          - [7. Next Steps](#7-next-steps)
         - [Step 4: Retrieve Full Records](#step-4-retrieve-full-records)
         - [Step 5: Return Results to the Frontend](#step-5-return-results-to-the-frontend)
+          - [ChatGPT Digression: pagination vs batch requests vs throttling](#chatgpt-digression-pagination-vs-batch-requests-vs-throttling)
     - [Revised Refactor Plan (prompt 2 / edited \& used as prompt 3) (4/12/25) \[ARCHIVED\]](#revised-refactor-plan-prompt-2--edited--used-as-prompt-3-41225-archived)
     - [Revised Refactor Plan (response 3) \[ARCHIVED\]](#revised-refactor-plan-response-3-archived)
       - [Strengths of Your Plan](#strengths-of-your-plan)
@@ -198,7 +204,279 @@ The `fetchCountFromAcris` functions can be run in parallel with each other. Once
 
 NB: This function will run after receivng the total number of matching records from the `fetchCountFromAcris` function.
 
-- [x] I need a function called `fetchDocIdsFromAcris` that will make an `axios` GET request similar to the `fetchFromACris` method, however, instead of defining its `url` variable as `this.constructMasterUrl(query)` I want to implement the `constructMasterUrlSelectDocIds` method with the syntax `this.constructMasterUrlSelectDocIds(query)`. 
+**MasterRealPropApi**
+
+- [x] I need a function called `fetchDocIdsFromAcris` that will make an `axios` GET request similar to the `fetchFromACris` method, however, instead of defining its `url` variable as `this.constructMasterUrl(query)` I want to implement the `constructMasterUrlSelectDocIds` method with the syntax `this.constructMasterUrlSelectDocIds(query)`.
+  - I tested this method with a new route called `router.get("/fetchDocIds", async function (req, res, next) {` located in my `masterRealPropApiRoutes` file in Postman with the URL `http://localhost:3001/api/real-property-master/fetchDocIds?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31`.  I received a 200 status code and 5,778 `document_id` values.
+  - TLDR: skip the ChatGPT Digression issue.  I chose pagination approach for now.
+
+**PartiesRealPropApi**
+- [x] I need a function called `fetchDocIdsFromAcris` that will make an `axios` GET request similar to the `fetchFromACris` method, however, instead of defining its `url` variable as `this.constructPartiesUrl(query)` I want to implement the `constructPartiesUrlSelectDocIds` method with the syntax `this.constructPartiesUrlSelectDocIds(query)`. 
+  - I tested this method with a new route called `router.get("/fetchDocIds", async function (req, res, next) {` located in my `partiesRealPropApiRoutes` file in Postman with the URL `http://localhost:3001/api/real-property-parties/fetchDocIds?party_type=1&name=EMPIRE`.  I received a 200 status code and 16,840 `document_id` values.
+  -   TLDR: skip the ChatGPT Digression issue.  I chose pagination approach for now.  I moved this digression to [HERE](#chatgpt-digression-pagination-vs-batch-requests-vs-throttling).
+
+
+I implemented the `fetchDocIdsFromAcris` and exposed the route `fetchDocIds` that tested in Postman.  Since I'm still testing the behavior of these APIs, `fetchDocIdsFromAcris` will return `masterRecordsDocumentIds` as well as the duplicates in a variable called `masterRecordsDocumentIds_Duplicates`.  At this point `masterRecordsDocumentIds` will be used in the subsequent API call using `PartiesRealPropApi.fetchDocIdsFromAcris`. 
+
+I tested `fetchCountFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` which returned a **200 OK** status code and the json: `{ "count": { "masterRecordCount": 5776 } }`.
+
+Then I tested the `fetchDocIdsFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchDocIds?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and received a **200 OK** status code and a json object containing 4,137 lines of code with a `document_id` on each line.
+
+I expected to receive the same number of results from both Postman tests (5,776) but there is a difference of over 1,000.  This occurred because of duplicate `document_id` values being eliminated by the `Set` in `fetchDocIdsFromAcris`.  When I changed the hash map variable to an array I received 5780 lines of json code as a response with four of those lines represented by a pair of `{}` and `[]`.
+
+NoW that I know how to order the API GET requests based on the lowest number of matching records from making the `fetchCountFromAcris` GET request from `MasterRealPropApi`, `PartiesRealPropApi` and `LegalsRealPropApi` I can proceed to use the resulting `document_id` values in the subsequent GET requess and cross-reference those values in the process.
+
+##### Step 3: Cross-Reference `document_id` Values
+
+- Goal: Narrow down the results by intersecting `document_id` values across datasets.
+- Approach:
+  - After retrieving `document_id` values from the first dataset, use them to construct the query for the second dataset.
+  - Repeat the process for the third dataset, further narrowing down the results.
+
+- I created a function called `constructPartiesUrlCrossRefMasterSelectDocIds` (the name is a work in progress 😉) which accepts `partiesQueryParams` and `masterRecordsDocumentIds` to construct a query URL using Socrata Query Language syntax.  The example I've been testing assumes the `partiesQueryParams` search terms are: `name`: "EMPIRE" and `party_type`: "1" and `masterRecordsDocumentIds` contains 4,133 `document_id` values and 1,643 duplicates.  Currently, if I were to pass 4,133 document_id values to `constructPartiesUrlCrossRefMasterSelectDocIds` and `fetchDocIdsFromAcrisCrossRefMaster` it would not work because (1) the API has a 1,000 record limit for its response and (2) the `constructPartiesUrlCrossRefMasterSelectDocIds` would add all 4,133 document_id values in one query url which I assume would cause an error. I need to figure out how to paginate the GET request and also test what the API's query url character limit is.  I have to consider the following options:
+
+###### 1. Determine the NYC Open Data API's Query URL Character Limit
+
+Before implementing the solution, you need to test the API's query URL character limit. Here's how:
+- Start with a small number of `document_id` values (e.g., 10) and gradually increase the number until the API returns an error.
+- Log the constructed query URL and measure its length to determine the maximum safe character limit.
+- For example:
+
+```js
+const testDocumentIds = Array.from({ length: 1000 }, (_, i) => `ID${i + 1}`);
+const testUrl = `https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN (${testDocumentIds.map(id => `'${id}'`).join(", ")})&$select=document_id`;
+console.log("Test URL length:", testUrl.length);
+```
+
+###### 2. Refactor `constructPartiesUrlCrossRefMasterSelectDocIds`
+
+- Modify this method to construct query URLs in batches based on the determined character limit or a fixed batch size (e.g., 1,000 `document_id` values per batch).
+- Updated Method:
+
+```js
+static constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize = 1000) {
+    const baseUrl = this.constructPartiesUrl(partiesQueryParams);
+
+    // Split `masterRecordsDocumentIds` into batches
+    const batches = [];
+    for (let i = 0; i < masterRecordsDocumentIds.length; i += batchSize) {
+        const batch = masterRecordsDocumentIds.slice(i, i + batchSize);
+        const documentIdsCondition = `document_id IN (${batch.map(id => `'${id}'`).join(", ")})`;
+        const separator = baseUrl.includes("$where=") ? " AND " : "$where=";
+        const url = `${baseUrl}${separator}${documentIdsCondition}&$select=document_id`;
+        batches.push(url);
+    }
+
+    return batches; // Return an array of query URLs
+}
+```
+
+###### 3. Refactor `fetchDocIdsFromAcrisCrossRefMaster`
+- Update this method to handle multiple query URLs (batches) and make paginated GET requests for each batch.
+- Updated Method:
+
+```js
+static async fetchDocIdsFromAcrisCrossRefMaster(partiesQueryParams, masterRecordsDocumentIds, batchSize = 1000) {
+    try {
+        // Construct query URLs in batches
+        const queryUrls = this.constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize);
+        const allDocumentIds = new Set();
+
+        for (const url of queryUrls) {
+            let offset = 0;
+            let hasMoreRecords = true;
+
+            while (hasMoreRecords) {
+                // Add pagination parameters
+                const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
+                console.log("Fetching URL:", paginatedUrl);
+
+                // Make the GET request
+                const response = await axios.get(paginatedUrl, {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
+                    },
+                });
+
+                // Add `document_id` values to the set
+                const records = response.data;
+                records.forEach(record => allDocumentIds.add(record.document_id));
+
+                // Check if there are more records to fetch
+                if (records.length < 1000) {
+                    hasMoreRecords = false;
+                } else {
+                    offset += 1000;
+                }
+            }
+        }
+
+        return Array.from(allDocumentIds); // Return unique `document_id` values
+    } catch (err) {
+        console.error("Error fetching document IDs from ACRIS API:", err.message);
+        throw new Error("Failed to fetch document IDs from ACRIS API");
+    }
+}
+```
+
+###### 4. Test the Refactored Methods
+- Use Postman to test the `/fetchDocIdsCrossRefMasterDocIds` route with a large number of document_id values (e.g., 5,778).
+- Verify that the API handles the batched and paginated requests correctly and returns the expected results.
+
+###### 5. Handle Edge Cases
+- Empty `masterRecordsDocumentIds`: If the array is empty, return an empty result immediately.
+- API Errors: Add error handling to retry failed requests or log detailed error messages for debugging.
+- Performance: Use `Promise.all` to parallelize requests for different batches if the API allows concurrent requests.
+
+###### 6. Example Workflow
+- Input:
+  - `partiesQueryParams`: `{ party_type: "1", name: "EMPIRE" }`
+  - `masterRecordsDocumentIds`: `[ "ID1", "ID2", ..., "ID5778" ]`
+- Output:
+  - A deduplicated array of `document_id` values from the ACRIS Real Property Parties dataset that match the criteria.
+
+###### 7. Next Steps
+After implementing and testing the refactored methods, you can proceed to add error handling to the `/fetchDocIdsCrossRefMasterDocIds` route as discussed earlier.
+
+##### Step 4: Retrieve Full Records
+
+- Goal: Fetch the full records for the final set of `document_id` values.
+- Approach:
+  - Once the cross-referencing is complete, make a final batch of API calls to retrieve the full records for the remaining `document_id` values.
+  - Use `$where=document_id IN (...)` to fetch records in batches.
+
+##### Step 5: Return Results to the Frontend
+
+- Goal: Provide the user with the final cross-referenced dataset.
+- Approach:
+  - Combine the records from all datasets into a single response object.
+  - Ensure the response is paginated if the result set is large.
+
+---
+
+**Analysis of Your Considerations**
+**Consideration A: Retrieve All Records or Only Their `document_id` Values**
+
+- Pros:
+  - Requesting only `document_id` values reduces the size of API responses, improving performance.
+  - Cross-referencing `document_id` values first ensures that only relevant records are retrieved in subsequent steps.
+- Cons:
+  - Increases the number of API calls because you need to make additional requests to fetch the full records after cross-referencing.
+  - Adds complexity to the implementation, as you need to manage multiple stages of API calls.
+
+**Recommendation**: Use this approach because the reduced response size outweighs the cost of additional API calls. It is especially useful when datasets are large.
+
+---
+
+**Consideration B: Cross-Referencing Datasets by Including `document_id` Values in Subsequent GET Requests**
+
+- Pros:
+  - Dynamically querying datasets with `document_id` values reduces the size of responses from subsequent API calls.
+  - Ensures that only relevant records are retrieved, minimizing unnecessary data processing.
+- Cons:
+  - Requires careful handling of query construction, especially when the number of `document_id` values exceeds the API's URL length limit.
+  - May require additional API calls to determine the optimal query order based on the number of matches.
+    **Recommendation**: Use this approach in combination with Consideration A. Dynamically querying datasets with `document_id` values is efficient and scalable when paired with a batching or pagination system.
+
+---
+
+**Consideration C: Pagination vs. Batching vs. Other Techniques**
+
+- Pagination:
+  - Definition: Dividing the results of an API query into smaller chunks (pages) and retrieving them one at a time.
+  - Use Case: Ideal for datasets with a large number of records and when the API enforces a response size limit (e.g., 1,000 records).
+  - Implementation:
+    - Use the $limit and $offset parameters to retrieve records in pages.
+    - Example:
+
+```js
+https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=document_id&$limit=1000&$offset=0
+https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=document_id&$limit=1000&$offset=1000
+```
+
+- Batching:
+  - Definition: Dividing a large set of query parameters (e.g., `document_id` values) into smaller groups and making separate API calls for each batch.
+  - Use Case: Ideal when querying datasets with a large number of `document_id` values.
+  - Implementation:
+    - Divide the `document_id` values into batches of 1,000 (or fewer, depending on the API's URL length limit).
+    - Example:
+
+```js
+https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN ('ID1', 'ID2', ..., 'ID1000')
+https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN ('ID1001', 'ID1002', ..., 'ID2000')
+```
+
+- Other Techniques:
+  - Parallel Requests:
+    - Make multiple API calls simultaneously to reduce overall execution time.
+    - Use a library like axios.all or Promise.all in JavaScript.
+  - Caching: - Cache frequently queried `document_id` values or records to reduce redundant API calls. - Use a caching layer like Redis or an in-memory store.
+    **Recommendation**: Use a combination of pagination and batching. Pagination is ideal for retrieving `document_id` values, while batching is effective for querying records with large sets of `document_id` values.
+
+---
+
+**Additional Considerations**
+
+1. Error Handling:
+   - Implement robust error handling to retry failed API calls.
+   - Log errors for debugging and monitoring.
+2. Rate Limiting:
+   - Respect the API's rate limits to avoid being throttled or blocked.
+   - Use a rate-limiting library or implement delays between API calls.
+3. Scalability:
+   - Design the system to handle increasing dataset sizes and user queries.
+   - Use asynchronous processing to avoid blocking the server.
+4. User Experience:
+   - Provide progress updates to the user if the query takes a long time to complete.
+   - Allow users to refine their queries to reduce the number of matches.
+
+---
+
+**Final Plan**
+
+1. Determine Query Order:
+   - Perform $select=count(\*) queries for each dataset to determine the number of matches.
+   - Query the dataset with the smallest number of matches first.
+2. Retrieve `document_id` Values:
+
+- Use pagination to retrieve document_id values from each dataset.
+- Store the document_id values in a hash map or set.
+
+3. Cross-Reference document_id Values:
+   - Intersect the document_id values from all datasets to narrow down the results.
+4. Retrieve Full Records:
+   - Use batching to fetch the full records for the remaining document_id values.
+5. Return Results:
+   - Combine the records from all datasets into a single response object.
+   - Paginate the response if necessary.
+
+**Example Workflow**
+**Step 1: Query Order**
+
+- Perform $select=count(\*) queries:
+  - Real Property Master API: 5,776 matches.
+  - Real Property Parties API: 16,840 matches.
+  - Real Property Legals API: Unknown (assume 10,000 matches).
+
+**Step 2: Retrieve document_id Values**
+
+- Query the Real Property Master API first: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=document_id&$limit=1000&$offset=0`
+- Repeat for the other datasets.
+
+**Step 3: Cross-Reference**
+
+- Intersect the document_id values from all datasets.
+
+**Step 4: Retrieve Full Records**
+
+- Use batching to fetch the full records: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$where=document_id IN ('ID1', 'ID2', ..., 'ID1000')`
+
+**Step 5: Return Results**
+
+- Combine the records and return them to the frontend.
+
+[Back to TOC](#table-of-contents)
 
 ###### ChatGPT Digression: pagination vs batch requests vs throttling
 
@@ -355,165 +633,6 @@ Slightly more complex to implement.
 ---
 
 - [x] I will also need to create the `constructMasterUrlSelectDocIds` method that will construct a query URL based upon the `masterQueryParams` values, however, instead of retrieving all of the records I only want to retrieve the `document_id` values from matching records. If possible I would like the `constructMasterUrlSelectDocIds` method to reuse the `constructMasterUrl` method.
-
-###### Dev Notes
-
-I implemented the `fetchDocIdsFromAcris` and exposed the route `fetchDocIds` that tested in Postman.
-
-1. I tested `fetchCountFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` which returned a **200 OK** status code and the json: `{ "count": { "masterRecordCount": 5776 } }`.
-2. Then I tested the `fetchDocIdsFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchDocIds?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and received a **200 OK** status code and a json object containing 4,137 lines of code with a `document_id` on each line.
-3. I expected to receive the same number of results from both Postman tests (5,776) but there is a difference of over 1,000. I'm researching why this could have happened. The following are potential candidates:
-
-**The most likely reasons for the discrepancy are:**
-
-1. Duplicate `document_id` values being eliminated by the `Set` in `fetchDocIdsFromAcris`.
-   - **this was the issue**: when I changed the hash map variable to an array I received 5780 lines of json code as a response with four of those lines represented by a pair of `{}` and `[]`
-2. Records without `document_id` values being excluded from `fetchDocIdsFromAcris`.
-3. Differences in how the API handles count queries versus `document_id` queries.
-  
-##### Step 3: Cross-Reference `document_id` Values
-
-- Goal: Narrow down the results by intersecting `document_id` values across datasets.
-- Approach:
-  - After retrieving `document_id` values from the first dataset, use them to construct the query for the second dataset.
-  - Repeat the process for the third dataset, further narrowing down the results.
-
-##### Step 4: Retrieve Full Records
-
-- Goal: Fetch the full records for the final set of `document_id` values.
-- Approach:
-  - Once the cross-referencing is complete, make a final batch of API calls to retrieve the full records for the remaining `document_id` values.
-  - Use `$where=document_id IN (...)` to fetch records in batches.
-
-##### Step 5: Return Results to the Frontend
-
-- Goal: Provide the user with the final cross-referenced dataset.
-- Approach:
-  - Combine the records from all datasets into a single response object.
-  - Ensure the response is paginated if the result set is large.
-
----
-
-**Analysis of Your Considerations**
-**Consideration A: Retrieve All Records or Only Their `document_id` Values**
-
-- Pros:
-  - Requesting only `document_id` values reduces the size of API responses, improving performance.
-  - Cross-referencing `document_id` values first ensures that only relevant records are retrieved in subsequent steps.
-- Cons:
-  - Increases the number of API calls because you need to make additional requests to fetch the full records after cross-referencing.
-  - Adds complexity to the implementation, as you need to manage multiple stages of API calls.
-
-**Recommendation**: Use this approach because the reduced response size outweighs the cost of additional API calls. It is especially useful when datasets are large.
-
----
-
-**Consideration B: Cross-Referencing Datasets by Including `document_id` Values in Subsequent GET Requests**
-
-- Pros:
-  - Dynamically querying datasets with `document_id` values reduces the size of responses from subsequent API calls.
-  - Ensures that only relevant records are retrieved, minimizing unnecessary data processing.
-- Cons:
-  - Requires careful handling of query construction, especially when the number of `document_id` values exceeds the API's URL length limit.
-  - May require additional API calls to determine the optimal query order based on the number of matches.
-    **Recommendation**: Use this approach in combination with Consideration A. Dynamically querying datasets with `document_id` values is efficient and scalable when paired with a batching or pagination system.
-
----
-
-**Consideration C: Pagination vs. Batching vs. Other Techniques**
-
-- Pagination:
-  - Definition: Dividing the results of an API query into smaller chunks (pages) and retrieving them one at a time.
-  - Use Case: Ideal for datasets with a large number of records and when the API enforces a response size limit (e.g., 1,000 records).
-  - Implementation:
-    - Use the $limit and $offset parameters to retrieve records in pages.
-    - Example:
-
-```js
-https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=document_id&$limit=1000&$offset=0
-https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=document_id&$limit=1000&$offset=1000
-```
-
-- Batching:
-  - Definition: Dividing a large set of query parameters (e.g., `document_id` values) into smaller groups and making separate API calls for each batch.
-  - Use Case: Ideal when querying datasets with a large number of `document_id` values.
-  - Implementation:
-    - Divide the `document_id` values into batches of 1,000 (or fewer, depending on the API's URL length limit).
-    - Example:
-
-```js
-https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN ('ID1', 'ID2', ..., 'ID1000')
-https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN ('ID1001', 'ID1002', ..., 'ID2000')
-```
-
-- Other Techniques:
-  - Parallel Requests:
-    - Make multiple API calls simultaneously to reduce overall execution time.
-    - Use a library like axios.all or Promise.all in JavaScript.
-  - Caching: - Cache frequently queried `document_id` values or records to reduce redundant API calls. - Use a caching layer like Redis or an in-memory store.
-    **Recommendation**: Use a combination of pagination and batching. Pagination is ideal for retrieving `document_id` values, while batching is effective for querying records with large sets of `document_id` values.
-
----
-
-**Additional Considerations**
-
-1. Error Handling:
-   - Implement robust error handling to retry failed API calls.
-   - Log errors for debugging and monitoring.
-2. Rate Limiting:
-   - Respect the API's rate limits to avoid being throttled or blocked.
-   - Use a rate-limiting library or implement delays between API calls.
-3. Scalability:
-   - Design the system to handle increasing dataset sizes and user queries.
-   - Use asynchronous processing to avoid blocking the server.
-4. User Experience:
-   - Provide progress updates to the user if the query takes a long time to complete.
-   - Allow users to refine their queries to reduce the number of matches.
-
----
-
-**Final Plan**
-
-1. Determine Query Order:
-   - Perform $select=count(\*) queries for each dataset to determine the number of matches.
-   - Query the dataset with the smallest number of matches first.
-2. Retrieve `document_id` Values:
-
-- Use pagination to retrieve document_id values from each dataset.
-- Store the document_id values in a hash map or set.
-
-3. Cross-Reference document_id Values:
-   - Intersect the document_id values from all datasets to narrow down the results.
-4. Retrieve Full Records:
-   - Use batching to fetch the full records for the remaining document_id values.
-5. Return Results:
-   - Combine the records from all datasets into a single response object.
-   - Paginate the response if necessary.
-
-**Example Workflow**
-**Step 1: Query Order**
-
-- Perform $select=count(\*) queries:
-  - Real Property Master API: 5,776 matches.
-  - Real Property Parties API: 16,840 matches.
-  - Real Property Legals API: Unknown (assume 10,000 matches).
-
-**Step 2: Retrieve document_id Values**
-
-- Query the Real Property Master API first: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=document_id&$limit=1000&$offset=0`
-- Repeat for the other datasets.
-
-**Step 3: Cross-Reference**
-
-- Intersect the document_id values from all datasets.
-
-**Step 4: Retrieve Full Records**
-
-- Use batching to fetch the full records: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$where=document_id IN ('ID1', 'ID2', ..., 'ID1000')`
-
-**Step 5: Return Results**
-
-- Combine the records and return them to the frontend.
 
 [Back to TOC](#table-of-contents)
 

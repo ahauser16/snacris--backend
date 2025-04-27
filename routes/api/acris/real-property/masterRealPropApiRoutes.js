@@ -43,8 +43,19 @@ router.get("/fetchRecordCount", async function (req, res, next) {
 router.get("/fetchDocIds", async function (req, res, next) {
     try {
         const query = req.query;
-        const count = await MasterRealPropApi.fetchDocIdsFromAcris(query);
-        return res.json({ count });
+        const { masterRecordsDocumentIds, masterRecordsDocumentIds_Duplicates } = await MasterRealPropApi.fetchDocIdsFromAcris(query);
+
+        // Debugging log to verify the returned values
+        // console.log("Returned from fetchDocIdsFromAcris:", {
+        //     masterRecordsDocumentIds,
+        //     masterRecordsDocumentIds_Duplicates,
+        // });
+
+        // Explicitly include `masterRecordsDocumentIds_Duplicates` in the response
+        return res.json({
+            masterRecordsDocumentIds,
+            masterRecordsDocumentIds_Duplicates: masterRecordsDocumentIds_Duplicates || [],
+        });
     } catch (err) {
         return next(err);
     }
