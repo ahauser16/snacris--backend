@@ -21,6 +21,18 @@ Then I need to package or normalize the response from the Real Property ACRIS da
       - [Consideration C - Pagination VS Batching VS UNKNOWN PROCESS VS ALL THE ABOVE](#consideration-c---pagination-vs-batching-vs-unknown-process-vs-all-the-above)
       - [CHATGPT RESPONSE TO ABOVE](#chatgpt-response-to-above)
         - [**Plan for Cross-Referencing Datasets Using `document_id`**](#plan-for-cross-referencing-datasets-using-document_id)
+        - [Step 1: Determine the Query Order](#step-1-determine-the-query-order)
+          - [`MasterRealPropApi` Dev Notes](#masterrealpropapi-dev-notes)
+          - [`PartiesRealPropApi` Dev Notes](#partiesrealpropapi-dev-notes)
+          - [`LegalsRealPropApi` Dev Notes](#legalsrealpropapi-dev-notes)
+          - [Notes](#notes)
+        - [Step 2: Retrieve `document_id` Values](#step-2-retrieve-document_id-values)
+          - [`fetchDocIdsFromAcris` Dev Notes](#fetchdocidsfromacris-dev-notes)
+          - [ChatGPT Digression: pagination vs batch requests vs throttling](#chatgpt-digression-pagination-vs-batch-requests-vs-throttling)
+          - [Dev Notes](#dev-notes)
+        - [Step 3: Cross-Reference `document_id` Values](#step-3-cross-reference-document_id-values)
+        - [Step 4: Retrieve Full Records](#step-4-retrieve-full-records)
+        - [Step 5: Return Results to the Frontend](#step-5-return-results-to-the-frontend)
     - [Revised Refactor Plan (prompt 2 / edited \& used as prompt 3) (4/12/25) \[ARCHIVED\]](#revised-refactor-plan-prompt-2--edited--used-as-prompt-3-41225-archived)
     - [Revised Refactor Plan (response 3) \[ARCHIVED\]](#revised-refactor-plan-response-3-archived)
       - [Strengths of Your Plan](#strengths-of-your-plan)
@@ -39,22 +51,23 @@ Then I need to package or normalize the response from the Real Property ACRIS da
 
 ## ACRIS Dataset "Gotchas"
 
-1. The limit of records sent from the Real Property and Personal Property APIs is 1,000.  
-2. The Search By Party Name feature of ACRIS relies on the Real Property: Master, Parties and Legals (a/k/a Lot) datasets.  Initially I thought it searched the `borough` column of the Master dataset but it is actually the `borough` column of the Legals dataset
+1. The limit of records sent from the Real Property and Personal Property APIs is 1,000.
+2. The Search By Party Name feature of ACRIS relies on the Real Property: Master, Parties and Legals (a/k/a Lot) datasets. Initially I thought it searched the `borough` column of the Master dataset but it is actually the `borough` column of the Legals dataset
 
 ## Search By Party Name (current focust 4/22/25)
 
 ### Background
 
-My front end route `partyNameSearch` and my back end route `queryAcrisPartyName` are an attempt to copy a search feature provided by a website maintained by the NYC Department of Finance's Automated City Record Indexing System ("ACRIS").  The homepage for the DOF that launches ACRIS is located here: [https://www.nyc.gov/site/finance/property/acris.page#](https://www.nyc.gov/site/finance/property/acris.page#) and the **Search By Party Name** feature I'm attempting to copy is located here: [https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName](https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName).  
+My front end route `partyNameSearch` and my back end route `queryAcrisPartyName` are an attempt to copy a search feature provided by a website maintained by the NYC Department of Finance's Automated City Record Indexing System ("ACRIS"). The homepage for the DOF that launches ACRIS is located here: [https://www.nyc.gov/site/finance/property/acris.page#](https://www.nyc.gov/site/finance/property/acris.page#) and the **Search By Party Name** feature I'm attempting to copy is located here: [https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName](https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName).
 
-ACRIS contains public land record data for all of New York City such as deeds, mortgages, leases and any other document that is directly associated with real property.  One of the search feature's of ACRIS is to search for records that are associated with a property owner's `name` with the option to cross-reference `name` with: (i) a date range for `document_date` (e.g. within 7 days from the current date, within 30 days from the current date, custom range, etc.), (ii) a `document_class` representing four categories each of which contains a list of unique `document_type` (e.g. "DEEDS & OTHER CONVEYANCES", "MORTGAGES & INSTRUMENTS", "UCC & FEDERAL LIENS" & "OTHER DOCUMENTS"), (iii) a `party_type` representing the role of that party that is mapped to each `document_type` and (iv) a `borough` representing one of the five NYC Boroughs/NYS Counties where the document's associated property is located.  
+ACRIS contains public land record data for all of New York City such as deeds, mortgages, leases and any other document that is directly associated with real property. One of the search feature's of ACRIS is to search for records that are associated with a property owner's `name` with the option to cross-reference `name` with: (i) a date range for `document_date` (e.g. within 7 days from the current date, within 30 days from the current date, custom range, etc.), (ii) a `document_class` representing four categories each of which contains a list of unique `document_type` (e.g. "DEEDS & OTHER CONVEYANCES", "MORTGAGES & INSTRUMENTS", "UCC & FEDERAL LIENS" & "OTHER DOCUMENTS"), (iii) a `party_type` representing the role of that party that is mapped to each `document_type` and (iv) a `borough` representing one of the five NYC Boroughs/NYS Counties where the document's associated property is located.
 
 ### NYC Open Data - free ACRIS data
 
-ACRIS data is available for free by [NYC Open Data](https://opendata.cityofnewyork.us/) comprised of 15 API endpoints that are grouped in three major categories (5 endpoints per category): Real Property, Personal Property and Code Maps.  The Real Property and Personal Property categories each represent a full dataset that follow the same schema where each of their 5 datasets are referred to as: (i) Master, (ii) Party, (iii) Legals, (iv) Remarks and (v) References and can be cross referenced with each other using the unique identifying value: `document_id`.  For example, a specific deed will have its own `document_id` and if you wanted all the information associated with that deed using the NYC Open Data APIs then you would need to send a GET request to the Real Property-Master, Real Property-Party, Real Property-Legals, Real Property-Remarks and Real Property-References API endpoints.  The Code Maps category's five datasets represent codes and data structures that are used to query the Real Property and Personal Property datasets such as arrays of countries and states of the U.S. and arrays of document classes, document types and party types.  I've included the link to each API's NYC Open Data webpage below as a reference.
+ACRIS data is available for free by [NYC Open Data](https://opendata.cityofnewyork.us/) comprised of 15 API endpoints that are grouped in three major categories (5 endpoints per category): Real Property, Personal Property and Code Maps. The Real Property and Personal Property categories each represent a full dataset that follow the same schema where each of their 5 datasets are referred to as: (i) Master, (ii) Party, (iii) Legals, (iv) Remarks and (v) References and can be cross referenced with each other using the unique identifying value: `document_id`. For example, a specific deed will have its own `document_id` and if you wanted all the information associated with that deed using the NYC Open Data APIs then you would need to send a GET request to the Real Property-Master, Real Property-Party, Real Property-Legals, Real Property-Remarks and Real Property-References API endpoints. The Code Maps category's five datasets represent codes and data structures that are used to query the Real Property and Personal Property datasets such as arrays of countries and states of the U.S. and arrays of document classes, document types and party types. I've included the link to each API's NYC Open Data webpage below as a reference.
 
 Real Property:
+
 - [Master](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj)
 - [Legals](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Legals/8h5j-fqxa)
 - [Parties](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Parties/636b-3b5g)
@@ -62,13 +75,15 @@ Real Property:
 - [Remarks](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Remarks/9p4w-7npp)
 
 Personal Property:
+
 - [Master](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Master/sv7x-dduq)
 - [Legals](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2)
 - [Parties](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Parties/nbbg-wtuz)
 - [References](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-References/6y3e-jcrc)
 - [Remarks](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Remarks/fuzi-5ks9)
-  
+
 Code Maps:
+
 - [Document Control Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Document-Control-Codes/7isb-wh4c/about_data)
 - [UCC Collateral Codes](https://data.cityofnewyork.us/City-Government/ACRIS-UCC-Collateral-Codes/q9kp-jvxv/about_data)
 - [Property Types Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Property-Types-Codes/94g4-w6xz/about_data)
@@ -77,13 +92,13 @@ Code Maps:
 
 ### Current Architecture
 
-In order to copy the ACRIS **Search By Party Name** feature I have a webpage (e.g. `http://localhost:3000/partyNameSearch`) with the same form that sends search terms to my Backend route (e.g. `http://localhost:3001/queryAcrisPartyName/fetchRecord?searchTerms[...]=...`).  
+In order to copy the ACRIS **Search By Party Name** feature I have a webpage (e.g. `http://localhost:3000/partyNameSearch`) with the same form that sends search terms to my Backend route (e.g. `http://localhost:3001/queryAcrisPartyName/fetchRecord?searchTerms[...]=...`).
 
-on the frontend the `SelectDatasetsCheckboxes` component allows the user to select which datasets they want to query in the (parent) form-component. Each form-component has "Primary" datasets that it queries and "Secondary" datasets that the user can get additional data from based on the results from the "Primary" datasets. For example, the `PartyNameSearchForm` form-component queries the "Primary" datasets: **Real Property Master** (`masterDataset`),  **Real Property Parties** (`partiesDataset`) and **Real Property Legals** (`legalsDataset`) datasets because the form's `doc_type`, `document_date_range`, `document_date_start` and `document_date_end` are all associated with the **Real Property Master** dataset, the `name` and `party_type` are associated with the **Real Property Parties** dataset and the `borough` is associated with the **Real Property Legals** dataset.
+on the frontend the `SelectDatasetsCheckboxes` component allows the user to select which datasets they want to query in the (parent) form-component. Each form-component has "Primary" datasets that it queries and "Secondary" datasets that the user can get additional data from based on the results from the "Primary" datasets. For example, the `PartyNameSearchForm` form-component queries the "Primary" datasets: **Real Property Master** (`masterDataset`), **Real Property Parties** (`partiesDataset`) and **Real Property Legals** (`legalsDataset`) datasets because the form's `doc_type`, `document_date_range`, `document_date_start` and `document_date_end` are all associated with the **Real Property Master** dataset, the `name` and `party_type` are associated with the **Real Property Parties** dataset and the `borough` is associated with the **Real Property Legals** dataset.
 
-The results of these three API GET requests contain records that can be cross-referenced by their `document_id` on the backend (the **Cross Referenced Results**) before being sent BACK to the front end. The `SelectDatasetsCheckboxes` component allows the `PartyNameSearchForm` component to communicate to the backend that the `document_id` from the **Cross Referenced Results** should be used to query the "Secondary datasets", which in this case are the **Real Property Remarks** (`remarksDataset`) and **Real Property References** (`referencesDataset`) datasets. The parent component, and in this case `PartyNameSearchForm`, disables the input elements representing the "Primary" datasets in the `SelectDatasetsCheckboxes` component through props. For example, in this case the `masterDataset`,  `partiesDataset` and `legalsDataset` inputs are disabled while in their "checked" state whereas the `remarksDataset` and `referencesDataset` can be toggled by the user. When the user toggles these "Secondary" datasets and submits the `PartyNameSearchForm` component's form they are communicating to the backend that in addition to the **Cross Referenced Results** they want additional data from the `remarksDataset` and `referencesDataset` datasets.
+The results of these three API GET requests contain records that can be cross-referenced by their `document_id` on the backend (the **Cross Referenced Results**) before being sent BACK to the front end. The `SelectDatasetsCheckboxes` component allows the `PartyNameSearchForm` component to communicate to the backend that the `document_id` from the **Cross Referenced Results** should be used to query the "Secondary datasets", which in this case are the **Real Property Remarks** (`remarksDataset`) and **Real Property References** (`referencesDataset`) datasets. The parent component, and in this case `PartyNameSearchForm`, disables the input elements representing the "Primary" datasets in the `SelectDatasetsCheckboxes` component through props. For example, in this case the `masterDataset`, `partiesDataset` and `legalsDataset` inputs are disabled while in their "checked" state whereas the `remarksDataset` and `referencesDataset` can be toggled by the user. When the user toggles these "Secondary" datasets and submits the `PartyNameSearchForm` component's form they are communicating to the backend that in addition to the **Cross Referenced Results** they want additional data from the `remarksDataset` and `referencesDataset` datasets.
 
-The data coming in looks like the object below which include `masterSearchTerms`, `partySearchTerms` and `legalsSearchTerms` which I save to the `masterQueryParams`, `partiesQueryParams` and `legalsQueryParams` variables to validate the data, respectively.  Then I pass these query params objects to `MasterRealPropApi`, `LegalsRealPropApi` and `PartiesRealPropApi` which (i) construct the query URL using Socrata Query Language syntax (SoQL) and (ii) make the Axios GET requests using the constructed query URLs.  
+The data coming in looks like the object below which include `masterSearchTerms`, `partySearchTerms` and `legalsSearchTerms` which I save to the `masterQueryParams`, `partiesQueryParams` and `legalsQueryParams` variables to validate the data, respectively. Then I pass these query params objects to `MasterRealPropApi`, `LegalsRealPropApi` and `PartiesRealPropApi` which (i) construct the query URL using Socrata Query Language syntax (SoQL) and (ii) make the Axios GET requests using the constructed query URLs.
 
 ```bash
 Received request with query parameters: {
@@ -103,87 +118,275 @@ Received request with query parameters: {
 
 ### How To Send API GET Requests and Cross Reference Results
 
-Currently, I can make these requests for data independently but I need a plan for how to make these GET requests to the three datasets in an efficient way.  For example, when I query the first [Real Property Master API](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj) with the `masterQueryParams`: `document_date_range`, `document_date_start`, `document_date_end`, `doc_type` and `doc_class` I get 1,000 records back but after more testing using Postman (e.g. `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=count(*)&$where=doc_type='DEED' AND document_date between '2025-02-01' and '2025-03-31'`) I'm actually getting 5,776 records that match my query so the API has a 1,000 record limit.  When I query the second [Real Property Parties API](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Parties/636b-3b5g) with the `partiesQueryParams`: `name` and `party_type` using the Postman route: `{{real_property_parties_base_url}}?$select=count(*)&$where=name like '%25EMPIRE%25' AND party_type='1'` I get 16,840 records back.  I didn't even try to query the [Real Property Legals API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) because that would request all the records associated with properties in all of Brooklyn.  
+Currently, I can make these requests for data independently but I need a plan for how to make these GET requests to the three datasets in an efficient way. For example, when I query the first [Real Property Master API](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj) with the `masterQueryParams`: `document_date_range`, `document_date_start`, `document_date_end`, `doc_type` and `doc_class` I get 1,000 records back but after more testing using Postman (e.g. `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=count(*)&$where=doc_type='DEED' AND document_date between '2025-02-01' and '2025-03-31'`) I'm actually getting 5,776 records that match my query so the API has a 1,000 record limit. When I query the second [Real Property Parties API](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Parties/636b-3b5g) with the `partiesQueryParams`: `name` and `party_type` using the Postman route: `{{real_property_parties_base_url}}?$select=count(*)&$where=name like '%25EMPIRE%25' AND party_type='1'` I get 16,840 records back. I didn't even try to query the [Real Property Legals API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) because that would request all the records associated with properties in all of Brooklyn.
 
-The only way I can think to perform this search is by making the first GET request to the Real Property Master API, save each record's `document_id` to a hash map and incorporate those values in my subsequent GET request to the Real Property Parties API.  However, since the initial request to the Real Property Master API matched 5,776 records that means I would need to include 5,776 `document_id` values in the GET request to the Real Property Parties API both of which have a response limit of 1,000 records.  This means I need to come up with a pagination or batching system that makes these requests to account for the response limits.  This system will have to account for many factors and make design choices that may favor certain user experiences or resource handling that require making sacrificies in other areas.  Below are design considerations that could be implemented in the API GET request processes.
+The only way I can think to perform this search is by making the first GET request to the Real Property Master API, save each record's `document_id` to a hash map and incorporate those values in my subsequent GET request to the Real Property Parties API. However, since the initial request to the Real Property Master API matched 5,776 records that means I would need to include 5,776 `document_id` values in the GET request to the Real Property Parties API both of which have a response limit of 1,000 records. This means I need to come up with a pagination or batching system that makes these requests to account for the response limits. This system will have to account for many factors and make design choices that may favor certain user experiences or resource handling that require making sacrificies in other areas. Below are design considerations that could be implemented in the API GET request processes.
 
 #### Consideration A - Retrieve All Records or Only Their `document_id` Values
 
-The first consideration that comes to mind is to request only the `document_id` values for each GET request which would cut down on the response size of each request.  Referring to the example above, I would request the 5,776 `document_id` values associated with the records from the Real Property Master API using a pagination process instead of the records themselves.  Continuing with the example, I would request the 16,840 `document_id` values associated with the records from the Real Property Parties API dataset.  However, to make the third request I would still need to query the Real Property Legals API dataset for all `document_id` values associated with the whole borough of Brooklyn.  I can't imagine querying the `document_id` values alone would be the solution here.  Also, if I were to only request the `document_id` values until I fully cross referenced the datasets I would eventually need to make 3 subsequent API requests for the actual records to the three datasets.  Meaning if it took `X` GET requests to receive all `document_id` values from `Real Property Master API` and `Y` requests from `Real Property Parties API` and `Z` requests from `Real Property Legals API` then I would be making `X + Y + Z + 3` API calls for this **Search By Party Name** feature as opposed to `X + Y + Z` API calls if I requested the records, extracted the `document_id` values, cross referenced those values, filtered out all records based on those values and returned the records to the user.
+The first consideration that comes to mind is to request only the `document_id` values for each GET request which would cut down on the response size of each request. Referring to the example above, I would request the 5,776 `document_id` values associated with the records from the Real Property Master API using a pagination process instead of the records themselves. Continuing with the example, I would request the 16,840 `document_id` values associated with the records from the Real Property Parties API dataset. However, to make the third request I would still need to query the Real Property Legals API dataset for all `document_id` values associated with the whole borough of Brooklyn. I can't imagine querying the `document_id` values alone would be the solution here. Also, if I were to only request the `document_id` values until I fully cross referenced the datasets I would eventually need to make 3 subsequent API requests for the actual records to the three datasets. Meaning if it took `X` GET requests to receive all `document_id` values from `Real Property Master API` and `Y` requests from `Real Property Parties API` and `Z` requests from `Real Property Legals API` then I would be making `X + Y + Z + 3` API calls for this **Search By Party Name** feature as opposed to `X + Y + Z` API calls if I requested the records, extracted the `document_id` values, cross referenced those values, filtered out all records based on those values and returned the records to the user.
 
 Pros: reduce size of responses from APIs and possibly response time
 Cons: increase number of API calls
 
 #### Consideration B - Cross Referencing Datasets By Including `document_id` Values in subsequent GET Requests
 
-The next condideration is to use the `document_id` values from the initial GET requests (whether extracted from the records or retrieved by themselves from the dataset) to construct the query URL in subsequent GET requests to the datasets.  Back to my example, the first request to Real Property Master API would return 5,776 `document_id` values that I need to cross reference with the Real Property Parties API and Real Property Legals API datasets.  Instead of retrieving all of the `document_id` values from the other two datasets I could use the 5,776 `document_id` values in the query url to cross reference those datasets dynamically.  This would still require making batch requests or pagination but it would reduce the size of the response from subsequent API calls.  This could become hard to scale and use programmatically when the query parameters change and cause the results from each dataset to vary.  For example, in this case the query to the Real Property Master API returns 5,776 records which is the least amount of matches compared to the other two but what if the query changes and the other datasets return a lower number of records.  I would need to implement a mechanism that compares the number of matches from each dataset and orders the GET requests based on the lower number of matches.  Meaning it would take an extra three API GET requests to the `Real Property Master API`, `Real Property Parties API` and `Real Property Legals API` datasets to determine which dataset to make calls to first and if it took `X` GET requests to receive all `document_id` values from `Real Property Master API` and `Y` requests from `Real Property Parties API` and `Z` requests from `Real Property Legals API` then I would be making `3 + X + Y + Z` API calls for this **Search By Party Name** feature as opposed to `X + Y + Z` API calls if I requested the records without taking the number of matches into consideration.  
+The next condideration is to use the `document_id` values from the initial GET requests (whether extracted from the records or retrieved by themselves from the dataset) to construct the query URL in subsequent GET requests to the datasets. Back to my example, the first request to Real Property Master API would return 5,776 `document_id` values that I need to cross reference with the Real Property Parties API and Real Property Legals API datasets. Instead of retrieving all of the `document_id` values from the other two datasets I could use the 5,776 `document_id` values in the query url to cross reference those datasets dynamically. This would still require making batch requests or pagination but it would reduce the size of the response from subsequent API calls. This could become hard to scale and use programmatically when the query parameters change and cause the results from each dataset to vary. For example, in this case the query to the Real Property Master API returns 5,776 records which is the least amount of matches compared to the other two but what if the query changes and the other datasets return a lower number of records. I would need to implement a mechanism that compares the number of matches from each dataset and orders the GET requests based on the lower number of matches. Meaning it would take an extra three API GET requests to the `Real Property Master API`, `Real Property Parties API` and `Real Property Legals API` datasets to determine which dataset to make calls to first and if it took `X` GET requests to receive all `document_id` values from `Real Property Master API` and `Y` requests from `Real Property Parties API` and `Z` requests from `Real Property Legals API` then I would be making `3 + X + Y + Z` API calls for this **Search By Party Name** feature as opposed to `X + Y + Z` API calls if I requested the records without taking the number of matches into consideration.
 
-Pros: 
-Cons: 
+Pros:
+Cons:
 
 #### Consideration C - Pagination VS Batching VS UNKNOWN PROCESS VS ALL THE ABOVE
 
-I take this moment to finish my thoughts with a question which is what is pagination and making batch requests?  How can I use these techniques in combination with the other considerations I explained above.  What are other techniques or processes that I'm not thinking of?
+I take this moment to finish my thoughts with a question which is what is pagination and making batch requests? How can I use these techniques in combination with the other considerations I explained above. What are other techniques or processes that I'm not thinking of?
 
 [Back to TOC](#table-of-contents)
 
-#### CHATGPT RESPONSE TO ABOVE 
+#### CHATGPT RESPONSE TO ABOVE
 
 ##### **Plan for Cross-Referencing Datasets Using `document_id`**
 
 To achieve the desired functionality of cross-referencing datasets using the `document_id` field, we need to design a system that balances efficiency, scalability, and user experience. Below is a detailed plan, followed by an analysis of your considerations and additional techniques.
 
-**Proposed Approach**
+##### Step 1: Determine the Query Order
 
-Step 1: Determine the Query Order
 - Goal: Minimize the number of API calls and the size of responses.
 - Approach:
   - Use the dataset with the smallest number of matches as the starting point.
   - Perform a `$select=count(*)` query for each dataset to determine the number of matching records.
   - Order the datasets by the number of matches and query the smallest dataset first.
 
-Step 1: ToDos:
+###### `MasterRealPropApi` Dev Notes
+
 - [x] write a function called `constructMasterUrlCountRec` that accepts the same parameters as `constructMasterUrl` and creates a query URL to the same endpoint but uses SoQL syntax to return the number of matching records instead of the records themselves (e.g. `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=count(*)&$where=doc_type='DEED'`).
-- [x] write a function called `fetchCountFromAcris` in `MasterRealPropApi` that accepts the `masterQueryParams`, uses `constructMasterUrlCountRec` to construct the query URL that finds the `count` of matching records and makes the `axios` GET request.  I've constructed and tested a URL which looks like this: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=count(*)&$where=doc_type='DEED'` and returns the response in the format: `[{"count": "5776"}]`.  I want  `fetchCountFromAcris` to handle the response by returning the key value pair: `masterRecordCount: 5776`.  Keep in mind I want the data type of `count` to be tested and have error handling that checks if the string data type, when converted to a number, is in fact a number. 
+- [x] write a function called `fetchCountFromAcris` in `MasterRealPropApi` that accepts the `masterQueryParams`, uses `constructMasterUrlCountRec` to construct the query URL that finds the `count` of matching records and makes the `axios` GET request. I've constructed and tested a URL which looks like this: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=count(*)&$where=doc_type='DEED'` and returns the response in the format: `[{"count": "5776"}]`. I want `fetchCountFromAcris` to handle the response by returning the key value pair: `masterRecordCount: 5776`. Keep in mind I want the data type of `count` to be tested and have error handling that checks if the string data type, when converted to a number, is in fact a number.
 - Postman testing notes:
-  - I tested the `constructMasterUrlCountRec` and `fetchCountFromAcris` functions above in Postman.  In order to expose or integrate the API call into the backend I created the new route in `masterRealPropApiRoutes.js` called "/fetchRecordCount".  I tested the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?document_id=FT_3160005545216` which returned a 200 OK status code and the the json: `{ "records": { "masterRecordCount": 1 }}`.
-  - Then I tested the same "/fetchRecordCount" route assuming that the `masterSearchTerms` were `document_date_range: 'custom-date-range', document_date_start: '2025-02-01',document_date_end: '2025-03-31', doc_type: 'DEED', doc_class: 'DEEDS AND OTHER CONVEYANCES'` using the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and I successfully received the json: `{ "records": { "masterRecordCount": 5776 }}`.  
+  - I tested the `constructMasterUrlCountRec` and `fetchCountFromAcris` functions above in Postman. In order to expose or integrate the API call into the backend I created the new route in `masterRealPropApiRoutes.js` called "/fetchRecordCount". I tested the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?document_id=FT_3160005545216` which returned a 200 OK status code and the the json: `{ "records": { "masterRecordCount": 1 }}`.
+  - Then I tested the same "/fetchRecordCount" route assuming that the `masterSearchTerms` were `document_date_range: 'custom-date-range', document_date_start: '2025-02-01',document_date_end: '2025-03-31', doc_type: 'DEED', doc_class: 'DEEDS AND OTHER CONVEYANCES'` using the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and I successfully received the json: `{ "records": { "masterRecordCount": 5776 }}`.
   - I tested the original "fetchRecord" route assuming the `masterSearchTerms` were: `document_date_range: 'custom-date-range', document_date_start: '2025-02-01',document_date_end: '2025-03-31', doc_type: 'DEED', doc_class: 'DEEDS AND OTHER CONVEYANCES'` using the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecord?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and I received 1,000 records.
 
-- [ ] write a function called `constructPartiesUrlCountRec` that accepts the same parameters as `constructPartiesUrl` and creates a query URL to the same endpoint but uses SoQL syntax to return the number of matching records instead of the records themselves (e.g. `https://data.cityofnewyork.us/resource/636b-3b5g.json?$select=count(*)&$where=name like '%25EMPIRE%25' AND party_type='1'`).
-- [ ] write a function called `fetchCountFromAcris` in `PartiesRealPropApi` that accepts the `partiesQueryParams`, uses `constructPartiesUrlCountRec` to construct the query URL that finds the `count` of matching records and makes the `axios` GET request.  I've constructed and tested a URL which looks like this: `https://data.cityofnewyork.us/resource/636b-3b5g.json?$select=count(*)&$where=name like '%25EMPIRE%25' AND party_type='1'` and returns the response in the format: `[{"count": "15000"}]`.  I want  `fetchCountFromAcris` to handle the response by returning the key value pair: `partiesRecordCount: 5776`.  Keep in mind I want the data type of `count` to be tested and have error handling that checks if the string data type, when converted to a number, is in fact a number. 
+###### `PartiesRealPropApi` Dev Notes
 
-
-- [x] write a function called `constructLegalsUrl`. 
-- [x] write a function called `constructLegalsUrlCountRec` that accepts the same parameters as `constructLegalsUrl` and creates a query URL to the same endpoint but uses SoQL syntax to return the number of matching records instead of the records themselves (e.g. `https://data.cityofnewyork.us/resource/8h5j-fqxa.json?$select=count(*)&$where=borough='3'`).
-- [x] write a function called `fetchCountFromAcris` in `LegalsRealPropApi` that accepts the `legalsQueryParams`, uses `constructLegalsUrlCountRec` to construct the query URL that finds the `count` of matching records and makes the `axios` GET request.  I've constructed and tested a URL which looks like this: `https://data.cityofnewyork.us/resource/8h5j-fqxa.json?$select=count(*)&$where=borough='3'` and returns the response in the format: `[{"count": "12000"}]`.  I want  `fetchCountFromAcris` to handle the response by returning the key value pair: `legalsRecordCount: 12,000`.  Keep in mind I want the data type of `count` to be tested and have error handling that checks if the string data type, when converted to a number, is in fact a number. 
+- [x] write a function called `constructPartiesUrlCountRec` that accepts the same parameters as `constructPartiesUrl` and creates a query URL to the same endpoint but uses SoQL syntax to return the number of matching records instead of the records themselves (e.g. `https://data.cityofnewyork.us/resource/636b-3b5g.json?$select=count(*)&$where=name like '%25EMPIRE%25' AND party_type='1'`).
+- [x] write a function called `fetchCountFromAcris` in `PartiesRealPropApi` that accepts the `partiesQueryParams`, uses `constructPartiesUrlCountRec` to construct the query URL that finds the `count` of matching records and makes the `axios` GET request. I've constructed and tested a URL which looks like this: `https://data.cityofnewyork.us/resource/636b-3b5g.json?$select=count(*)&$where=name like '%25EMPIRE%25' AND party_type='1'` and returns the response in the format: `[{"count": "15000"}]`. I want `fetchCountFromAcris` to handle the response by returning the key value pair: `partiesRecordCount: 5776`. Keep in mind I want the data type of `count` to be tested and have error handling that checks if the string data type, when converted to a number, is in fact a number.
 - Postman testing notes:
-  - I tested the `constructLegalsUrlCountRec` and `fetchCountFromAcris` functions above in Postman.  In order to expose or integrate the API call into the backend I created the new route in `legalsRealPropApiRoutes.js` called "/fetchRecordCount".  I tested the Postman URL: `http://localhost:3001/api/real-property-legals/fetchRecordCount?borough=3` which returned a 200 OK status code and the the json: `{ "records": { "legalsRecordCount": 7281986 }}`.
+  - I tested the `constructPartiesUrlCountRec` and `fetchCountFromAcris` functions above in Postman. In order to expose or integrate the API call into the backend I created the new route in `partiesRealPropApiRoutes.js` called "/fetchRecordCount". I tested the Postman URL: `http://localhost:3001/api/real-property-parties/fetchRecordCount?party_type=1&name=EMPIRE` which returned a 200 OK status code and the the json: `{ "records": { "partiesRecordCount": 16840 }}`.
+  - Then I tested the same "/fetchRecordCount" route assuming that the `partiesSearchTerms` were `{ name: 'EMPIRE', party_type: '1' },` using the Postman URL: `http://localhost:3001/api/real-property-parties/fetchRecordCount?party_type=1&name=EMPIRE` and I successfully received the json: `{ "records": { "partiesRecordCount": 16840 }}`.
+  - I tested the original "fetchRecord" route with the same `partiesSearchTerms` using the Postman URL: `http://localhost:3001/api/real-property-parties/fetchRecord?party_type=1&name=EMPIRE` and I received 1,000 recor
 
+###### `LegalsRealPropApi` Dev Notes
 
-- [ ] write a function called `determineFetchOrder` which receives the `masterRecordCount`, `legalsRecordCount` and `partiesRecordCount` and compares each .
+- [x] write a function called `constructLegalsUrl`.
+- [x] write a function called `constructLegalsUrlCountRec` that accepts the same parameters as `constructLegalsUrl` and creates a query URL to the same endpoint but uses SoQL syntax to return the number of matching records instead of the records themselves (e.g. `https://data.cityofnewyork.us/resource/8h5j-fqxa.json?$select=count(*)&$where=borough='3'`).
+- [x] write a function called `fetchCountFromAcris` in `LegalsRealPropApi` that accepts the `legalsQueryParams`, uses `constructLegalsUrlCountRec` to construct the query URL that finds the `count` of matching records and makes the `axios` GET request. I've constructed and tested a URL which looks like this: `https://data.cityofnewyork.us/resource/8h5j-fqxa.json?$select=count(*)&$where=borough='3'` and returns the response in the format: `[{"count": "12000"}]`. I want `fetchCountFromAcris` to handle the response by returning the key value pair: `legalsRecordCount: 12,000`. Keep in mind I want the data type of `count` to be tested and have error handling that checks if the string data type, when converted to a number, is in fact a number.
+- Postman testing notes:
+  - I tested the `constructLegalsUrlCountRec` and `fetchCountFromAcris` functions above in Postman. In order to expose or integrate the API call into the backend I created the new route in `legalsRealPropApiRoutes.js` called "/fetchRecordCount". I tested the Postman URL: `http://localhost:3001/api/real-property-legals/fetchRecordCount?borough=3` which returned a 200 OK status code and the the json: `{ "records": { "legalsRecordCount": 7281986 }}`.
 
+###### Notes
 
-Step 2: Retrieve `document_id` Values
+The `fetchCountFromAcris` functions can be run in parallel with each other. Once `masterRecordCount`, `legalsRecordCount` and `partiesRecordCount` are received a controller function such as `determineFetchOrder` could sort them based lowest number of records. The lowest number would determine which API to make the `fetchDocIdsFromAcris` call to.
+
+##### Step 2: Retrieve `document_id` Values
+
 - Goal: Reduce the size of responses and focus on cross-referencing.
 - Approach:
   - For each dataset, retrieve only the `document_id` values using the `$select=document_id` parameter.
   - Use pagination to handle datasets with more than 1,000 records.
   - Store the `document_id` values in a hash map or set for efficient cross-referencing.
 
-Step 3: Cross-Reference `document_id` Values
+###### `fetchDocIdsFromAcris` Dev Notes
+
+NB: This function will run after receivng the total number of matching records from the `fetchCountFromAcris` function.
+
+- [x] I need a function called `fetchDocIdsFromAcris` that will make an `axios` GET request similar to the `fetchFromACris` method, however, instead of defining its `url` variable as `this.constructMasterUrl(query)` I want to implement the `constructMasterUrlSelectDocIds` method with the syntax `this.constructMasterUrlSelectDocIds(query)`. 
+
+###### ChatGPT Digression: pagination vs batch requests vs throttling
+
+Also, I know that the API record limit is 1,000 records and expect to always exceed that limit. I need you to help me make design decisions with respect to using pagination, batch requests, making paralell requests or a combination of these approaches to ensure that all of the matching `document_id` values will be received. As part of this process and before executing `fetchDocIdsFromAcris` I plan on running the function `constructMasterUrlCountRec` to find out how many matching records match the query criteria. Once I receive the number of records (e.g. `{ "records": { "masterRecordCount": 5776 }}`) I want to run `fetchDocIdsFromAcris` to obtain the `document_id` value for each of those 5,776 records. I could use a pagination system to obtain all of those records which would require at least 6 GET requests. I do not know how pagination works but I suspect that it involves making multiple GET requests in a specific order and that each subsequent request is not sent until the prior request's response is received. Referring back to my example of the `"masterRecordCount": 5776` number or records I assume using a pagination method would involve making the initial GET request and receive 1,000 `document_id` values, save them to a hash map variable called `masterRecordsDocumentIds` (for example), then keep making subsequent GET requests until all 5,776 `document_id` values are saved to `masterRecordsDocumentIds`. The other option could be to use a batch request system where I send out all 6 GET requests at once that run parallel (or concurrent) with each other. Since I already know from executing my `fetchDocIdsFromAcris` function that there are 5776 matching records then I could configure the first search to retrieve the first 1,000 records, the second search to retrieve the next 1,000 records, etc. However, I don't know if this is a best practice or how to do it. I'm not concerned about the order in which I receive these 5,776 `document_id` values and I would prefer to receive them as quickly as possible. Based on the aforementioned description what are my options?
+
+**1. Pagination**
+Pagination involves making sequential GET requests, where each request retrieves a fixed number of records (e.g., 1,000). Each subsequent request uses an offset to fetch the next set of records.
+
+**How It Works:**
+Use the constructMasterUrlSelectDocIds method to construct the base URL.
+Add $limit=1000 and $offset=<value> to the query string.
+Start with offset=0 and increment it by 1,000 for each subsequent request.
+Stop when all records are fetched.
+
+**Example:**
+
+```js
+async function fetchDocIdsWithPagination(query, totalRecords) {
+  const limit = 1000;
+  const totalPages = Math.ceil(totalRecords / limit);
+  const documentIds = [];
+
+  for (let page = 0; page < totalPages; page++) {
+    const offset = page * limit;
+    const url = `${MasterRealPropApi.constructMasterUrlSelectDocIds(
+      query
+    )}&$limit=${limit}&$offset=${offset}`;
+    const response = await axios.get(url, {
+      headers: { "X-App-Token": process.env.APP_TOKEN },
+    });
+    documentIds.push(...response.data.map((record) => record.document_id));
+  }
+
+  return documentIds;
+}
+```
+
+**Pros:**
+
+- Simple to implement.
+- Sequential and predictable.
+  **Cons:**
+- Slower because each request waits for the previous one to complete.
+
+---
+
+**2. Batch Requests**
+Batching involves sending multiple GET requests simultaneously, each configured to fetch a specific range of records.
+
+**How It Works:**
+
+1. Use the `constructMasterUrlSelectDocIds` method to construct the base URL.
+2. Divide the total records into batches of 1,000.
+3. Send all requests at once using `Promise.all`.
+
+**Example:**
+
+```js
+async function fetchDocIdsWithBatching(query, totalRecords) {
+  const limit = 1000;
+  const totalPages = Math.ceil(totalRecords / limit);
+  const requests = [];
+
+  for (let page = 0; page < totalPages; page++) {
+    const offset = page * limit;
+    const url = `${MasterRealPropApi.constructMasterUrlSelectDocIds(
+      query
+    )}&$limit=${limit}&$offset=${offset}`;
+    requests.push(
+      axios.get(url, {
+        headers: { "X-App-Token": process.env.APP_TOKEN },
+      })
+    );
+  }
+
+  const responses = await Promise.all(requests);
+  const documentIds = responses.flatMap((response) =>
+    response.data.map((record) => record.document_id)
+  );
+  return documentIds;
+}
+```
+
+**Pros:**
+
+- Faster because requests are sent concurrently.
+- Ideal for large datasets.
+  **Cons:**
+- Higher memory usage.
+- May overwhelm the API or network if too many requests are sent simultaneously.
+
+---
+
+**3. Parallel Requests with Throttling**
+Parallel requests with throttling involve sending a limited number of requests concurrently to avoid overwhelming the API.
+
+**How It Works:**
+
+1. Use the `constructMasterUrlSelectDocIds` method to construct the base URL.
+2. Divide the total records into batches of 1,000.
+3. Use a library like `p-limit` or implement a custom throttling mechanism to limit the number of concurrent requests.
+
+**Example:**
+
+```js
+const pLimit = require("p-limit");
+
+async function fetchDocIdsWithThrottling(query, totalRecords) {
+  const limit = 1000;
+  const totalPages = Math.ceil(totalRecords / limit);
+  const maxConcurrentRequests = 5; // Limit to 5 concurrent requests
+  const limitConcurrency = pLimit(maxConcurrentRequests);
+
+  const requests = Array.from({ length: totalPages }, (_, page) => {
+    const offset = page * limit;
+    const url = `${MasterRealPropApi.constructMasterUrlSelectDocIds(
+      query
+    )}&$limit=${limit}&$offset=${offset}`;
+    return limitConcurrency(() =>
+      axios.get(url, {
+        headers: { "X-App-Token": process.env.APP_TOKEN },
+      })
+    );
+  });
+
+  const responses = await Promise.all(requests);
+  const documentIds = responses.flatMap((response) =>
+    response.data.map((record) => record.document_id)
+  );
+  return documentIds;
+}
+```
+
+**Pros:**
+Balances speed and resource usage.
+Avoids overwhelming the API.
+**Cons:**
+Slightly more complex to implement.
+
+---
+
+**Recommendations for Your Use Case**
+
+1. If Speed is Critical: Use Batch Requests to fetch all records as quickly as possible.
+2. If API Rate Limits are a Concern: Use Parallel Requests with Throttling to balance speed and resource usage.
+3. If Simplicity is Preferred: Use Pagination, as it is straightforward and predictable.
+
+**Summary of Examples**
+
+1. Pagination: Sequential requests, slower but simple.
+2. Batch Requests: Concurrent requests, faster but resource-intensive.
+3. Parallel Requests with Throttling: Concurrent requests with a limit, balances speed and resource usage.
+
+---
+
+- [x] I will also need to create the `constructMasterUrlSelectDocIds` method that will construct a query URL based upon the `masterQueryParams` values, however, instead of retrieving all of the records I only want to retrieve the `document_id` values from matching records. If possible I would like the `constructMasterUrlSelectDocIds` method to reuse the `constructMasterUrl` method.
+
+###### Dev Notes
+
+I implemented the `fetchDocIdsFromAcris` and exposed the route `fetchDocIds` that tested in Postman.
+
+1. I tested `fetchCountFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` which returned a **200 OK** status code and the json: `{ "count": { "masterRecordCount": 5776 } }`.
+2. Then I tested the `fetchDocIdsFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchDocIds?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and received a **200 OK** status code and a json object containing 4,137 lines of code with a `document_id` on each line.
+3. I expected to receive the same number of results from both Postman tests (5,776) but there is a difference of over 1,000. I'm researching why this could have happened. The following are potential candidates:
+
+**The most likely reasons for the discrepancy are:**
+
+1. Duplicate `document_id` values being eliminated by the `Set` in `fetchDocIdsFromAcris`.
+   - **this was the issue**: when I changed the hash map variable to an array I received 5780 lines of json code as a response with four of those lines represented by a pair of `{}` and `[]`
+2. Records without `document_id` values being excluded from `fetchDocIdsFromAcris`.
+3. Differences in how the API handles count queries versus `document_id` queries.
+  
+##### Step 3: Cross-Reference `document_id` Values
+
 - Goal: Narrow down the results by intersecting `document_id` values across datasets.
 - Approach:
   - After retrieving `document_id` values from the first dataset, use them to construct the query for the second dataset.
   - Repeat the process for the third dataset, further narrowing down the results.
 
-Step 4: Retrieve Full Records
+##### Step 4: Retrieve Full Records
+
 - Goal: Fetch the full records for the final set of `document_id` values.
 - Approach:
   - Once the cross-referencing is complete, make a final batch of API calls to retrieve the full records for the remaining `document_id` values.
   - Use `$where=document_id IN (...)` to fetch records in batches.
 
-Step 5: Return Results to the Frontend
+##### Step 5: Return Results to the Frontend
+
 - Goal: Provide the user with the final cross-referenced dataset.
 - Approach:
   - Combine the records from all datasets into a single response object.
@@ -195,8 +398,8 @@ Step 5: Return Results to the Frontend
 **Consideration A: Retrieve All Records or Only Their `document_id` Values**
 
 - Pros:
-  - Requesting only document_id values reduces the size of API responses, improving performance.
-  - Cross-referencing document_id values first ensures that only relevant records are retrieved in subsequent steps.
+  - Requesting only `document_id` values reduces the size of API responses, improving performance.
+  - Cross-referencing `document_id` values first ensures that only relevant records are retrieved in subsequent steps.
 - Cons:
   - Increases the number of API calls because you need to make additional requests to fetch the full records after cross-referencing.
   - Adds complexity to the implementation, as you need to manage multiple stages of API calls.
@@ -206,17 +409,19 @@ Step 5: Return Results to the Frontend
 ---
 
 **Consideration B: Cross-Referencing Datasets by Including `document_id` Values in Subsequent GET Requests**
+
 - Pros:
   - Dynamically querying datasets with `document_id` values reduces the size of responses from subsequent API calls.
   - Ensures that only relevant records are retrieved, minimizing unnecessary data processing.
 - Cons:
   - Requires careful handling of query construction, especially when the number of `document_id` values exceeds the API's URL length limit.
   - May require additional API calls to determine the optimal query order based on the number of matches.
-**Recommendation**: Use this approach in combination with Consideration A. Dynamically querying datasets with `document_id` values is efficient and scalable when paired with a batching or pagination system.
+    **Recommendation**: Use this approach in combination with Consideration A. Dynamically querying datasets with `document_id` values is efficient and scalable when paired with a batching or pagination system.
 
 ---
 
 **Consideration C: Pagination vs. Batching vs. Other Techniques**
+
 - Pagination:
   - Definition: Dividing the results of an API query into smaller chunks (pages) and retrieving them one at a time.
   - Use Case: Ideal for datasets with a large number of records and when the API enforces a response size limit (e.g., 1,000 records).
@@ -245,14 +450,13 @@ https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN ('ID
   - Parallel Requests:
     - Make multiple API calls simultaneously to reduce overall execution time.
     - Use a library like axios.all or Promise.all in JavaScript.
-  - Caching:
-    - Cache frequently queried `document_id` values or records to reduce redundant API calls.
-    - Use a caching layer like Redis or an in-memory store.
-**Recommendation**: Use a combination of pagination and batching. Pagination is ideal for retrieving `document_id` values, while batching is effective for querying records with large sets of `document_id` values.
+  - Caching: - Cache frequently queried `document_id` values or records to reduce redundant API calls. - Use a caching layer like Redis or an in-memory store.
+    **Recommendation**: Use a combination of pagination and batching. Pagination is ideal for retrieving `document_id` values, while batching is effective for querying records with large sets of `document_id` values.
 
 ---
 
 **Additional Considerations**
+
 1. Error Handling:
    - Implement robust error handling to retry failed API calls.
    - Log errors for debugging and monitoring.
@@ -269,12 +473,15 @@ https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN ('ID
 ---
 
 **Final Plan**
+
 1. Determine Query Order:
-   - Perform $select=count(*) queries for each dataset to determine the number of matches.
+   - Perform $select=count(\*) queries for each dataset to determine the number of matches.
    - Query the dataset with the smallest number of matches first.
 2. Retrieve `document_id` Values:
-  - Use pagination to retrieve document_id values from each dataset.
-   - Store the document_id values in a hash map or set.
+
+- Use pagination to retrieve document_id values from each dataset.
+- Store the document_id values in a hash map or set.
+
 3. Cross-Reference document_id Values:
    - Intersect the document_id values from all datasets to narrow down the results.
 4. Retrieve Full Records:
@@ -286,22 +493,26 @@ https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN ('ID
 **Example Workflow**
 **Step 1: Query Order**
 
-- Perform $select=count(*) queries:
+- Perform $select=count(\*) queries:
   - Real Property Master API: 5,776 matches.
   - Real Property Parties API: 16,840 matches.
   - Real Property Legals API: Unknown (assume 10,000 matches).
 
 **Step 2: Retrieve document_id Values**
+
 - Query the Real Property Master API first: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=document_id&$limit=1000&$offset=0`
 - Repeat for the other datasets.
 
 **Step 3: Cross-Reference**
+
 - Intersect the document_id values from all datasets.
 
 **Step 4: Retrieve Full Records**
+
 - Use batching to fetch the full records: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$where=document_id IN ('ID1', 'ID2', ..., 'ID1000')`
 
 **Step 5: Return Results**
+
 - Combine the records and return them to the frontend.
 
 [Back to TOC](#table-of-contents)
@@ -451,16 +662,17 @@ example of potential structure of `records` array:
 
 - [x] The `document_date` parameter is derived from `document_date_range`, `document_date_start`, and `document_date_end`. Ensure that the logic for constructing this parameter is well-defined and accounts for edge cases (e.g., missing or invalid date values).
 
-4. Utility Function for SoQL Syntax 
-- This won't be possible since each column of the datasets is unique, not in its data type but, in how it is used in a simple query and in more complex queries that require cross referencing each other.  I've kept the idea for `laterSearch` below and will revisit it.
-   - Your idea of creating a utility function (e.g., `alterSearch`) to generate SoQL syntax is excellent. This function could handle:
-     - Range Queries: e.g., `document_date between '20250401' and '20250415'`.
-     - Exact Value Queries: e.g., `borough = '3'`.
-     - List Queries: e.g., `document_id in ('123456789', '987654321')`.
-   - Additional Query Types:
-     - Wildcard Queries: e.g., `name like 'empire%'`.
-     - Null/Not Null Queries: e.g., `document_amt is not null`.
-   - Suggestion: Implement `alterSearch` as a utility function that accepts a column name, a query type, and the corresponding value(s). It should return a valid SoQL `$where` clause.
+4. Utility Function for SoQL Syntax
+
+- This won't be possible since each column of the datasets is unique, not in its data type but, in how it is used in a simple query and in more complex queries that require cross referencing each other. I've kept the idea for `laterSearch` below and will revisit it.
+  - Your idea of creating a utility function (e.g., `alterSearch`) to generate SoQL syntax is excellent. This function could handle:
+    - Range Queries: e.g., `document_date between '20250401' and '20250415'`.
+    - Exact Value Queries: e.g., `borough = '3'`.
+    - List Queries: e.g., `document_id in ('123456789', '987654321')`.
+  - Additional Query Types:
+    - Wildcard Queries: e.g., `name like 'empire%'`.
+    - Null/Not Null Queries: e.g., `document_amt is not null`.
+  - Suggestion: Implement `alterSearch` as a utility function that accepts a column name, a query type, and the corresponding value(s). It should return a valid SoQL `$where` clause.
 
 5. Error Handling for Secondary Datasets
    - Your plan does not specify how to handle cases where some `document_id` values return results while others do not.
@@ -473,11 +685,12 @@ if (response.data.length === 0) {
 ```
 
 6. Performance Considerations - fetching data using pagination or batching will be absolutely necessary as it turns out since mimicing the **Search By Party Name** feature returns thousands of records that must be cross referenced with each other.
+
 - [ ] TODO: explore how to incorporate pagination/batching into the `MasterRealPropApi` and other API modules.
-   - Fetching data from multiple APIs (especially secondary datasets) could lead to performance bottlenecks if the number of `document_id` values is large.
-   - Suggestion:
-     - Use batching or pagination when querying secondary datasets to avoid overwhelming the APIs or your server.
-     - Consider parallelizing API calls using `Promise.all` for better performance.
+  - Fetching data from multiple APIs (especially secondary datasets) could lead to performance bottlenecks if the number of `document_id` values is large.
+  - Suggestion:
+    - Use batching or pagination when querying secondary datasets to avoid overwhelming the APIs or your server.
+    - Consider parallelizing API calls using `Promise.all` for better performance.
 
 7. Testing
 
@@ -492,11 +705,11 @@ if (response.data.length === 0) {
 
 1. Refactor `MasterRealPropApi` and `PartiesRealPropApi`:
 
-   - [x] Create and implement `constructMasterUrl` to encapsulate the URL construction logic.  
+   - [x] Create and implement `constructMasterUrl` to encapsulate the URL construction logic.
    - [x] Create and implement `constructPartiesUrl` to encapsulate the URL construction logic.
-   - [x] Update `fetchFromAcris` to use `constructMasterUrl`.  **This function was implemented by `MasterRealPropApi` and I successfully tested it using Postman.**
-   - [x] Update `fetchFromAcris` to use `constructPartiesUrl`.  **This function was implemented by `MasterRealPropApi` and I successfully tested it using Postman.**
-   - [X] Create and implement `constructPartiesUrlCrossRefMaster` to encapsulate the URL construction logic that includes the `document_id` values resulting from the first API request to Real Property Master (`masterRecordsDocumentIds`) and the query parameters from the front end associated with the Real Property Parties dataset (`partiesQueryParams`).
+   - [x] Update `fetchFromAcris` to use `constructMasterUrl`. **This function was implemented by `MasterRealPropApi` and I successfully tested it using Postman.**
+   - [x] Update `fetchFromAcris` to use `constructPartiesUrl`. **This function was implemented by `MasterRealPropApi` and I successfully tested it using Postman.**
+   - [x] Create and implement `constructPartiesUrlCrossRefMaster` to encapsulate the URL construction logic that includes the `document_id` values resulting from the first API request to Real Property Master (`masterRecordsDocumentIds`) and the query parameters from the front end associated with the Real Property Parties dataset (`partiesQueryParams`).
 
 2. Test `MasterRealPropApi` and `PartiesRealPropApi` implementation through the Front End using the `PartyNameSearchForm`
 
@@ -553,8 +766,6 @@ The GET request from the front end looks like this:
 GET /queryAcrisPartyName/fetchRecord?searchTerms[name]=EMPIRE&searchTerms[document_date_range]=last-1-year&searchTerms[document_date_start]=2024-04-16&searchTerms[document_date_end]=2025-04-16&searchTerms[borough]=3&searchTerms[party_type]=1&searchTerms[doc_type]=doc-type-default&searchTerms[doc_class]=DEEDS+AND+OTHER+CONVEYANCES&primaryApiSources[masterDataset]=true&primaryApiSources[partiesDataset]=true&secondaryApiSources[legalsDataset]=false&secondaryApiSources[referencesDataset]=false&secondaryApiSources[remarksDataset]=false
 ```
 
-
-
 3. Refactor `LegalsRealPropApi`, `ReferencesRealPropApi`, and `RemarksRealPropApi`:
 
    - [ ] Add `fetchSecondaryDataFromAcris` to handle fetching data for multiple `document_id` values.
@@ -568,16 +779,16 @@ GET /queryAcrisPartyName/fetchRecord?searchTerms[name]=EMPIRE&searchTerms[docume
    - [ ] Use `primaryRecordDocumentIds` to fetch data for secondary datasets.
    - [ ] Combine `primaryRecords` and `secondaryRecords` into records.
 
-4. Validate Query Parameters:
+5. Validate Query Parameters:
 
    - [ ] Add validation logic to ensure that all required parameters are present and correctly formatted.
 
-5. Optimize Performance:
+6. Optimize Performance:
 
    - [ ] Implement batching or pagination for secondary dataset queries if necessary.
    - [ ] Use `Promise.all` to parallelize API calls where possible.
 
-6. Test the Implementation:
+7. Test the Implementation:
    - [ ] Write unit tests for all new functions.
    - [ ] Write integration tests for the `queryAcrisPartyName` route.
 
@@ -589,7 +800,7 @@ Overengineering
 GraphQL
 
 Victor 5:09 PM
-EDA (Event driven architecture) 
+EDA (Event driven architecture)
 — offloading requests from the HTTP request
 Optimistic prediction (imagining ahead of time what users are searching for)
 
@@ -741,8 +952,7 @@ router.get("/fetchRecord", async function (req, res, next) {
       masterQueryParams.document_date_start = searchTerms.document_date_start;
     if (searchTerms?.document_date_end)
       masterQueryParams.document_date_end = searchTerms.document_date_end;
-    if (searchTerms?.borough)
-      masterQueryParams.borough = searchTerms.borough;
+    if (searchTerms?.borough) masterQueryParams.borough = searchTerms.borough;
     if (searchTerms?.doc_type)
       masterQueryParams.doc_type = transformForUrl(searchTerms.doc_type);
 
@@ -863,17 +1073,18 @@ If any API call fails, the response will include an error object in the correspo
 
 [Back to TOC](#table-of-contents)
 
-### Frontend and Backend testing notes 
+### Frontend and Backend testing notes
 
 #### Background
 
-The following test is for my Front End route called "partyNameSearch" and my Back End route called `queryAcrisPartyName` which is an attempt to copy a search feature for the NYC Department of Finance's website called "ACRIS" which stands for Automated City Record Indexing System.  The homepage for the DOF that launches ACRIS is located here: [https://www.nyc.gov/site/finance/property/acris.page#](https://www.nyc.gov/site/finance/property/acris.page#) and the **Search By Party Name** feature I'm attempting to copy is located here: [https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName](https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName).  
+The following test is for my Front End route called "partyNameSearch" and my Back End route called `queryAcrisPartyName` which is an attempt to copy a search feature for the NYC Department of Finance's website called "ACRIS" which stands for Automated City Record Indexing System. The homepage for the DOF that launches ACRIS is located here: [https://www.nyc.gov/site/finance/property/acris.page#](https://www.nyc.gov/site/finance/property/acris.page#) and the **Search By Party Name** feature I'm attempting to copy is located here: [https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName](https://a836-acris.nyc.gov/DS/DocumentSearch/PartyName).
 
-ACRIS contains public land record data for all of New York City such as deeds, mortgages, leases and any other document that is directly associated with real property.  One of the search feature's of ACRIS is to search for records that are associated with a property owner's `name` with the option to cross-reference `name` with: (i) a date range for `document_date` (e.g. within 7 days from the current date, within 30 days from the current date, custom range, etc.), (ii) a `document_class` representing four categories each of which contains a list of unique `document_type` (e.g. "DEEDS & OTHER CONVEYANCES", "MORTGAGES & INSTRUMENTS", "UCC & FEDERAL LIENS" & "OTHER DOCUMENTS"), (iii) a `party_type` representing the role of that party that is mapped to each `document_type` and (iv) a `borough` representing one of the five NYC Boroughs/NYS Counties where the document was recorded.  
+ACRIS contains public land record data for all of New York City such as deeds, mortgages, leases and any other document that is directly associated with real property. One of the search feature's of ACRIS is to search for records that are associated with a property owner's `name` with the option to cross-reference `name` with: (i) a date range for `document_date` (e.g. within 7 days from the current date, within 30 days from the current date, custom range, etc.), (ii) a `document_class` representing four categories each of which contains a list of unique `document_type` (e.g. "DEEDS & OTHER CONVEYANCES", "MORTGAGES & INSTRUMENTS", "UCC & FEDERAL LIENS" & "OTHER DOCUMENTS"), (iii) a `party_type` representing the role of that party that is mapped to each `document_type` and (iv) a `borough` representing one of the five NYC Boroughs/NYS Counties where the document was recorded.
 
-The ACRIS data is available hosted by [NYC Open Data](https://opendata.cityofnewyork.us/) comprised of 15 API endpoints that are grouped in three major categories (5 endpoints per category): Real Property, Personal Property and Code Maps.  The Real Property and Personal Property categories each represent a full dataset that follow the same schema where each of their 5 datasets are referred to as: (i) Master, (ii) Party, (iii) Lot, (iv) Remarks and (v) References and can be cross referenced with each other using the unique identifying value: `document_id`.  For example, a specific deed will have its own `document_id` and if you wanted all the information associated with that deed using the NYC Open Data APIs then you would need to send a GET request to the Real Property-Master, Real Property-Party, Real Property-Lot, Real Property-Remarks and Real Property-References API endpoints.  The Code Maps category's five datasets represent codes and data structures that are used to query the Real Property and Personal Property datasets such as arrays of countries and states of the U.S. and arrays of document classes, document types and party types.  I've included the link to each API's NYC Open Data webpage below as a reference.
+The ACRIS data is available hosted by [NYC Open Data](https://opendata.cityofnewyork.us/) comprised of 15 API endpoints that are grouped in three major categories (5 endpoints per category): Real Property, Personal Property and Code Maps. The Real Property and Personal Property categories each represent a full dataset that follow the same schema where each of their 5 datasets are referred to as: (i) Master, (ii) Party, (iii) Lot, (iv) Remarks and (v) References and can be cross referenced with each other using the unique identifying value: `document_id`. For example, a specific deed will have its own `document_id` and if you wanted all the information associated with that deed using the NYC Open Data APIs then you would need to send a GET request to the Real Property-Master, Real Property-Party, Real Property-Lot, Real Property-Remarks and Real Property-References API endpoints. The Code Maps category's five datasets represent codes and data structures that are used to query the Real Property and Personal Property datasets such as arrays of countries and states of the U.S. and arrays of document classes, document types and party types. I've included the link to each API's NYC Open Data webpage below as a reference.
 
 Real Property:
+
 - [Master](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj)
 - [Party](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Legals/8h5j-fqxa)
 - [Lot](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Parties/636b-3b5g)
@@ -881,25 +1092,28 @@ Real Property:
 - [Remarks](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Remarks/9p4w-7npp)
 
 Personal Property:
+
 - [Master](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Master/sv7x-dduq)
 - [Party](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2)
 - [Lot](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Parties/nbbg-wtuz)
 - [References](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-References/6y3e-jcrc)
 - [Remarks](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Remarks/fuzi-5ks9)
-  
+
 Code Maps:
+
 - [Document Control Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Document-Control-Codes/7isb-wh4c/about_data)
 - [UCC Collateral Codes](https://data.cityofnewyork.us/City-Government/ACRIS-UCC-Collateral-Codes/q9kp-jvxv/about_data)
 - [Property Types Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Property-Types-Codes/94g4-w6xz/about_data)
 - [State Codes](https://data.cityofnewyork.us/City-Government/ACRIS-State-Codes/5c9e-33xj/about_data)
 - [Country Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Country-Codes/j2iz-mwzu/about_data)
 
-In order to copy the ACRIS **Search By Party Name** feature I have a Front End webpage (e.g. http://localhost:3000/partyNameSearch) sending search terms associated with the Real Property Master and Real Property Parties datasets to my Backend route (e.g. http://localhost:3001/queryAcrisPartyName/fetchRecord?searchTerms[...]=...).  
+In order to copy the ACRIS **Search By Party Name** feature I have a Front End webpage (e.g. http://localhost:3000/partyNameSearch) sending search terms associated with the Real Property Master and Real Property Parties datasets to my Backend route (e.g. http://localhost:3001/queryAcrisPartyName/fetchRecord?searchTerms[...]=...).
 
 - [x] I make an API GET request to the [Real Property Master API](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj) with the `masterQueryParams`: `borough`, `doc_type`, `document_date_start` and `document_date_end` (two date type values representing a range search query of the `document_type` column).
-- [x] I save the resulting records to the `masterRecords` array while creating the array-type variable `masterRecordsDocumentIds` containing the `document_id` value of each record in `masterRecords`.  
+- [x] I save the resulting records to the `masterRecords` array while creating the array-type variable `masterRecordsDocumentIds` containing the `document_id` value of each record in `masterRecords`.
 
 **For example, I searched on the ACRIS website using the search criteria:**
+
 - `name`: "EMPIRE"
 - `document_date`: "last-1-year"
 - `party_type`: "1"
@@ -907,8 +1121,8 @@ In order to copy the ACRIS **Search By Party Name** feature I have a Front End w
 - `document_class`: DEEDS AND OTHER CONVEYANCES
   - NB: to simulate the search on my end I must search for the `doc_type` values: "DEED", "MEMORANDUM OF LEASE" and "CONDO DECLARATION"
 
-
 **and got the 9 records with the Document Ids:**
+
 ```bash
 Master Records Document IDs (with names and document dates for context): [
   '2024051000620001', //(EMPIRE ADAR LLC, 5/2/2024)
@@ -927,84 +1141,85 @@ Master Records Document IDs (with names and document dates for context): [
 **I replicated the search above using my Backend server and Postman using the query:** `https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=name LIKE '%25EMPIRE%25' AND party_type='1' AND document_id IN ('2024051000620001',  '2024042600136001',  '2025040900070001',  '2024112600954001',  '2025021800719001',  '2024092300336001',  '2024092300336001',  '2024092300336001',  '2025040900509001')`
 
 **And got the 5 results:**
+
 - note that `2024092300336001` shows up once below but three times when I used ACRIS because it was recorded against three different properties which you would only know if you cross referenced the `lot` dataset
 - note that `2025040900070001` and `2025040900509001` did not show up in my replicated-search due to the datasets not being updated for the month of April 2025 (my search date is 4/19/25)
-- this means my replicated-test was "successful" even though it did not match my experience on ACRIS.  It was even more helpful because it exposed how the datasets are not updated frequently backend and how a document with a unique `document_id` is displayed multiple times depending on how many properties it was recorded.
+- this means my replicated-test was "successful" even though it did not match my experience on ACRIS. It was even more helpful because it exposed how the datasets are not updated frequently backend and how a document with a unique `document_id` is displayed multiple times depending on how many properties it was recorded.
+
 ```json
 [
-    {
-        "document_id": "2025021800719001",
-        "record_type": "P",
-        "party_type": "1",
-        "name": "EMPIRE STATE DAIRY LLC",
-        "address_1": "C/O: BUSHBURG PROPERTIES",
-        "address_2": "3611 14TH AVENUE, SUITE 215",
-        "country": "US",
-        "city": "BROOKLYN",
-        "state": "NY",
-        "zip": "11218",
-        "good_through_date": "2025-02-28T00:00:00.000"
-    },
-    {
-        "document_id": "2024112600954001",
-        "record_type": "P",
-        "party_type": "1",
-        "name": "EMPIRE REALTY HOLDINGS LLC",
-        "address_1": "4003 HAHN AVE",
-        "country": "US",
-        "city": "BETHPAGE",
-        "state": "NY",
-        "zip": "11714",
-        "good_through_date": "2024-12-31T00:00:00.000"
-    },
-    {
-        "document_id": "2024092300336001",
-        "record_type": "P",
-        "party_type": "1",
-        "name": "EMPIRE STATE DAIRYY LLC",
-        "address_1": "3611 14TH AVENUE",
-        "address_2": "SUITE 215",
-        "country": "US",
-        "city": "BROOKLYN",
-        "state": "NY",
-        "zip": "11218",
-        "good_through_date": "2024-09-30T00:00:00.000"
-    },
-    {
-        "document_id": "2024051000620001",
-        "record_type": "P",
-        "party_type": "1",
-        "name": "EMPIRE ADAR LLC",
-        "address_1": "C/O: ELI FIXLER, ESQ",
-        "address_2": "1507 AVENUE M",
-        "country": "US",
-        "city": "BROOKLYN",
-        "state": "NY",
-        "zip": "11230",
-        "good_through_date": "2024-05-31T00:00:00.000"
-    },
-    {
-        "document_id": "2024042600136001",
-        "record_type": "P",
-        "party_type": "1",
-        "name": "EMPIRE HOLDINGS I LLC",
-        "address_1": "183 WILSON ST, SUITE 133",
-        "country": "US",
-        "city": "BROOKLYN",
-        "state": "NY",
-        "zip": "11211",
-        "good_through_date": "2024-04-30T00:00:00.000"
-    }
+  {
+    "document_id": "2025021800719001",
+    "record_type": "P",
+    "party_type": "1",
+    "name": "EMPIRE STATE DAIRY LLC",
+    "address_1": "C/O: BUSHBURG PROPERTIES",
+    "address_2": "3611 14TH AVENUE, SUITE 215",
+    "country": "US",
+    "city": "BROOKLYN",
+    "state": "NY",
+    "zip": "11218",
+    "good_through_date": "2025-02-28T00:00:00.000"
+  },
+  {
+    "document_id": "2024112600954001",
+    "record_type": "P",
+    "party_type": "1",
+    "name": "EMPIRE REALTY HOLDINGS LLC",
+    "address_1": "4003 HAHN AVE",
+    "country": "US",
+    "city": "BETHPAGE",
+    "state": "NY",
+    "zip": "11714",
+    "good_through_date": "2024-12-31T00:00:00.000"
+  },
+  {
+    "document_id": "2024092300336001",
+    "record_type": "P",
+    "party_type": "1",
+    "name": "EMPIRE STATE DAIRYY LLC",
+    "address_1": "3611 14TH AVENUE",
+    "address_2": "SUITE 215",
+    "country": "US",
+    "city": "BROOKLYN",
+    "state": "NY",
+    "zip": "11218",
+    "good_through_date": "2024-09-30T00:00:00.000"
+  },
+  {
+    "document_id": "2024051000620001",
+    "record_type": "P",
+    "party_type": "1",
+    "name": "EMPIRE ADAR LLC",
+    "address_1": "C/O: ELI FIXLER, ESQ",
+    "address_2": "1507 AVENUE M",
+    "country": "US",
+    "city": "BROOKLYN",
+    "state": "NY",
+    "zip": "11230",
+    "good_through_date": "2024-05-31T00:00:00.000"
+  },
+  {
+    "document_id": "2024042600136001",
+    "record_type": "P",
+    "party_type": "1",
+    "name": "EMPIRE HOLDINGS I LLC",
+    "address_1": "183 WILSON ST, SUITE 133",
+    "country": "US",
+    "city": "BROOKLYN",
+    "state": "NY",
+    "zip": "11211",
+    "good_through_date": "2024-04-30T00:00:00.000"
+  }
 ]
 ```
 
 **Test Summary**
-I had to create this new test due to rethinking how I want to cross reference the results of the two API calls to RP Master and RP Party datasets and given how those datasets are kept up to date, or rather, how they are **NOT** kept up to date.  The former issue is when I make an API call to the RP Party dataset with minimal query data such as `name` and `party_type` I receive thousands of records so I need to first make the call to RP Master, extract their `document_id` values from each record and include them in the subsequent call to RP Party API.  However, the Real Property datasets are not kept up to date on a daily basis.  I find that, as of today 4/19/25, there are no records for the month of April (from 4/1/25 to 4/19/25) so I needed to run a new test that would provide enough data and not an empty dataset when I query records from the "last-7-days".
-
+I had to create this new test due to rethinking how I want to cross reference the results of the two API calls to RP Master and RP Party datasets and given how those datasets are kept up to date, or rather, how they are **NOT** kept up to date. The former issue is when I make an API call to the RP Party dataset with minimal query data such as `name` and `party_type` I receive thousands of records so I need to first make the call to RP Master, extract their `document_id` values from each record and include them in the subsequent call to RP Party API. However, the Real Property datasets are not kept up to date on a daily basis. I find that, as of today 4/19/25, there are no records for the month of April (from 4/1/25 to 4/19/25) so I needed to run a new test that would provide enough data and not an empty dataset when I query records from the "last-7-days".
 
 - [ ] Then I use `masterRecordsDocumentIds` and the `partiesQueryParams` values from `name` and `party_type` to make a subsequent API GET request to the [Real Property Party API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) using `PartiesRealPropApi.fetchFromAcris` and save the resulting records to `partyRecords`.
-  - **PROMPT ON HOW TO PROCEED**.  This poses a design decision that I'm not sure which is the best route to take.  I need your help on how to best approach refactoring my code.  Currently my `PartiesRealPropApi.fetchFromAcris` method only accepts `partiesQueryParams` as its parameter and calls the `constructPartiesUrl` function to construct the query URL that is used to make the API call.  However, in addition to `partiesQueryParams`, now I want to pass `masterRecordsDocumentIds` to `PartiesRealPropApi.fetchFromAcris` to achieve the following search behavior.  I want the query URL to be constructed in such a way so the API GET request queries the dataset for records that contain the key/value pairs contained in `partiesQueryParams` (such as `name` AND `party_type`) that also have any of the `document_id` values from `masterRecordsDocumentIds`. Since `masterRecordsDocumentIds` is an additional paraqmeter to `PartiesRealPropApi.fetchFromAcris`, I think I will need to create a new method to construct the query URL instead of `constructPartiesUrl`, which only accounts for the `partiesQueryParams`, when both `masterRecordsDocumentIds` and `partiesQueryParams` are passed to `PartiesRealPropApi.fetchFromAcris`.  The new method should be named `constructPartiesUrlCrossRefMaster` that is called by `fetchFromAcris`, however, I don't know if this is a good refactor plan.  I want you to review my aforementioned refactor plan based on the query url behavior and provide advise on how to proceed.
-  - **AI RESPONSE ON HOW TO PROCEED**.  *Your plan to create a new method constructPartiesUrlCrossRefMaster to handle the additional masterRecordsDocumentIds parameter is a good approach. It allows you to keep the existing constructPartiesUrl method focused on simpler queries while introducing a new method for more complex cross-referenced queries. This separation of concerns makes the code easier to maintain and extend.*
+  - **PROMPT ON HOW TO PROCEED**. This poses a design decision that I'm not sure which is the best route to take. I need your help on how to best approach refactoring my code. Currently my `PartiesRealPropApi.fetchFromAcris` method only accepts `partiesQueryParams` as its parameter and calls the `constructPartiesUrl` function to construct the query URL that is used to make the API call. However, in addition to `partiesQueryParams`, now I want to pass `masterRecordsDocumentIds` to `PartiesRealPropApi.fetchFromAcris` to achieve the following search behavior. I want the query URL to be constructed in such a way so the API GET request queries the dataset for records that contain the key/value pairs contained in `partiesQueryParams` (such as `name` AND `party_type`) that also have any of the `document_id` values from `masterRecordsDocumentIds`. Since `masterRecordsDocumentIds` is an additional paraqmeter to `PartiesRealPropApi.fetchFromAcris`, I think I will need to create a new method to construct the query URL instead of `constructPartiesUrl`, which only accounts for the `partiesQueryParams`, when both `masterRecordsDocumentIds` and `partiesQueryParams` are passed to `PartiesRealPropApi.fetchFromAcris`. The new method should be named `constructPartiesUrlCrossRefMaster` that is called by `fetchFromAcris`, however, I don't know if this is a good refactor plan. I want you to review my aforementioned refactor plan based on the query url behavior and provide advise on how to proceed.
+  - **AI RESPONSE ON HOW TO PROCEED**. _Your plan to create a new method constructPartiesUrlCrossRefMaster to handle the additional masterRecordsDocumentIds parameter is a good approach. It allows you to keep the existing constructPartiesUrl method focused on simpler queries while introducing a new method for more complex cross-referenced queries. This separation of concerns makes the code easier to maintain and extend._
     - Here’s a detailed review and advice on how to proceed:
       1. Create `constructPartiesUrlCrossRefMaster`:
          - This method will construct a query URL that includes both `partiesQueryParams` and `masterRecordsDocumentIds`.
@@ -1092,28 +1307,34 @@ static async fetchFromAcris(partiesQueryParams, masterRecordsDocumentIds = null)
 3. Update the Route
 
 In your `queryAcrisPartyName` route, pass both `partiesQueryParams` and `masterRecordsDocumentIds` to `fetchFromAcris`:
+
 ```js
 // Fetch data from the Parties dataset
 if (primaryDatasets.partiesDataset) {
-    try {
-        console.log("Fetching Parties Dataset with query params:", partiesQueryParams);
-        partyRecords = await PartiesRealPropApi.fetchFromAcris(partiesQueryParams, masterRecordsDocumentIds);
-        console.log("Fetched Parties Records:", partyRecords.length);
-    } catch (err) {
-        console.error("Error fetching Parties Dataset:", err.message);
-        partyRecords.push({
-            dataFound: false,
-            dataset: "partiesDataset",
-            error: err.message,
-        });
-    }
+  try {
+    console.log(
+      "Fetching Parties Dataset with query params:",
+      partiesQueryParams
+    );
+    partyRecords = await PartiesRealPropApi.fetchFromAcris(
+      partiesQueryParams,
+      masterRecordsDocumentIds
+    );
+    console.log("Fetched Parties Records:", partyRecords.length);
+  } catch (err) {
+    console.error("Error fetching Parties Dataset:", err.message);
+    partyRecords.push({
+      dataFound: false,
+      dataset: "partiesDataset",
+      error: err.message,
+    });
+  }
 }
 ```
 
-
-- [ ] This request will return any records that have a matching `document_id` from the array of `masterRecordsDocumentIds` AND a matching search term for both `name` AND `party_type` which will be saved to the `partyRecords` array and the `document_id` values from those results will be saved to `partyRecordsDocumentIdsCrossRef`.  
-   - This is necessary because before I implemented the aformentioned logic in item 2 & 3 when I performed my [Test B](#41825-test-b), the `masterRecords` results contained 5 records and the `partyRecords` results contained 1,000 records.  I thought I could make the two API calls independently and cross reference the results afterward but I do not think this is an efficient way to make API calls and handle the results.  Also, the 2nd call may not have even contained all matching records since 1,000 is the limit to what that API can send back.  TODO: Ask Ian if there is a better way to query the Real Property datasets and cross reference the results.  For example, instead of returning the actual records from the [Real Property Party API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) GET request I could only handle the `document_id` values, cross reference those values with the results of the [Real Property Party API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) GET request, construct more specific query URLs, and then make another GET request to each API for the records.  This approach would double the number of API requests but the size of data would be much smaller.
-- [ ] Then I will need to combine `masterRecords` and `partyRecords` into a new array called `primaryRecords` and filter out any records that do not have a `document_id` value in the `masterRecordsDocumentIds` array AND the `partyRecordsDocumentIds` array.  
+- [ ] This request will return any records that have a matching `document_id` from the array of `masterRecordsDocumentIds` AND a matching search term for both `name` AND `party_type` which will be saved to the `partyRecords` array and the `document_id` values from those results will be saved to `partyRecordsDocumentIdsCrossRef`.
+  - This is necessary because before I implemented the aformentioned logic in item 2 & 3 when I performed my [Test B](#41825-test-b), the `masterRecords` results contained 5 records and the `partyRecords` results contained 1,000 records. I thought I could make the two API calls independently and cross reference the results afterward but I do not think this is an efficient way to make API calls and handle the results. Also, the 2nd call may not have even contained all matching records since 1,000 is the limit to what that API can send back. TODO: Ask Ian if there is a better way to query the Real Property datasets and cross reference the results. For example, instead of returning the actual records from the [Real Property Party API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) GET request I could only handle the `document_id` values, cross reference those values with the results of the [Real Property Party API](http://data.cityofnewyork.us/City-Government/ACRIS-Personal-Property-Legals/uqqa-hym2) GET request, construct more specific query URLs, and then make another GET request to each API for the records. This approach would double the number of API requests but the size of data would be much smaller.
+- [ ] Then I will need to combine `masterRecords` and `partyRecords` into a new array called `primaryRecords` and filter out any records that do not have a `document_id` value in the `masterRecordsDocumentIds` array AND the `partyRecordsDocumentIds` array.
 
 For example, for the test below I sent a GET request to the [Real Property Master API](http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj) with the `searchTerms` and values: `borough`, `doc_type`, `document_date_start` and `document_date_end`
 
@@ -1374,12 +1595,12 @@ The combined number of "Primary Records" was 1,005 and the total number of uniqu
 #### 4/20/25 (Test C - `borough` and `limit` realizations)
 
 ##### `borough` vs `borough`
-It turns out that **Search By Party Name** feature queries the `borough` column of the Real Property Lot dataset as opposed to the `borough` column of the Real Property Master dataset.  This is a huge realization that should not have taken me this long to find out but here we are...
+
+It turns out that **Search By Party Name** feature queries the `borough` column of the Real Property Lot dataset as opposed to the `borough` column of the Real Property Master dataset. This is a huge realization that should not have taken me this long to find out but here we are...
 
 ##### API Responses limited to 1,000 records
-It turns out that if I want to replicate the **Search By Party Name** feature I will need to make API GET requests to the Real Property datasets in a specific order while including the `document_id` values from the prior response in the next GET request.  For example, I used the search criteria below to query the Real Property Master dataset with the url: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=count(*)&$where=doc_type='DEED' AND document_date between '2025-02-01' and '2025-03-31'`.  The result was that there were 5,776 records but I only received 1,000 so, first, I need a way to add pagination so I get all 5,776 records OR at least each record's `document_id` value.  Then I want to take those `document_id` values and include them in the subsequent API GET request to the Real Property Parties dataset.  This way I'm cross-referencing the two datasets so the resulting records should be less than 5,776 since I only want records with, for example, `name` that contains "EMPIRE" and has a `party_type` value of '1' so let's say that reduces the cumulative search results down to 1,000.  The resulting records, or `document_id` values of those records, will be included in the subsequent API GET request to the Real Property Legals (a/k/a Lot) dataset so now I'm taking 1,000 `document_id` values and sending them to the Real Property Legals API to see which of those `document_id` values also has a `borough` value of '3'.  Incorporating pagination into this will be very difficult.
 
-
+It turns out that if I want to replicate the **Search By Party Name** feature I will need to make API GET requests to the Real Property datasets in a specific order while including the `document_id` values from the prior response in the next GET request. For example, I used the search criteria below to query the Real Property Master dataset with the url: `https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=count(*)&$where=doc_type='DEED' AND document_date between '2025-02-01' and '2025-03-31'`. The result was that there were 5,776 records but I only received 1,000 so, first, I need a way to add pagination so I get all 5,776 records OR at least each record's `document_id` value. Then I want to take those `document_id` values and include them in the subsequent API GET request to the Real Property Parties dataset. This way I'm cross-referencing the two datasets so the resulting records should be less than 5,776 since I only want records with, for example, `name` that contains "EMPIRE" and has a `party_type` value of '1' so let's say that reduces the cumulative search results down to 1,000. The resulting records, or `document_id` values of those records, will be included in the subsequent API GET request to the Real Property Legals (a/k/a Lot) dataset so now I'm taking 1,000 `document_id` values and sending them to the Real Property Legals API to see which of those `document_id` values also has a `borough` value of '3'. Incorporating pagination into this will be very difficult.
 
 Then I need to cross reference the results so that I filter out records that do not share a `document_id` value with a record in the other dataset.
 

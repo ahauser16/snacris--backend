@@ -92,6 +92,18 @@ class MasterRealPropApi {
   }
 
   /**
+   * Constructs a SoQL query URL to retrieve only `document_id` values from the Real Property Master dataset.
+   *
+   * @param {Object} params - Optional query parameters (same as constructMasterUrl).
+   * @returns {string} - Constructed SoQL query URL for selecting `document_id` values.
+   */
+  static constructMasterUrlSelectDocIds(params = {}) {
+    const baseUrl = this.constructMasterUrl(params);
+    return `${baseUrl}&$select=document_id`;
+  }
+
+
+  /**
    * Fetch data from the ACRIS Real Property Master dataset.
    * @param {Object} query - Query parameters.
    * @returns {Array} - Fetched records.
@@ -167,6 +179,52 @@ class MasterRealPropApi {
       throw new Error("Failed to fetch count from ACRIS API");
     }
   }
+
+/**
+   * Fetch all `document_id` values from the ACRIS Real Property Master dataset using pagination.
+   *
+   * @param {Object} query - Query parameters.
+   * @returns {Array<string>} - Array of all `document_id` values.
+   */
+static async fetchDocIdsFromAcris(query) {
+  try {
+    const limit = 1000; // API record limit per request
+    let offset = 0;
+    let hasMoreRecords = true;
+    const masterRecordsDocumentIds = [];
+
+    while (hasMoreRecords) {
+      // Construct the URL with pagination parameters
+      const url = `${this.constructMasterUrlSelectDocIds(query)}&$limit=${limit}&$offset=${offset}`;
+      console.log("fetchDocIdsFromAcris URL:", url);
+
+      // Make the GET request to the NYC Open Data API
+      const response = await axios.get(url, {
+        headers: {
+          "Content-Type": "application/json",
+          "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
+        },
+      });
+
+      // Add `document_id` values to the set
+      const records = response.data;
+      records.forEach(record => masterRecordsDocumentIds.push(record.document_id));
+
+      // Check if there are more records to fetch
+      if (records.length < limit) {
+        hasMoreRecords = false;
+      } else {
+        offset += limit;
+      }
+    }
+
+    return Array.from(masterRecordsDocumentIds);
+  } catch (err) {
+    console.error("Error fetching document IDs from ACRIS API:", err.message);
+    throw new Error("Failed to fetch document IDs from ACRIS API");
+  }
+}
+
 }
 
 module.exports = MasterRealPropApi;

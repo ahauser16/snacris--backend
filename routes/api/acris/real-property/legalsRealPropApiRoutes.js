@@ -33,8 +33,8 @@ router.get("/fetchRecord", async function (req, res, next) {
 router.get("/fetchRecordCount", async function (req, res, next) {
     try {
         const query = req.query;
-        const records = await LegalsRealPropApi.fetchCountFromAcris(query);
-        return res.json({ records });
+        const count = await LegalsRealPropApi.fetchCountFromAcris(query);
+        return res.json({ count });
     } catch (err) {
         return next(err);
     }
