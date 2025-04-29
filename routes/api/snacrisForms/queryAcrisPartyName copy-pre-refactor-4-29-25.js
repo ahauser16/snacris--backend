@@ -69,13 +69,8 @@ router.get("/fetchRecord", async function (req, res, next) {
         if (legalsSearchTerms?.borough)
             legalsQueryParams.borough = legalsSearchTerms.borough;
 
-        // Step 1: Determine the Query Order based on the (i) the presence of the `primaryDatasets`: `masterDataset`, `partiesDataset` and `legalsDataset`, make API calls for each dataset to see how many records are returned using the `fetchCountFromAcris` method and (3)  the subsequent API calls to datasets is ordered by the lowest number of records going first.  For example, `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` returned 5776 records, `http://localhost:3001/api/real-property-parties/fetchRecordCount?party_type=1&name=EMPIRE` returned 16,840 records and `http://localhost:3001/api/real-property-legals/fetchRecordCount?borough=3` returned `7281986` records.  Therefore, based on these counts, the order of API calls would be: `masterDataset` first, then `partiesDataset` and then `legalsDataset`.  The API calls are made in parallel using `Promise.all()`.
-        
-        // Step 2: Retrieve `document_id` Values  in the order determined by Step 1 using the `MasterRealPropApi.fetchDocIdsFromAcris` followed by `PartiesRealPropApi.fetchDocIdsFromAcrisCrossRefMasterDocIds` and then `LegalsRealPropApi.fetchDocIdsFromAcris` methods.  The `document_id` values are used to cross-reference the records in the `partiesDataset` and `legalsDataset` with the `masterDataset`.  [The API calls are made in parallel using `Promise.all()` ]<-- is this correct?
-        // Step 3: Cross-Reference `document_id` Values
-        // Step 4: Retrieve Full Records
-        // Step 5: Return Results to the Frontend
 
+        
         // Initialize arrays to hold records
         let masterRecords = [];
         let partyRecords = [];

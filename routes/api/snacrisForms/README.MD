@@ -207,129 +207,121 @@ NB: This function will run after receivng the total number of matching records f
 **MasterRealPropApi**
 
 - [x] I need a function called `fetchDocIdsFromAcris` that will make an `axios` GET request similar to the `fetchFromACris` method, however, instead of defining its `url` variable as `this.constructMasterUrl(query)` I want to implement the `constructMasterUrlSelectDocIds` method with the syntax `this.constructMasterUrlSelectDocIds(query)`.
-  - I tested this method with a new route called `router.get("/fetchDocIds", async function (req, res, next) {` located in my `masterRealPropApiRoutes` file in Postman with the URL `http://localhost:3001/api/real-property-master/fetchDocIds?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31`.  I received a 200 status code and 5,778 `document_id` values.
-  - TLDR: skip the ChatGPT Digression issue.  I chose pagination approach for now.
+  - I tested this method with a new route called `router.get("/fetchDocIds", async function (req, res, next) {` located in my `masterRealPropApiRoutes` file in Postman with the URL `http://localhost:3001/api/real-property-master/fetchDocIds?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31`. I received a 200 status code and 5,778 `document_id` values.
+  - TLDR: skip the ChatGPT Digression issue. I chose pagination approach for now.
 
 **PartiesRealPropApi**
-- [x] I need a function called `fetchDocIdsFromAcris` that will make an `axios` GET request similar to the `fetchFromACris` method, however, instead of defining its `url` variable as `this.constructPartiesUrl(query)` I want to implement the `constructPartiesUrlSelectDocIds` method with the syntax `this.constructPartiesUrlSelectDocIds(query)`. 
-  - I tested this method with a new route called `router.get("/fetchDocIds", async function (req, res, next) {` located in my `partiesRealPropApiRoutes` file in Postman with the URL `http://localhost:3001/api/real-property-parties/fetchDocIds?party_type=1&name=EMPIRE`.  I received a 200 status code and 16,840 `document_id` values.
-  -   TLDR: skip the ChatGPT Digression issue.  I chose pagination approach for now.  I moved this digression to [HERE](#chatgpt-digression-pagination-vs-batch-requests-vs-throttling).
+
+- [x] I need a function called `fetchDocIdsFromAcris` that will make an `axios` GET request similar to the `fetchFromACris` method, however, instead of defining its `url` variable as `this.constructPartiesUrl(query)` I want to implement the `constructPartiesUrlSelectDocIds` method with the syntax `this.constructPartiesUrlSelectDocIds(query)`.
+  - I tested this method with a new route called `router.get("/fetchDocIds", async function (req, res, next) {` located in my `partiesRealPropApiRoutes` file in Postman with the URL `http://localhost:3001/api/real-property-parties/fetchDocIds?party_type=1&name=EMPIRE`. I received a 200 status code and 16,840 `document_id` values.
+  - TLDR: skip the ChatGPT Digression issue. I chose pagination approach for now. I moved this digression to [HERE](#chatgpt-digression-pagination-vs-batch-requests-vs-throttling).I implemented the `fetchDocIdsFromAcris` and exposed the route `fetchDocIds` that tested in Postman. Since I'm still testing the behavior of these APIs, `fetchDocIdsFromAcris` will return `masterRecordsDocumentIds` as well as the duplicates in a variable called `masterRecordsDocumentIds_Duplicates`. At this point `masterRecordsDocumentIds` will be used in the subsequent API call using `PartiesRealPropApi.fetchDocIdsFromAcris`.
+- [x] Tested `fetchCountFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` which returned a **200 OK** status code and the json: `{ "count": { "masterRecordCount": 57} } `.
+- [x] Tested the `fetchDocIdsFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchDocIds?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and received a **200 OK** status code and a json object containing 4,137 lines of code with a `document_id` on each line.  I expected to receive the same number of results from both Postman tests (5,776) but there is a difference of over 1,000. This occurred because of duplicate `document_id` values being eliminated by the `Set` in `fetchDocIdsFromAcris`. When I changed the hash map variable to an array I received 5780 lines of json code as a response with four of those lines represented by a pair of `{}` and `[]`.  NoW that I know how to order the API GET requests based on the lowest number of matching records from making the `fetchCountFromAcris` GET request from `MasterRealPropApi`, `PartiesRealPropApi` and `LegalsRealPropApi` I can proceed to use the resulting `document_id` values in the subsequent GET requess and cross-reference those values in the process.
+- [x] Create a function that retrieves the `document_id` values from the Real Prop Parties API including values from the prior API call to Real Prop Master API.  This will cross reference the two sets of values to reduce the amount of records to retrieve from the Real Prop Parties API.  The function is called `fetchDocIdsFromAcrisCrossRefMaster` and accepts `partiesQueryParams`, `masterRecordsDocumentIds` (`document_id` values from the prior call to Real Prop Master) and `batchSize` (currently this value is 500 because I received a `431 Request Header Fields Too Large` when I tested the route with over 600 values).
+  - Postman notes: 
+    - I added the route `/fetchDocIdsCrossRefMasterDocIds` in `partiesRealPropAPiRoutes.js` and tested the following url in Postman: `http://localhost:3001/api/real-property-parties/fetchDocIdsCrossRefMasterDocIds?party_type=1&name=EMPIRE&masterRecordsDocumentIds="2025022800270001","2025032100622001","2025022400701001","2025031800626001","2025022100710001","2025022800877002","2025022500488002","2025022600605009","2025022800770001","2025030500445001","2025030400224001","2025030700273001","2025032000231001","2025022700477001"...` which received a `200` status code and the json response: `{ "partiesDocIdsCrossRefMaster": [ "2025021800719001" ]}`
+- [x] Create a function that retrieves the `document_id` values from the Real Prop Legals API including values from the prior API call to Real Prop Parties API which were cross referenced with the results from the initial Real Prop Master API call.  This third API call will cross reference the two sets of values to reduce the amount of records to retrieve from the Real Prop Parties API.  The function is called `fetchDocIdsFromAcrisCrossRefMaster` and accepts `partiesQueryParams`, `masterRecordsDocumentIds` (`document_id` values from the prior call to Real Prop Master) and `batchSize` (currently this value is 500 because I received a `431 Request Header Fields Too Large` when I tested the route with over 600 values).
 
 
-I implemented the `fetchDocIdsFromAcris` and exposed the route `fetchDocIds` that tested in Postman.  Since I'm still testing the behavior of these APIs, `fetchDocIdsFromAcris` will return `masterRecordsDocumentIds` as well as the duplicates in a variable called `masterRecordsDocumentIds_Duplicates`.  At this point `masterRecordsDocumentIds` will be used in the subsequent API call using `PartiesRealPropApi.fetchDocIdsFromAcris`. 
 
-I tested `fetchCountFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` which returned a **200 OK** status code and the json: `{ "count": { "masterRecordCount": 5776 } }`.
-
-Then I tested the `fetchDocIdsFromAcris` function with the Postman URL: `http://localhost:3001/api/real-property-master/fetchDocIds?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` and received a **200 OK** status code and a json object containing 4,137 lines of code with a `document_id` on each line.
-
-I expected to receive the same number of results from both Postman tests (5,776) but there is a difference of over 1,000.  This occurred because of duplicate `document_id` values being eliminated by the `Set` in `fetchDocIdsFromAcris`.  When I changed the hash map variable to an array I received 5780 lines of json code as a response with four of those lines represented by a pair of `{}` and `[]`.
-
-NoW that I know how to order the API GET requests based on the lowest number of matching records from making the `fetchCountFromAcris` GET request from `MasterRealPropApi`, `PartiesRealPropApi` and `LegalsRealPropApi` I can proceed to use the resulting `document_id` values in the subsequent GET requess and cross-reference those values in the process.
+**PartiesRealPropApi**
 
 ##### Step 3: Cross-Reference `document_id` Values
 
 - Goal: Narrow down the results by intersecting `document_id` values across datasets.
 - Approach:
+
   - After retrieving `document_id` values from the first dataset, use them to construct the query for the second dataset.
   - Repeat the process for the third dataset, further narrowing down the results.
 
-- I created a function called `constructPartiesUrlCrossRefMasterSelectDocIds` (the name is a work in progress 😉) which accepts `partiesQueryParams` and `masterRecordsDocumentIds` to construct a query URL using Socrata Query Language syntax.  The example I've been testing assumes the `partiesQueryParams` search terms are: `name`: "EMPIRE" and `party_type`: "1" and `masterRecordsDocumentIds` contains 4,133 `document_id` values and 1,643 duplicates.  Currently, if I were to pass 4,133 document_id values to `constructPartiesUrlCrossRefMasterSelectDocIds` and `fetchDocIdsFromAcrisCrossRefMaster` it would not work because (1) the API has a 1,000 record limit for its response and (2) the `constructPartiesUrlCrossRefMasterSelectDocIds` would add all 4,133 document_id values in one query url which I assume would cause an error. I need to figure out how to paginate the GET request and also test what the API's query url character limit is.  I have to consider the following options:
+- I created a function called `constructPartiesUrlCrossRefMasterSelectDocIds` (the name is a work in progress 😉) which accepts `partiesQueryParams` and `masterRecordsDocumentIds` to construct a query URL using Socrata Query Language syntax. The example I've been testing assumes the `partiesQueryParams` search terms are: `name`: "EMPIRE" and `party_type`: "1" and `masterRecordsDocumentIds` contains 4,133 `document_id` values and 1,643 duplicates. Currently, if I were to pass 4,133 document_id values to `constructPartiesUrlCrossRefMasterSelectDocIds` and `fetchDocIdsFromAcrisCrossRefMaster` it would not work because (1) the API has a 1,000 record limit for its response and (2) the `constructPartiesUrlCrossRefMasterSelectDocIds` would add all 4,133 document_id values in one query url which I assume would cause an error. I need to figure out how to paginate the GET request and also test what the API's query url character limit is. I have to consider the following options:
 
 ###### 1. Determine the NYC Open Data API's Query URL Character Limit
 
 Before implementing the solution, you need to test the API's query URL character limit. Here's how:
+
 - Start with a small number of `document_id` values (e.g., 10) and gradually increase the number until the API returns an error.
 - Log the constructed query URL and measure its length to determine the maximum safe character limit.
 - For example:
 
 ```js
 const testDocumentIds = Array.from({ length: 1000 }, (_, i) => `ID${i + 1}`);
-const testUrl = `https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN (${testDocumentIds.map(id => `'${id}'`).join(", ")})&$select=document_id`;
+const testUrl = `https://data.cityofnewyork.us/resource/636b-3b5g.json?$where=document_id IN (${testDocumentIds
+  .map((id) => `'${id}'`)
+  .join(", ")})&$select=document_id`;
 console.log("Test URL length:", testUrl.length);
 ```
+
+**testing notes**
+`2025021800719001` is a match for the search criteria that I'm using in Postman where `party_type` is `1` and `name` is "EMPIRE" for the Parties API and is also a match for the Master API where `doc_type` is "DEED" and `document_start_date` is "2025-02-01" and `document_start_date` is "2025-03-31". I keep it at the end of the sample `document_id` values below
+
+50: `200 OK`
+
+```json
+"2025022800270001", "2025032100622001", "2025022400701001", "2025031800626001", "2025022100710001", "2025022800877002", "2025022500488002", "2025022600605009", "2025022800770001", "2025030500445001", "2025030400224001", "2025030700273001", "2025032000231001", "2025022700477001", "2025031000349001", "2025031200609001", "2025022800170001", "2025022500408006", "2025030500288002", "2025030401114001", "2025022700110001", "2025022500405001", "2025022600900001", "2025022500216001", "2025022500468001", "2025022800492001", "2025022800812001", "2025022800915002", "2025031900187001", "2025022700985001", "2025022400767001", "2025021400759001", "2025022701016001", "2025030400811001", "2025022700312001", "2025031800576001", "2025022500008002", "2025031100524001", "2025022400052001", "2025030600120001", "2025022700499001", "2025022700525002", "2025030400883001", "2025022300033001", "2025031001008001", "2025031201029001", "2025030401000001", "2025022600303001", "2025022700887001", "2025021800719001",
+```
+
+100: `200 OK`
+
+```json
+"2025022800270001", "2025032100622001", "2025022400701001", "2025031800626001", "2025022100710001", "2025022800877002", "2025022500488002", "2025022600605009", "2025022800770001", "2025030500445001", "2025030400224001", "2025030700273001", "2025032000231001", "2025022700477001", "2025031000349001", "2025031200609001", "2025022800170001", "2025022500408006", "2025030500288002", "2025030401114001", "2025022700110001", "2025022500405001", "2025022600900001", "2025022500216001", "2025022500468001", "2025022800492001", "2025022800812001", "2025022800915002", "2025031900187001", "2025022700985001", "2025022400767001", "2025021400759001", "2025022701016001", "2025030400811001", "2025022700312001", "2025031800576001", "2025022500008002", "2025031100524001", "2025022400052001", "2025030600120001", "2025022700499001", "2025022700525002", "2025030400883001", "2025022300033001", "2025031001008001", "2025031201029001", "2025030401000001", "2025022600303001", "2025022700887001", "2025031300292001", "2025022700282001", "2025022400624001", "2025030500624001", "2025031700367001", "2025022800064001", "2025030500030002", "2025030300471001", "2025031400020001", "2025021100386001", "2025030600796001", "2025031200470001", "2025030300940001", "2025021900554001", "2025021900699001", "2025030301042001", "2025032100744001", "2025022701135001", "2025030600650002", "2025030401071001", "2025031100254001", "2025031000870001", "2025030700831001", "2025022500409003", "2025022600916001", "2025030600746001", "2025022800392001", "2025022600218001", "2025031100383001", "2025022500473001", "2025022600174003", "2025022400903001", "2025032000432001", "2025030601140001", "2025022400225001", "2025030600103001", "2025022700852001", "2025031800706001", "2025030300602001", "2025022800886001", "2025030700043002", "2025022800162001", "2025030400787001", "2025031100604001", "2025030500353001", "2025030700247001", "2025030700379002", "2025030700328001", "2025031800441001", "2025022600524001", "2025022700732001", "2025021800719001",
+```
+
+200: `200 OK`
+
+300: `200 status`
+
+400: status: `200 OK`
+
+500: status: `200 OK`
+
+600: status: `200 OK`
+
+620: status: `431 Request Header Fields Too Large`
+
+650: status: `431 Request Header Fields Too Large`
+
+I found that with the query url: `http://localhost:3001/api/real-property-parties/fetchDocIdsCrossRefMasterDocIds?party_type=1&name=EMPIRE&masterRecordsDocumentIds=["2025022800270001", "2025032100622001", "2025022400701001"...]` and 620 `document_id` values the url was too large. There were 13171 characters including spaces to the right of the `?`. Since this query does not have that many parameters I think for now I will hard code the limit to be 500 `document_id` values which should leave 100 characters. Eventually I will need to create a function that populates the query url dynamically based on the remaining space by giving priority to the Party query parameters (e.g. `party_type=1`and `name=EMPIRE`) and then adding `document_id` values (e.g. `masterRecordsDocumentIds=["2025022800270001", "2025032100622001", "2025022400701001"...]`) until the max space has been reached.
 
 ###### 2. Refactor `constructPartiesUrlCrossRefMasterSelectDocIds`
 
 - Modify this method to construct query URLs in batches based on the determined character limit or a fixed batch size (e.g., 1,000 `document_id` values per batch).
+- [x] COMPLETE
 - Updated Method:
 
 ```js
 static constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize = 1000) {
-    const baseUrl = this.constructPartiesUrl(partiesQueryParams);
 
-    // Split `masterRecordsDocumentIds` into batches
-    const batches = [];
-    for (let i = 0; i < masterRecordsDocumentIds.length; i += batchSize) {
-        const batch = masterRecordsDocumentIds.slice(i, i + batchSize);
-        const documentIdsCondition = `document_id IN (${batch.map(id => `'${id}'`).join(", ")})`;
-        const separator = baseUrl.includes("$where=") ? " AND " : "$where=";
-        const url = `${baseUrl}${separator}${documentIdsCondition}&$select=document_id`;
-        batches.push(url);
-    }
-
-    return batches; // Return an array of query URLs
 }
 ```
 
 ###### 3. Refactor `fetchDocIdsFromAcrisCrossRefMaster`
+
 - Update this method to handle multiple query URLs (batches) and make paginated GET requests for each batch.
+- [x] COMPLETE
 - Updated Method:
 
 ```js
 static async fetchDocIdsFromAcrisCrossRefMaster(partiesQueryParams, masterRecordsDocumentIds, batchSize = 1000) {
-    try {
-        // Construct query URLs in batches
-        const queryUrls = this.constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize);
-        const allDocumentIds = new Set();
 
-        for (const url of queryUrls) {
-            let offset = 0;
-            let hasMoreRecords = true;
-
-            while (hasMoreRecords) {
-                // Add pagination parameters
-                const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
-                console.log("Fetching URL:", paginatedUrl);
-
-                // Make the GET request
-                const response = await axios.get(paginatedUrl, {
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-                    },
-                });
-
-                // Add `document_id` values to the set
-                const records = response.data;
-                records.forEach(record => allDocumentIds.add(record.document_id));
-
-                // Check if there are more records to fetch
-                if (records.length < 1000) {
-                    hasMoreRecords = false;
-                } else {
-                    offset += 1000;
-                }
-            }
-        }
-
-        return Array.from(allDocumentIds); // Return unique `document_id` values
-    } catch (err) {
-        console.error("Error fetching document IDs from ACRIS API:", err.message);
-        throw new Error("Failed to fetch document IDs from ACRIS API");
-    }
 }
 ```
 
+- [x] Create 
+
 ###### 4. Test the Refactored Methods
+
 - Use Postman to test the `/fetchDocIdsCrossRefMasterDocIds` route with a large number of document_id values (e.g., 5,778).
 - Verify that the API handles the batched and paginated requests correctly and returns the expected results.
 
 ###### 5. Handle Edge Cases
+
 - Empty `masterRecordsDocumentIds`: If the array is empty, return an empty result immediately.
 - API Errors: Add error handling to retry failed requests or log detailed error messages for debugging.
 - Performance: Use `Promise.all` to parallelize requests for different batches if the API allows concurrent requests.
 
 ###### 6. Example Workflow
+
 - Input:
   - `partiesQueryParams`: `{ party_type: "1", name: "EMPIRE" }`
   - `masterRecordsDocumentIds`: `[ "ID1", "ID2", ..., "ID5778" ]`
@@ -337,6 +329,7 @@ static async fetchDocIdsFromAcrisCrossRefMaster(partiesQueryParams, masterRecord
   - A deduplicated array of `document_id` values from the ACRIS Real Property Parties dataset that match the criteria.
 
 ###### 7. Next Steps
+
 After implementing and testing the refactored methods, you can proceed to add error handling to the `/fetchDocIdsCrossRefMasterDocIds` route as discussed earlier.
 
 ##### Step 4: Retrieve Full Records

@@ -100,19 +100,20 @@ class PartiesRealPropApi {
          * @returns {string} - Constructed SoQL query URL.
          */
 
-    static constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds) {
+    static constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize = 500) {
         const baseUrl = this.constructPartiesUrl(partiesQueryParams);
-
-        //Add validation to ensure that masterRecordsDocumentIds is an array before constructing the query URL
-        if (Array.isArray(masterRecordsDocumentIds) && masterRecordsDocumentIds.length > 0) {
-            const documentIdsCondition = `document_id IN (${masterRecordsDocumentIds.map(id => `'${id}'`).join(", ")})`;
+    
+        // Split `masterRecordsDocumentIds` into batches
+        const batches = [];
+        for (let i = 0; i < masterRecordsDocumentIds.length; i += batchSize) {
+            const batch = masterRecordsDocumentIds.slice(i, i + batchSize);
+            const documentIdsCondition = `document_id IN (${batch.map(id => `'${id}'`).join(", ")})`;
             const separator = baseUrl.includes("$where=") ? " AND " : "$where=";
             const url = `${baseUrl}${separator}${documentIdsCondition}&$select=document_id`;
-            console.log("Constructed URL:", url); // Debug log
-            return url;
+            batches.push(url);
         }
-
-        return `${baseUrl}&$select=document_id`;
+    
+        return batches; // Return an array of query URLs
     }
 
     /**
@@ -214,26 +215,43 @@ class PartiesRealPropApi {
      * @returns {Array} - Fetched `document_id` values.
      */
 
-    static async fetchDocIdsFromAcrisCrossRefMaster(partiesQueryParams, masterRecordsDocumentIds) {
+    static async fetchDocIdsFromAcrisCrossRefMaster(partiesQueryParams, masterRecordsDocumentIds, batchSize = 500) {
         try {
-            // Construct the URL using constructPartiesUrlCrossRefMasterSelectDocIds
-            const url = this.constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds);
-            console.log("PartiesRealPropApi Constructed CrossRef URL:", url);
-
-            // Make the GET request to the NYC Open Data API
-            const response = await axios.get(url, {
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-                },
-            });
-
-            // Handle case where no records are found
-            if (response.data.length === 0) {
-                throw new NotFoundError(`No document IDs found for query: ${JSON.stringify(partiesQueryParams)}`);
+            // Construct query URLs in batches
+            const queryUrls = this.constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize);
+            const allDocumentIds = new Set();
+    
+            for (const url of queryUrls) {
+                let offset = 0;
+                let hasMoreRecords = true;
+    
+                while (hasMoreRecords) {
+                    // Add pagination parameters
+                    const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
+                    console.log("Fetching URL:", paginatedUrl);
+    
+                    // Make the GET request
+                    const response = await axios.get(paginatedUrl, {
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
+                        },
+                    });
+    
+                    // Add `document_id` values to the set
+                    const records = response.data;
+                    records.forEach(record => allDocumentIds.add(record.document_id));
+    
+                    // Check if there are more records to fetch
+                    if (records.length < 1000) {
+                        hasMoreRecords = false;
+                    } else {
+                        offset += 1000;
+                    }
+                }
             }
-
-            return response.data.map(record => record.document_id);
+    
+            return Array.from(allDocumentIds); // Return unique `document_id` values
         } catch (err) {
             console.error("Error fetching document IDs from ACRIS API:", err.message);
             throw new Error("Failed to fetch document IDs from ACRIS API");

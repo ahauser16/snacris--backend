@@ -30,11 +30,40 @@ router.get("/fetchRecord", async function (req, res, next) {
     }
 });
 
+/** GET /fetchRecordCount => { count: { legalsRecordCount: number } }
+ *
+ * Fetch the count of matching records from the ACRIS-Real Property Legals dataset.
+ *
+ * Authorization required: none
+ */
+
 router.get("/fetchRecordCount", async function (req, res, next) {
     try {
         const query = req.query;
         const count = await LegalsRealPropApi.fetchCountFromAcris(query);
         return res.json({ count });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+/** GET /fetchDocIdsCrossRefPartyDocIds => { legalsDocIdsCrossRefParties: [...] }
+ *
+ * Fetch `document_id` values from the ACRIS-Real Property Legals dataset cross-referenced with Parties dataset.
+ *
+ * Expects `partiesDocIdsCrossRefMaster` to be passed as a JSON array in the query.
+ *
+ * Returns [{ document_id }]
+ *
+ * Authorization required: none
+ */
+router.get("/fetchDocIdsCrossRefPartyDocIds", async function (req, res, next) {
+    try {
+        const query = req.query;
+        const partiesDocIdsCrossRefMaster = JSON.parse(query.partiesDocIdsCrossRefMaster || "[]");
+        console.log("Parsed partiesDocIdsCrossRefMaster:", partiesDocIdsCrossRefMaster); // Debug log
+        const legalsDocIdsCrossRefParties = await LegalsRealPropApi.fetchDocIdsFromAcrisCrossRefParties(query, partiesDocIdsCrossRefMaster);
+        return res.json({ legalsDocIdsCrossRefParties });
     } catch (err) {
         return next(err);
     }

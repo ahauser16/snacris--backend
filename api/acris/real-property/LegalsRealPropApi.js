@@ -82,7 +82,32 @@ class LegalsRealPropApi {
     return `${baseUrl}&$select=count(*)`;
   }
 
-  
+
+  /**
+     * Constructs a SoQL query URL for the Real Property Legals dataset (cross-referenced with Parties dataset, selecting only `document_id` values).
+     *
+     * @param {Object} legalsQueryParams - Query parameters for the Legals dataset.
+     * @param {Array<string>} partiesDocIdsCrossRefMaster - Array of document IDs to cross-reference.
+     * @param {number} batchSize - Number of document IDs per batch.
+     * @returns {Array<string>} - Array of constructed query URLs.
+     */
+  static constructLegalsUrlCrossRefPartiesSelectDocIds(legalsQueryParams, partiesDocIdsCrossRefMaster, batchSize = 500) {
+    const baseUrl = this.constructLegalsUrl(legalsQueryParams);
+
+    // Split `partiesDocIdsCrossRefMaster` into batches
+    const batches = [];
+    for (let i = 0; i < partiesDocIdsCrossRefMaster.length; i += batchSize) {
+      const batch = partiesDocIdsCrossRefMaster.slice(i, i + batchSize);
+      const documentIdsCondition = `document_id IN (${batch.map(id => `'${id}'`).join(", ")})`;
+      const separator = baseUrl.includes("$where=") ? " AND " : "$where=";
+      const url = `${baseUrl}${separator}${documentIdsCondition}&$select=document_id`;
+      batches.push(url);
+    }
+
+    return batches; // Return an array of query URLs
+  }
+
+
   /**
    * Fetch the count of matching records from the ACRIS Real Property Legals dataset.
    *
@@ -152,6 +177,56 @@ class LegalsRealPropApi {
       throw new Error("Failed to fetch data from ACRIS API");
     }
   }
-}
 
+  /**
+   * Fetch `document_id` values from the ACRIS Real Property Legals dataset (cross-referenced with Parties dataset).
+   *
+   * @param {Object} legalsQueryParams - Query parameters for the Legals dataset.
+   * @param {Array<string>} partiesDocIdsCrossRefMaster - Array of document IDs to cross-reference.
+   * @param {number} batchSize - Number of document IDs per batch.
+   * @returns {Array<string>} - Fetched `document_id` values.
+   */
+  static async fetchDocIdsFromAcrisCrossRefParties(legalsQueryParams, partiesDocIdsCrossRefMaster, batchSize = 500) {
+    try {
+      // Construct query URLs in batches
+      const queryUrls = this.constructLegalsUrlCrossRefPartiesSelectDocIds(legalsQueryParams, partiesDocIdsCrossRefMaster, batchSize);
+      const allDocumentIds = new Set();
+
+      for (const url of queryUrls) {
+        let offset = 0;
+        let hasMoreRecords = true;
+
+        while (hasMoreRecords) {
+          // Add pagination parameters
+          const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
+          console.log("Fetching URL:", paginatedUrl);
+
+          // Make the GET request
+          const response = await axios.get(paginatedUrl, {
+            headers: {
+              "Content-Type": "application/json",
+              "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
+            },
+          });
+
+          // Add `document_id` values to the set
+          const records = response.data;
+          records.forEach(record => allDocumentIds.add(record.document_id));
+
+          // Check if there are more records to fetch
+          if (records.length < 1000) {
+            hasMoreRecords = false;
+          } else {
+            offset += 1000;
+          }
+        }
+      }
+
+      return Array.from(allDocumentIds); // Return unique `document_id` values
+    } catch (err) {
+      console.error("Error fetching document IDs from ACRIS API:", err.message);
+      throw new Error("Failed to fetch document IDs from ACRIS API");
+    }
+  }
+}
 module.exports = LegalsRealPropApi;
