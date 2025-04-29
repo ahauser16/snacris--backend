@@ -44,7 +44,7 @@ const {
 } = require("./routes");
 
 const app = express();
-const origin = ["https://react-jobly-frontend-b97y.onrender.com"]
+const origin = ["https://react-snacris-frontend-web.onrender.com"]
 if (process.env.NODE_ENV === "development") {
   origin.push("http://localhost:3000");
 }
