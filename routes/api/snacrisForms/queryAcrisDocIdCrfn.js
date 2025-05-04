@@ -3,12 +3,12 @@
 /** Routes for ACRIS Real Property Legals API calls. */
 
 const express = require("express");
-const MasterRealPropApi = require("../../../api/acris/real-property/MasterRealPropApi");
-const LegalsRealPropApi = require("../../../api/acris/real-property/LegalsRealPropApi");
-const PartiesRealPropApi = require("../../../api/acris/real-property/PartiesRealPropApi");
-const RemarksRealPropApi = require("../../../api/acris/real-property/RemarksRealPropApi");
-const ReferencesRealPropApi = require("../../../api/acris/real-property/ReferencesRealPropApi");
-const { transformForUrl } = require("../../../api/utils");
+const MasterRealPropApi = require("../../../thirdPartyApi/acris/real-property/MasterRealPropApi");
+const LegalsRealPropApi = require("../../../thirdPartyApi/acris/real-property/LegalsRealPropApi");
+const PartiesRealPropApi = require("../../../thirdPartyApi/acris/real-property/PartiesRealPropApi");
+const RemarksRealPropApi = require("../../../thirdPartyApi/acris/real-property/RemarksRealPropApi");
+const ReferencesRealPropApi = require("../../../thirdPartyApi/acris/real-property/ReferencesRealPropApi");
+const { transformForUrl } = require("../../../thirdPartyApi/utils");
 
 const router = new express.Router();
 

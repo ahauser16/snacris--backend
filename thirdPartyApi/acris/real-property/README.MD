@@ -1,10 +1,10 @@
 # ACRIS REAL PROPERTY DATASET API NOTES
 
-### REAL_PROPERTY_MASTER
-#### NYC Open Data URL: http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj
-#### NYS OPEN DATA Name: ACRIS - Real Property Master
-#### NYS OPEN DATA Description: Document Details for Real Property Related Documents Recorded in ACRIS
-#### API Endpoint URL: https://data.cityofnewyork.us/resource/bnx9-e6tj.json
+## REAL_PROPERTY_MASTER
+### NYC Open Data URL: http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj
+### NYS OPEN DATA Name: ACRIS - Real Property Master
+### NYS OPEN DATA Description: Document Details for Real Property Related Documents Recorded in ACRIS
+### API Endpoint URL: https://data.cityofnewyork.us/resource/bnx9-e6tj.json
 
 ```mermaid
 erDiagram

@@ -3,7 +3,7 @@
 /** Routes for ACRIS Real Property References API calls. */
 
 const express = require("express");
-const ReferencesPersPropApi = require("../../../../api/acris/personal-property/ReferencesPersPropApi");
+const ReferencesPersPropApi = require("../../../../thirdPartyApi/acris/personal-property/ReferencesPersPropApi");
 
 const router = new express.Router();
 

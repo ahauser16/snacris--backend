@@ -45,7 +45,6 @@ class LegalsRealPropApi {
   } = {}) {
     const conditions = [];
 
-    // Add conditions for text fields
     if (document_id) conditions.push(`upper(document_id)=upper('${document_id}')`);
     if (record_type) conditions.push(`record_type='${record_type}'`);
     if (easement) conditions.push(`easement='${easement}'`);
@@ -57,16 +56,12 @@ class LegalsRealPropApi {
     if (street_name) conditions.push(`street_name='${street_name}'`);
     if (unit) conditions.push(`unit='${unit}'`);
     if (good_through_date) conditions.push(`good_through_date='${good_through_date}'`);
-
-    // Add conditions for number fields
     if (borough) conditions.push(`borough=${borough}`);
     if (block) conditions.push(`block=${block}`);
     if (lot) conditions.push(`lot=${lot}`);
 
-    // Construct the $where clause
     const whereClause = conditions.length > 0 ? `$where=${conditions.join(" AND ")}` : "";
 
-    // Construct the full URL
     const url = `${API_ENDPOINTS.realPropertyLegals}?${whereClause}`;
     return url;
   }
@@ -94,7 +89,6 @@ class LegalsRealPropApi {
   static constructLegalsUrlCrossRefPartiesSelectDocIds(legalsQueryParams, partiesDocIdsCrossRefMaster, batchSize = 500) {
     const baseUrl = this.constructLegalsUrl(legalsQueryParams);
 
-    // Split `partiesDocIdsCrossRefMaster` into batches
     const batches = [];
     for (let i = 0; i < partiesDocIdsCrossRefMaster.length; i += batchSize) {
       const batch = partiesDocIdsCrossRefMaster.slice(i, i + batchSize);
@@ -104,7 +98,37 @@ class LegalsRealPropApi {
       batches.push(url);
     }
 
-    return batches; // Return an array of query URLs
+    return batches;
+  }
+
+
+  /**
+   * Fetch data from the ACRIS Real Property Legals dataset.
+   * @param {Object} query - Query parameters.
+   * @returns {Array} - Fetched records.
+   */
+  static async fetchFromAcris(query) {
+    try {
+      const url = this.constructLegalsUrl(query);
+
+      // Define the headers object
+      const headers = {
+        "Content-Type": "application/json",
+        "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+      };
+
+      // Make the GET request
+      const { data } = await axios.get(url, { headers });
+
+      if (!data?.length) {
+        console.warn(`No records found for query: ${JSON.stringify(query)}`);
+        throw new NotFoundError("No records found for the given query.");
+      }
+
+      return data;
+    } catch (err) {
+      throw new NotFoundError(`No records found for query: ${JSON.stringify(query)}`);
+    }
   }
 
 
@@ -117,64 +141,24 @@ class LegalsRealPropApi {
    */
   static async fetchCountFromAcris(query) {
     try {
-      // Construct the URL for counting records
       const url = this.constructLegalsUrlCountRec(query);
-      console.log("constructLegalsUrlCountRec created:", url);
 
-      // Make the GET request to the NYC Open Data API
-      const response = await axios.get(url, {
-        headers: {
-          "Content-Type": "application/json",
-          "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-        },
-      });
+      const headers = {
+        "Content-Type": "application/json",
+        "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+      };
 
-      // Validate the response
-      if (!response.data || response.data.length === 0 || !response.data[0].count) {
-        throw new NotFoundError(`No count found for query: ${JSON.stringify(query)}`);
+      const { data } = await axios.get(url, { headers });
+
+      if (!data?.length || !data[0]?.count) {
+        console.warn(`No count data found for query: ${JSON.stringify(query)}`);
+        throw new NotFoundError("No count data found for the given query.");
       }
 
-      // Parse and validate the count
-      const count = Number(response.data[0].count);
-      if (isNaN(count)) {
-        throw new Error("Invalid count value received from ACRIS API");
-      }
-
-      return { legalsRecordCount: count };
+      // Return the count of unique `document_id` values
+      return Number(data[0].count);
     } catch (err) {
-      console.error("Error fetching count from ACRIS API:", err.message);
       throw new Error("Failed to fetch count from ACRIS API");
-    }
-  }
-
-  /**
-   * Fetch data from the ACRIS Real Property Legals dataset.
-   * @param {Object} query - Query parameters.
-   * @returns {Array} - Fetched records.
-   */
-  static async fetchFromAcris(query) {
-    try {
-      // Construct the URL with query parameters
-      const url = this.constructLegalsUrl(query);
-      console.log("Constructed URL:", url);
-
-      // Make the GET request to the NYC Open Data API
-      const response = await axios.get(url, {
-        headers: {
-          "Content-Type": "application/json",
-          "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-        },
-      });
-
-      // Handle case where no records are found
-      if (response.data.length === 0) {
-        throw new NotFoundError(`No records found for query: ${JSON.stringify(query)}`);
-      }
-
-      return response.data;
-    } catch (err) {
-      console.error("Error fetching data from ACRIS API:", err.message);
-      throw new Error("Failed to fetch data from ACRIS API");
     }
   }
 
@@ -197,23 +181,23 @@ class LegalsRealPropApi {
         let hasMoreRecords = true;
 
         while (hasMoreRecords) {
-          // Add pagination parameters
           const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
           console.log("Fetching URL:", paginatedUrl);
 
-          // Make the GET request
-          const response = await axios.get(paginatedUrl, {
-            headers: {
-              "Content-Type": "application/json",
-              "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-            },
-          });
+          const headers = {
+            "Content-Type": "application/json",
+            "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+          };
 
-          // Add `document_id` values to the set
-          const records = response.data;
-          records.forEach(record => allDocumentIds.add(record.document_id));
+          const { data } = await axios.get(paginatedUrl, { headers });
 
-          // Check if there are more records to fetch
+          if (!data?.length) {
+            console.warn(`No records found for query: ${JSON.stringify(query)}`);
+            throw new NotFoundError("No records found for the given query.");
+          }
+
+          data.forEach(record => allDocumentIds.add(record.document_id));
+
           if (records.length < 1000) {
             hasMoreRecords = false;
           } else {
@@ -222,7 +206,7 @@ class LegalsRealPropApi {
         }
       }
 
-      return Array.from(allDocumentIds); // Return unique `document_id` values
+      return Array.from(allDocumentIds); 
     } catch (err) {
       console.error("Error fetching document IDs from ACRIS API:", err.message);
       throw new Error("Failed to fetch document IDs from ACRIS API");

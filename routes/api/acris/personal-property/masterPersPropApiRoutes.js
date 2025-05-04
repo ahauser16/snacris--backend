@@ -3,7 +3,7 @@
 /** Routes for ACRIS Real Property Master API calls. */
 
 const express = require("express");
-const MasterPersPropApi = require("../../../../api/acris/personal-property/MasterPersPropApi");
+const MasterPersPropApi = require("../../../../thirdPartyApi/acris/personal-property/MasterPersPropApi");
 
 const router = new express.Router();
 
@@ -22,9 +22,31 @@ const router = new express.Router();
 
 router.get("/fetchRecord", async function (req, res, next) {
     try {
+      const query = req.query;
+      const masterRecords = await MasterPersPropApi.fetchFromAcris(query);
+      return res.json({ masterRecords });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  
+router.get("/fetchRecordCount", async function (req, res, next) {
+    try {
         const query = req.query;
-        const records = await MasterPersPropApi.fetchFromAcris(query);
-        return res.json({ records });
+        const masterRecordCount = await MasterPersPropApi.fetchCountFromAcris(query);
+        return res.json({ masterRecordCount });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+router.get("/fetchDocIds", async function (req, res, next) {
+    try {
+        const query = req.query;
+        const masterRecordsDocumentIds = await MasterPersPropApi.fetchDocIdsFromAcris(query);
+
+        return res.json({ masterRecordsDocumentIds });
     } catch (err) {
         return next(err);
     }

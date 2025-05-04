@@ -3,7 +3,7 @@
 /** Routes for ACRIS Document Types API calls. */
 
 const express = require("express");
-const DocTypesCodeMapApi = require("../../../../api/acris/code-maps/DocTypesCodeMapApi");
+const DocTypesCodeMapApi = require("../../../../thirdPartyApi/acris/code-maps/DocTypesCodeMapApi");
 
 const router = new express.Router();
 

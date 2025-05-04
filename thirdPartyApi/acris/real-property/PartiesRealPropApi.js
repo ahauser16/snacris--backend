@@ -102,7 +102,7 @@ class PartiesRealPropApi {
 
     static constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize = 500) {
         const baseUrl = this.constructPartiesUrl(partiesQueryParams);
-    
+
         // Split `masterRecordsDocumentIds` into batches
         const batches = [];
         for (let i = 0; i < masterRecordsDocumentIds.length; i += batchSize) {
@@ -112,49 +112,9 @@ class PartiesRealPropApi {
             const url = `${baseUrl}${separator}${documentIdsCondition}&$select=document_id`;
             batches.push(url);
         }
-    
+
         return batches; // Return an array of query URLs
     }
-
-    /**
-     * Fetch the count of matching records from the ACRIS Real Property Parties dataset.
-     *
-     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @returns {Object} - An object containing the count of matching records.
-     * @throws {Error} - If the count is not a valid number or if the API call fails.
-     */
-    static async fetchCountFromAcris(partiesQueryParams) {
-        try {
-            // Construct the URL for counting records
-            const url = this.constructPartiesUrlCountRec(partiesQueryParams);
-            console.log("constructPartiesUrlCountRec created:", url);
-
-            // Make the GET request to the NYC Open Data API
-            const response = await axios.get(url, {
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-                },
-            });
-
-            // Validate the response
-            if (!response.data || response.data.length === 0 || !response.data[0].count) {
-                throw new NotFoundError(`No count found for query: ${JSON.stringify(partiesQueryParams)}`);
-            }
-
-            // Parse and validate the count
-            const count = Number(response.data[0].count);
-            if (isNaN(count)) {
-                throw new Error("Invalid count value received from ACRIS API");
-            }
-
-            return { partiesRecordCount: count };
-        } catch (err) {
-            console.error("Error fetching count from ACRIS API:", err.message);
-            throw new Error("Failed to fetch count from ACRIS API");
-        }
-    }
-
 
 
     /**
@@ -183,27 +143,105 @@ class PartiesRealPropApi {
          */
     static async fetchFromAcris(partiesQueryParams) {
         try {
-            // Construct the URL using constructPartiesUrl
             const url = this.constructPartiesUrl(partiesQueryParams);
             console.log("PartiesRealPropApi Constructed URL:", url);
 
-            // Make the GET request to the NYC Open Data API
-            const response = await axios.get(url, {
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-                },
-            });
+            const headers = {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+            };
 
-            // Handle case where no records are found
-            if (response.data.length === 0) {
-                throw new NotFoundError(`No records found for query: ${JSON.stringify(partiesQueryParams)}`);
+            const { data } = await axios.get(url, { headers });
+
+            if (!data?.length) {
+                console.warn(`No records found for query: ${JSON.stringify(query)}`);
+                throw new NotFoundError("No records found for the given query.");
             }
 
-            return response.data;
+            return data;
         } catch (err) {
             console.error("Error fetching data from ACRIS API:", err.message);
             throw new Error("Failed to fetch data from ACRIS API");
+        }
+    }
+
+    /**
+     * Fetch the count of matching records from the ACRIS Real Property Parties dataset.
+     *
+     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
+     * @returns {Object} - An object containing the count of matching records.
+     * @throws {Error} - If the count is not a valid number or if the API call fails.
+     */
+    static async fetchCountFromAcris(partiesQueryParams) {
+        try {
+            const url = this.constructPartiesUrlCountRec(partiesQueryParams);
+            console.log("constructPartiesUrlCountRec created:", url);
+
+            const headers = {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+            };
+
+            const { data } = await axios.get(url, { headers });
+
+            if (!data?.length || !data[0]?.count) {
+                console.warn(`No count data found for query: ${JSON.stringify(query)}`);
+                throw new NotFoundError("No count data found for the given query.");
+            }
+
+            return Number(data[0].count);
+        } catch (err) {
+            console.error("Error fetching count from ACRIS API:", err.message);
+            throw new Error("Failed to fetch count from ACRIS API");
+        }
+    }
+
+    /**
+         * Fetch all `document_id` values from the ACRIS Real Property Parties dataset using pagination.
+         *
+         * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
+         * @returns {Object} - An object containing:
+         *   - `partiesRecordsDocumentIds`: Array of unique `document_id` values.
+         *   - `partiesRecordsDocumentIds_Duplicates`: Array of duplicate `document_id` values.
+         */
+    static async fetchDocIdsFromAcris(partiesQueryParams) {
+        try {
+            const limit = 1000;
+            let offset = 0;
+            let hasMoreRecords = true;
+            const partiesRecordsDocumentIds = new Set();
+
+            while (hasMoreRecords) {
+                const url = `${this.constructPartiesUrlSelectDocIds(partiesQueryParams)}&$limit=${limit}&$offset=${offset}`;
+                console.log("fetchDocIdsFromAcris URL:", url);
+
+                const headers = {
+                    "Content-Type": "application/json",
+                    "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+                };
+
+                const { data } = await axios.get(url, { headers });
+
+                if (!data?.length) {
+                    console.warn(`No document IDs found for query: ${JSON.stringify(query)}`);
+                    throw new NotFoundError("No document IDs found for the given query.");
+                }
+
+                data.forEach(record => {
+                    partiesRecordsDocumentIds.add(record.document_id);
+                });
+
+                if (data.length < limit) {
+                    hasMoreRecords = false;
+                } else {
+                    offset += limit;
+                }
+            }
+
+            return Array.from(partiesRecordsDocumentIds);
+        } catch (err) {
+            console.error("Error fetching document IDs from ACRIS API:", err.message);
+            throw new Error("Failed to fetch document IDs from ACRIS API");
         }
     }
 
@@ -220,29 +258,30 @@ class PartiesRealPropApi {
             // Construct query URLs in batches
             const queryUrls = this.constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize);
             const allDocumentIds = new Set();
-    
+
             for (const url of queryUrls) {
                 let offset = 0;
                 let hasMoreRecords = true;
-    
+
                 while (hasMoreRecords) {
-                    // Add pagination parameters
                     const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
                     console.log("Fetching URL:", paginatedUrl);
-    
-                    // Make the GET request
-                    const response = await axios.get(paginatedUrl, {
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-                        },
-                    });
-    
-                    // Add `document_id` values to the set
-                    const records = response.data;
-                    records.forEach(record => allDocumentIds.add(record.document_id));
-    
-                    // Check if there are more records to fetch
+
+                    // Define the headers object
+                    const headers = {
+                        "Content-Type": "application/json",
+                        "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+                    };
+
+                    const { data } = await axios.get(paginatedUrl, { headers });
+
+                    if (!data?.length) {
+                        console.warn(`No records found for query: ${JSON.stringify(query)}`);
+                        throw new NotFoundError("No records found for the given query.");
+                    }
+
+                    data.forEach(record => allDocumentIds.add(record.document_id));
+
                     if (records.length < 1000) {
                         hasMoreRecords = false;
                     } else {
@@ -250,68 +289,7 @@ class PartiesRealPropApi {
                     }
                 }
             }
-    
-            return Array.from(allDocumentIds); // Return unique `document_id` values
-        } catch (err) {
-            console.error("Error fetching document IDs from ACRIS API:", err.message);
-            throw new Error("Failed to fetch document IDs from ACRIS API");
-        }
-    }
-
-    /**
-         * Fetch all `document_id` values from the ACRIS Real Property Parties dataset using pagination.
-         *
-         * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-         * @returns {Object} - An object containing:
-         *   - `partiesRecordsDocumentIds`: Array of unique `document_id` values.
-         *   - `partiesRecordsDocumentIds_Duplicates`: Array of duplicate `document_id` values.
-         */
-    static async fetchDocIdsFromAcris(partiesQueryParams) {
-        try {
-            const limit = 1000; // API record limit per request
-            let offset = 0;
-            let hasMoreRecords = true;
-            const partiesRecordsDocumentIds = new Set(); // To store unique `document_id` values
-            const partiesRecordsDocumentIds_Duplicates = []; // To store duplicate `document_id` values
-            const seenDocumentIds = new Set(); // To track all `document_id` values seen so far
-
-            while (hasMoreRecords) {
-                // Construct the URL with pagination parameters
-                const url = `${this.constructPartiesUrlSelectDocIds(partiesQueryParams)}&$limit=${limit}&$offset=${offset}`;
-                console.log("fetchDocIdsFromAcris URL:", url);
-
-                // Make the GET request to the NYC Open Data API
-                const response = await axios.get(url, {
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-                    },
-                });
-
-                // Add `document_id` values to the sets
-                const records = response.data;
-                records.forEach(record => {
-                    const documentId = record.document_id;
-                    if (seenDocumentIds.has(documentId)) {
-                        partiesRecordsDocumentIds_Duplicates.push(documentId);
-                    } else {
-                        seenDocumentIds.add(documentId);
-                        partiesRecordsDocumentIds.add(documentId);
-                    }
-                });
-
-                // Check if there are more records to fetch
-                if (records.length < limit) {
-                    hasMoreRecords = false;
-                } else {
-                    offset += limit;
-                }
-            }
-
-            return {
-                partiesRecordsDocumentIds: Array.from(partiesRecordsDocumentIds),
-                partiesRecordsDocumentIds_Duplicates,
-            };
+            return Array.from(allDocumentIds);
         } catch (err) {
             console.error("Error fetching document IDs from ACRIS API:", err.message);
             throw new Error("Failed to fetch document IDs from ACRIS API");

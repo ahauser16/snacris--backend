@@ -3,7 +3,7 @@
 /** Routes for ACRIS Property Types API calls. */
 
 const express = require("express");
-const PropTypesCodeMapApi = require("../../../../api/acris/code-maps/PropTypesCodeMapApi");
+const PropTypesCodeMapApi = require("../../../../thirdPartyApi/acris/code-maps/PropTypesCodeMapApi");
 
 const router = new express.Router();
 

@@ -3,7 +3,7 @@
 /** Routes for ACRIS State Codes API calls. */
 
 const express = require("express");
-const StatesCodeMapApi = require("../../../../api/acris/code-maps/StatesCodeMapApi");
+const StatesCodeMapApi = require("../../../../thirdPartyApi/acris/code-maps/StatesCodeMapApi");
 
 const router = new express.Router();
 

@@ -3,7 +3,7 @@
 /** Routes for ACRIS Real Property Legals API calls. */
 
 const express = require("express");
-const LegalsRealPropApi = require("../../../../api/acris/real-property/LegalsRealPropApi");
+const LegalsRealPropApi = require("../../../../thirdPartyApi/acris/real-property/LegalsRealPropApi");
 
 const router = new express.Router();
 
@@ -22,10 +22,12 @@ const router = new express.Router();
 
 router.get("/fetchRecord", async function (req, res, next) {
     try {
+        console.log("Received query parameters:", req.query);
         const query = req.query;
         const records = await LegalsRealPropApi.fetchFromAcris(query);
         return res.json({ records });
     } catch (err) {
+        console.error("Error in /fetchRecord route:", err.message);
         return next(err);
     }
 });
@@ -40,8 +42,8 @@ router.get("/fetchRecord", async function (req, res, next) {
 router.get("/fetchRecordCount", async function (req, res, next) {
     try {
         const query = req.query;
-        const count = await LegalsRealPropApi.fetchCountFromAcris(query);
-        return res.json({ count });
+        const legalsRecordCount = await LegalsRealPropApi.fetchCountFromAcris(query);
+        return res.json({ legalsRecordCount });
     } catch (err) {
         return next(err);
     }

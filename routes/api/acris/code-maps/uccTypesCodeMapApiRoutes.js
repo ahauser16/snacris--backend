@@ -3,7 +3,7 @@
 /** Routes for ACRIS UCC Collateral Codes API calls. */
 
 const express = require("express");
-const UccTypesCodeMapApi = require("../../../../api/acris/code-maps/UccTypesCodeMapApi");
+const UccTypesCodeMapApi = require("../../../../thirdPartyApi/acris/code-maps/UccTypesCodeMapApi");
 
 const router = new express.Router();
 

@@ -27,7 +27,7 @@ const {
   propTypesCodeMapApiRoutes,
   uccTypesCodeMapApiRoutes,
   masterRealPropDbRoutes,
-  legalsRealPropDbRoutes,
+  legalsRealPropDbRoutes, // remove unused imports by creating a separate branch and call it "Code Review".
   partiesRealPropDbRoutes,
   remarksRealPropDbRoutes,
   referencesRealPropDbRoutes,
@@ -59,31 +59,31 @@ app.get("/", (req, res) => { res.send("Hello, World!") });
 
 app.use(authenticateJWT);
 app.use("/auth", authRoutes);
-app.use("/users", usersRoutes);
-app.use("/queryAcrisAddressParcel", queryAcrisAddressParcel);
+app.use("/users", usersRoutes); 
+app.use("/queryAcrisAddressParcel", queryAcrisAddressParcel); 
 app.use("/queryAcrisDocIdCrfn", queryAcrisDocIdCrfn);
 app.use("/queryAcrisPartyName", queryAcrisPartyName);
-app.use("/api/real-property-master", masterRealPropApiRoutes);
-app.use("/api/real-property-legals", legalsRealPropApiRoutes);
-app.use("/api/real-property-parties", partiesRealPropApiRoutes);
-app.use("/api/real-property-remarks", remarksRealPropApiRoutes);
-app.use("/api/real-property-references", referencesRealPropApiRoutes);
-app.use("/api/personal-property-master", masterPersPropApiRoutes);
-app.use("/api/personal-property-legals", legalsPersPropApiRoutes);
-app.use("/api/personal-property-parties", partiesPersPropApiRoutes);
-app.use("/api/personal-property-remarks", remarksPersPropApiRoutes);
-app.use("/api/personal-property-references", referencesPersPropApiRoutes);
-app.use("/api/code-map-countries", countriesCodeMapApiRoutes);
-app.use("/api/code-map-states", statesCodeMapApiRoutes);
-app.use("/api/code-map-documents", docTypesCodeMapApiRoutes);
-app.use("/api/code-map-properties", propTypesCodeMapApiRoutes);
-app.use("/api/code-map-ucc", uccTypesCodeMapApiRoutes);
+app.use("/realPropertyMaster", masterRealPropApiRoutes); 
+app.use("/realPropertyLegals", legalsRealPropApiRoutes);
+app.use("/realPropertyParties", partiesRealPropApiRoutes);
+app.use("/realPropertyRemarks", remarksRealPropApiRoutes);
+app.use("/realPropertyReferences", referencesRealPropApiRoutes);
+app.use("/persPropertyMaster", masterPersPropApiRoutes);
+app.use("/persPropertyLegals", legalsPersPropApiRoutes);
+app.use("/persPropertyParties", partiesPersPropApiRoutes);
+app.use("/persPropertyRemarks", remarksPersPropApiRoutes);
+app.use("/persPropertyReferences", referencesPersPropApiRoutes);
+app.use("/codeMapCountries", countriesCodeMapApiRoutes);
+app.use("/codeMapStates", statesCodeMapApiRoutes);
+app.use("/codeMapDocumentTypes", docTypesCodeMapApiRoutes);
+app.use("/codeMapPropertyTypes", propTypesCodeMapApiRoutes);
+app.use("/codeMapUccLiens", uccTypesCodeMapApiRoutes);
 app.use("/db/real-property-master", masterRealPropDbRoutes);
-// app.use("/db/real-property-legals", legalsRealPropDbRoutes);
-// app.use("/db/real-property-parties", partiesRealPropDbRoutes);
-// app.use("/db/real-property-remarks", remarksRealPropDbRoutes);
+// app.use("/db/real-propersRealPropDbRoutes);
 // app.use("/db/real-property-references", referencesRealPropDbRoutes);
-// app.use("/db/personal-property-master", masterPersPropDbRoutes);
+// app.use("/db/personal-property-masterty-legals", legalsRealPropDbRoutes);
+// app.use("/db/real-property-parties", partiesRealPropDbRoutes);
+// app.use("/db/real-property-remarks", remark", masterPersPropDbRoutes);
 // app.use("/db/personal-property-legals", legalsPersPropDbRoutes);
 // app.use("/db/personal-property-parties", partiesPersPropDbRoutes);
 // app.use("/db/personal-property-remarks", remarksPersPropDbRoutes);
@@ -94,10 +94,6 @@ app.use("/db/real-property-master", masterRealPropDbRoutes);
 app.use("/db/code-map-documents", docTypesCodeMapDbRoutes);
 // app.use("/db/code-map-properties", propTypesCodeMapDbRoutes);
 // app.use("/db/code-map-ucc", uccTypesCodeMapDbRoutes);
-
-// app.use("/companies", companiesRoutes);
-// app.use("/jobs", jobsRoutes);
-
 
 /** Handle 404 errors -- this matches everything */
 app.use(function (req, res, next) {

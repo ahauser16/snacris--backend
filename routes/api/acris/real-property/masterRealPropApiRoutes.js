@@ -1,10 +1,7 @@
 "use strict";
-
 /** Routes for ACRIS Real Property Master API calls. */
-
 const express = require("express");
-const MasterRealPropApi = require("../../../../api/acris/real-property/MasterRealPropApi");
-
+const MasterRealPropApi = require("../../../../thirdPartyApi/acris/real-property/MasterRealPropApi");
 const router = new express.Router();
 
 /** GET /fetchRecord => { records: [...] }
@@ -22,19 +19,20 @@ const router = new express.Router();
 
 router.get("/fetchRecord", async function (req, res, next) {
     try {
-        const query = req.query;
-        const records = await MasterRealPropApi.fetchFromAcris(query);
-        return res.json({ records });
+      const query = req.query;
+      const masterRecords = await MasterRealPropApi.fetchFromAcris(query);
+      return res.json({ masterRecords });
     } catch (err) {
-        return next(err);
+      return next(err);
     }
-});
+  });
 
+  
 router.get("/fetchRecordCount", async function (req, res, next) {
     try {
         const query = req.query;
-        const count = await MasterRealPropApi.fetchCountFromAcris(query);
-        return res.json({ count });
+        const masterRecordCount = await MasterRealPropApi.fetchCountFromAcris(query);
+        return res.json({ masterRecordCount });
     } catch (err) {
         return next(err);
     }
@@ -43,19 +41,9 @@ router.get("/fetchRecordCount", async function (req, res, next) {
 router.get("/fetchDocIds", async function (req, res, next) {
     try {
         const query = req.query;
-        const { masterRecordsDocumentIds, masterRecordsDocumentIds_Duplicates } = await MasterRealPropApi.fetchDocIdsFromAcris(query);
+        const masterRecordsDocumentIds = await MasterRealPropApi.fetchDocIdsFromAcris(query);
 
-        // Debugging log to verify the returned values
-        // console.log("Returned from fetchDocIdsFromAcris:", {
-        //     masterRecordsDocumentIds,
-        //     masterRecordsDocumentIds_Duplicates,
-        // });
-
-        // Explicitly include `masterRecordsDocumentIds_Duplicates` in the response
-        return res.json({
-            masterRecordsDocumentIds,
-            masterRecordsDocumentIds_Duplicates: masterRecordsDocumentIds_Duplicates || [],
-        });
+        return res.json({ masterRecordsDocumentIds });
     } catch (err) {
         return next(err);
     }

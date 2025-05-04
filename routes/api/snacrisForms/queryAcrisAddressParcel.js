@@ -3,8 +3,8 @@
 /** Routes for ACRIS Real Property Legals API calls. */
 
 const express = require("express");
-const LegalsRealPropApi = require("../../../api/acris/real-property/LegalsRealPropApi");
-const { transformForUrl } = require("../../../api/utils");
+const LegalsRealPropApi = require("../../../thirdPartyApi/acris/real-property/LegalsRealPropApi");
+const { transformForUrl } = require("../../../thirdPartyApi/utils");
 
 const router = new express.Router();
 
