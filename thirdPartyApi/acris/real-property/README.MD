@@ -1,9 +1,23 @@
-# ACRIS REAL PROPERTY DATASET API NOTES
+# REAL PROPERTY API NOTES
 
-## REAL_PROPERTY_MASTER
+## Table of Contents
+
+- [REAL PROPERTY API NOTES](#real-property-api-notes)
+    - [REAL_PROPERTY_MASTER](#real_property_master)
+    - [REAL_PROPERTY_LEGALS](#real_property_legals)
+    - [REAL_PROPERTY_PARTIES](#real_property_parties)
+    - [REAL_PROPERTY_REFERENCES](#real_property_references)
+    - [REAL_PROPERTY_REMARKS](#real_property_remarks)
+
+## File Architecture
+
+
+
+
+## `MasterRealPropApi`
 ### NYC Open Data URL: http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj
 ### NYS OPEN DATA Name: ACRIS - Real Property Master
-### NYS OPEN DATA Description: Document Details for Real Property Related Documents Recorded in ACRIS
+### NYS OPEN DATA Description: Master document Details for Real Property Related Documents Recorded in ACRIS
 ### API Endpoint URL: https://data.cityofnewyork.us/resource/bnx9-e6tj.json
 
 ```mermaid
@@ -28,11 +42,11 @@ erDiagram
 
 ---
 
-### REAL_PROPERTY_LEGALS
-#### NYC Open Data URL: https://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Legals/8h5j-fqxa/about_data
-#### NYS OPEN DATA Name: ACRIS - Real Property Legals
-#### NYS OPEN DATA Description: Property Details for Real Property Related Documents Recorded in ACRIS
-#### API Endpoint URL: https://data.cityofnewyork.us/resource/8h5j-fqxa.json
+## `LegalsRealPropApi`
+### NYC Open Data URL: https://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Legals/8h5j-fqxa/about_data
+### NYS OPEN DATA Name: ACRIS - Real Property Legals
+### NYS OPEN DATA Description: Property Details for Real Property Related Documents Recorded in ACRIS
+### API Endpoint URL: https://data.cityofnewyork.us/resource/8h5j-fqxa.json
 
 ```mermaid
 erDiagram
@@ -56,12 +70,11 @@ erDiagram
 
 ---
 
-### REAL_PROPERTY_PARTIES
-
-#### NYC Open Data URL: https://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Parties/636b-3b5g/about_data
-#### NYS OPEN DATA Name: ACRIS - Real Property Parties
-#### NYS OPEN DATA Description: Party Names for Real Property Related Documents Recorded in ACRIS
-#### API Endpoint URL: https://data.cityofnewyork.us/resource/636b-3b5g.json
+## `PartiesRealPropApi`
+### NYC Open Data URL: https://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Parties/636b-3b5g/about_data
+### NYS OPEN DATA Name: ACRIS - Real Property Parties
+### NYS OPEN DATA Description: Party Names for Real Property Related Documents Recorded in ACRIS
+### API Endpoint URL: https://data.cityofnewyork.us/resource/636b-3b5g.json
 
 ```mermaid
 erDiagram
@@ -82,11 +95,11 @@ erDiagram
 
 ---
 
-### REAL_PROPERTY_REFERENCES
-#### NYC Open Data URL: https://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-References/pwkr-dpni/about_data
-#### NYS OPEN DATA Name: ACRIS - Real Property References
-#### NYS OPEN DATA Description: Document Cross References for Real Property Related Documents Recorded in ACRIS
-#### API Endpoint URL: https://data.cityofnewyork.us/resource/pwkr-dpni.json
+## `ReferencesRealPropApi`
+### NYC Open Data URL: https://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-References/pwkr-dpni/about_data
+### NYS OPEN DATA Name: ACRIS - Real Property References
+### NYS OPEN DATA Description: Document Cross References for Real Property Related Documents Recorded in ACRIS
+### API Endpoint URL: https://data.cityofnewyork.us/resource/pwkr-dpni.json
 
 ```mermaid
 erDiagram
@@ -105,11 +118,11 @@ erDiagram
 
 ---
 
-### REAL_PROPERTY_REMARKS
-#### NYC Open Data URL: https://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Remarks/9p4w-7npp/about_data
-#### NYS OPEN DATA Name: ACRIS - Real Property Remarks
-#### NYS OPEN DATA Description: Document Remarks for Real Property Related Documents Recorded in ACRIS
-#### API Endpoint URL: https://data.cityofnewyork.us/resource/9p4w-7npp.json
+## `RemarksRealPropApi`
+### NYC Open Data URL: https://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Remarks/9p4w-7npp/about_data
+### NYS OPEN DATA Name: ACRIS - Real Property Remarks
+### NYS OPEN DATA Description: Document Remarks for Real Property Related Documents Recorded in ACRIS
+### API Endpoint URL: https://data.cityofnewyork.us/resource/9p4w-7npp.json
 
 ```mermaid
 erDiagram
@@ -121,3 +134,4 @@ erDiagram
         TEXT good_through_date "10 characters, Format: MM/DD/YYYY"
     }
 ```
+

@@ -18,8 +18,9 @@ const router = new express.Router();
 router.get("/fetchRecord", async function (req, res, next) {
     try {
         const query = req.query;
-        const partiesRecords = await PartiesRealPropApi.fetchFromAcris(query);
-        return res.json({ partiesRecords });
+        //const partiesRecords = await PartiesRealPropApi.fetchFromAcris(query); // <-- old code
+        const realPropPartiesRecords = await PartiesRealPropApi.fetchAcrisRecords(query); 
+        return res.json({ realPropPartiesRecords });
     } catch (err) {
         return next(err);
     }
@@ -40,7 +41,7 @@ router.get("/fetchDocIdsCrossRefMasterDocIds", async function (req, res, next) {
         const query = req.query;
         const masterRecordsDocumentIds = JSON.parse(query.masterRecordsDocumentIds || "[]");
         console.log("Parsed masterRecordsDocumentIds:", masterRecordsDocumentIds); // Debug log
-        const partiesDocIdsCrossRefMaster = await PartiesRealPropApi.fetchDocIdsFromAcrisCrossRefMaster(query, masterRecordsDocumentIds);
+        const partiesDocIdsCrossRefMaster = await PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef(query, masterRecordsDocumentIds); 
         return res.json({ partiesDocIdsCrossRefMaster });
     } catch (err) {
         return next(err);
@@ -56,8 +57,8 @@ router.get("/fetchDocIdsCrossRefMasterDocIds", async function (req, res, next) {
 router.get("/fetchRecordCount", async function (req, res, next) {
     try {
         const query = req.query;
-        const partiesRecordCount = await PartiesRealPropApi.fetchCountFromAcris(query);
-        return res.json({ partiesRecordCount });
+        const realPropPartiesRecordCount = await PartiesRealPropApi.fetchAcrisRecordCount(query); // <-- old code
+        return res.json({ realPropPartiesRecordCount });
     } catch (err) {
         return next(err);
     }
@@ -73,8 +74,8 @@ router.get("/fetchRecordCount", async function (req, res, next) {
 router.get("/fetchDocIds", async function (req, res, next) {
     try {
         const query = req.query;
-        const partiesRecordsDocumentIds = await PartiesRealPropApi.fetchDocIdsFromAcris(query);
-        return res.json({ partiesRecordsDocumentIds });
+        const realPropPartiesRecordsDocumentIds = await PartiesRealPropApi.fetchAcrisDocumentIds(query); // <-- old code
+        return res.json({ realPropPartiesRecordsDocumentIds });
     } catch (err) {
         return next(err);
     }

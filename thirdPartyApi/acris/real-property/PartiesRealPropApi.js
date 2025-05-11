@@ -2,150 +2,20 @@
 
 const axios = require("axios");
 const { NotFoundError } = require("../../../expressError");
-const API_ENDPOINTS = require("../../apiEndpoints");
-
-/** Functions for interacting with the ACRIS Real Property Parties API. */
+const SoqlUrl = require("../utils/SoqlUrl");
 
 class PartiesRealPropApi {
-    /**
-     * Constructs a SoQL query URL for the Real Property Parties dataset (simple query).
-     *
-     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @param {string} [partiesQueryParams.document_id] - Document ID.
-     * @param {string} [partiesQueryParams.record_type] - Record type.
-     * @param {string} [partiesQueryParams.party_type] - Party type.
-     * @param {string} [partiesQueryParams.name] - Party name.
-     * @param {string} [partiesQueryParams.address_1] - Address line 1.
-     * @param {string} [partiesQueryParams.address_2] - Address line 2.
-     * @param {string} [partiesQueryParams.country] - Country.
-     * @param {string} [partiesQueryParams.city] - City.
-     * @param {string} [partiesQueryParams.state] - State.
-     * @param {string} [partiesQueryParams.zip] - ZIP code.
-     * @param {string} [partiesQueryParams.good_through_date] - Good through date.
-     * @returns {string} - Constructed SoQL query URL.
-     */
-    static constructPartiesUrl(partiesQueryParams) {
-        const conditions = [];
-
-        // Add conditions from partiesQueryParams
-        if (partiesQueryParams.document_id) {
-            conditions.push(`document_id='${partiesQueryParams.document_id}'`);
-        }
-        if (partiesQueryParams.record_type) {
-            conditions.push(`record_type='${partiesQueryParams.record_type}'`);
-        }
-        if (partiesQueryParams.party_type) {
-            conditions.push(`party_type='${partiesQueryParams.party_type}'`);
-        }
-        if (partiesQueryParams.name) {
-            conditions.push(`name LIKE '%25${partiesQueryParams.name}%25'`);
-        }
-        if (partiesQueryParams.address_1) {
-            conditions.push(`address_1='${partiesQueryParams.address_1}'`);
-        }
-        if (partiesQueryParams.address_2) {
-            conditions.push(`address_2='${partiesQueryParams.address_2}'`);
-        }
-        if (partiesQueryParams.country) {
-            conditions.push(`country='${partiesQueryParams.country}'`);
-        }
-        if (partiesQueryParams.city) {
-            conditions.push(`city='${partiesQueryParams.city}'`);
-        }
-        if (partiesQueryParams.state) {
-            conditions.push(`state='${partiesQueryParams.state}'`);
-        }
-        if (partiesQueryParams.zip) {
-            conditions.push(`zip='${partiesQueryParams.zip}'`);
-        }
-        if (partiesQueryParams.good_through_date) {
-            conditions.push(`good_through_date='${partiesQueryParams.good_through_date}'`);
-        }
-
-        // Construct the $where clause
-        const whereClause = conditions.length > 0 ? `$where=${conditions.join(" AND ")}` : "";
-
-        // Construct the full URL
-        const url = `${API_ENDPOINTS.realPropertyParties}?${whereClause}`;
-        return url;
-    }
 
     /**
-     * Constructs a SoQL query URL to count matching records in the Real Property Parties dataset.
-     *
-     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @returns {string} - Constructed SoQL query URL for counting records.
-     */
-    static constructPartiesUrlCountRec(partiesQueryParams) {
-        const baseUrl = this.constructPartiesUrl(partiesQueryParams);
-        return `${baseUrl}&$select=count(*)`;
-    }
-
-    /**
-     * Constructs a SoQL query URL to retrieve only `document_id` values from the Real Property Parties dataset.
-     *
-     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @returns {string} - Constructed SoQL query URL for selecting `document_id` values.
-     */
-    static constructPartiesUrlSelectDocIds(partiesQueryParams) {
-        const baseUrl = this.constructPartiesUrl(partiesQueryParams);
-        return `${baseUrl}&$select=document_id`;
-    }
-
-    /**
-         * Constructs a SoQL query URL for the Real Property Parties dataset (cross-referenced with Master dataset, selecting only `document_id` values).
-         *
-         * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-         * @param {Array<string>} masterRecordsDocumentIds - Array of document IDs to cross-reference.
-         * @returns {string} - Constructed SoQL query URL.
-         */
-
-    static constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize = 500) {
-        const baseUrl = this.constructPartiesUrl(partiesQueryParams);
-
-        // Split `masterRecordsDocumentIds` into batches
-        const batches = [];
-        for (let i = 0; i < masterRecordsDocumentIds.length; i += batchSize) {
-            const batch = masterRecordsDocumentIds.slice(i, i + batchSize);
-            const documentIdsCondition = `document_id IN (${batch.map(id => `'${id}'`).join(", ")})`;
-            const separator = baseUrl.includes("$where=") ? " AND " : "$where=";
-            const url = `${baseUrl}${separator}${documentIdsCondition}&$select=document_id`;
-            batches.push(url);
-        }
-
-        return batches; // Return an array of query URLs
-    }
-
-
-    /**
-     * Fetch data from the ACRIS Real Property Parties dataset.
-     *
-     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @param {string} [partiesQueryParams.document_id] - Document ID.
-     * @param {string} [partiesQueryParams.record_type] - Record type.
-     * @param {string} [partiesQueryParams.party_type] - Party type.
-     * @param {string} [partiesQueryParams.name] - Party name.
-     * @param {string} [partiesQueryParams.address_1] - Address line 1.
-     * @param {string} [partiesQueryParams.address_2] - Address line 2.
-     * @param {string} [partiesQueryParams.country] - Country.
-     * @param {string} [partiesQueryParams.city] - City.
-     * @param {string} [partiesQueryParams.state] - State.
-     * @param {string} [partiesQueryParams.zip] - ZIP code.
-     * @param {string} [partiesQueryParams.good_through_date] - Good through date.
-     * @param {Array<string>|null} masterRecordsDocumentIds - Array of document IDs to cross-reference (optional).
-     * @returns {Array} - Fetched records.
-     */
-    /**
-         * Fetch data from the ACRIS Real Property Parties dataset (simple query).
+         * Fetch all records from the ACRIS Real Property Parties dataset matching `partiesQueryParams` parameters.
          *
          * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
          * @returns {Array} - Fetched records.
+         * 
          */
-    static async fetchFromAcris(partiesQueryParams) {
+    static async fetchAcrisRecords(partiesQueryParams) {
         try {
-            const url = this.constructPartiesUrl(partiesQueryParams);
-            console.log("PartiesRealPropApi Constructed URL:", url);
-
+            const url = SoqlUrl.constructUrl(partiesQueryParams, "PartiesRealPropApi", "records");
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -154,29 +24,26 @@ class PartiesRealPropApi {
             const { data } = await axios.get(url, { headers });
 
             if (!data?.length) {
-                console.warn(`No records found for query: ${JSON.stringify(query)}`);
-                throw new NotFoundError("No records found for the given query.");
+                console.warn(`No records found for query: ${JSON.stringify(partiesQueryParams)} from Real Property Parties API`);
+                throw new NotFoundError("No records found for the given query from Real Property Parties API.");
             }
 
             return data;
         } catch (err) {
-            console.error("Error fetching data from ACRIS API:", err.message);
-            throw new Error("Failed to fetch data from ACRIS API");
+            console.error("Error fetching records from Real Property Parties API:", err.message);
+            throw new Error("Failed to fetch records from Real Property Parties API");
         }
     }
 
     /**
-     * Fetch the count of matching records from the ACRIS Real Property Parties dataset.
-     *
-     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @returns {Object} - An object containing the count of matching records.
-     * @throws {Error} - If the count is not a valid number or if the API call fails.
-     */
-    static async fetchCountFromAcris(partiesQueryParams) {
+         * Fetch the count of matching records from the ACRIS Real Property Parties dataset.
+         *
+         * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
+         * @returns {number} - Count of matching records.
+         */
+    static async fetchAcrisRecordCount(partiesQueryParams) {
         try {
-            const url = this.constructPartiesUrlCountRec(partiesQueryParams);
-            console.log("constructPartiesUrlCountRec created:", url);
-
+            const url = SoqlUrl.constructUrl(partiesQueryParams, "PartiesRealPropApi", "countAll");
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -185,78 +52,65 @@ class PartiesRealPropApi {
             const { data } = await axios.get(url, { headers });
 
             if (!data?.length || !data[0]?.count) {
-                console.warn(`No count data found for query: ${JSON.stringify(query)}`);
-                throw new NotFoundError("No count data found for the given query.");
+                console.warn(`No count data found for query: ${JSON.stringify(partiesQueryParams)} from Real Property Parties API`);
+                throw new NotFoundError("No count data found for the given query from Real Property Parties API.");
             }
 
             return Number(data[0].count);
         } catch (err) {
-            console.error("Error fetching count from ACRIS API:", err.message);
-            throw new Error("Failed to fetch count from ACRIS API");
+            console.error("Error fetching record count from Real Property Parties API:", err.message);
+            throw new Error("Failed to fetch record count from Real Property Parties API");
         }
     }
 
+
     /**
-         * Fetch all `document_id` values from the ACRIS Real Property Parties dataset using pagination.
+         * Fetch all `document_id` values from the ACRIS Real Property Parties dataset matching `partiesQueryParams` parameters.
          *
          * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-         * @returns {Object} - An object containing:
-         *   - `partiesRecordsDocumentIds`: Array of unique `document_id` values.
-         *   - `partiesRecordsDocumentIds_Duplicates`: Array of duplicate `document_id` values.
+         * @returns {Array} - Fetched `document_id` values.
+         * 
          */
-    static async fetchDocIdsFromAcris(partiesQueryParams) {
+    static async fetchAcrisDocumentIds(partiesQueryParams) {
         try {
-            const limit = 1000;
-            let offset = 0;
-            let hasMoreRecords = true;
-            const partiesRecordsDocumentIds = new Set();
+            const url = SoqlUrl.constructUrl(partiesQueryParams, "PartiesRealPropApi", "document_id");
+            const headers = {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+            };
 
-            while (hasMoreRecords) {
-                const url = `${this.constructPartiesUrlSelectDocIds(partiesQueryParams)}&$limit=${limit}&$offset=${offset}`;
-                console.log("fetchDocIdsFromAcris URL:", url);
+            const { data } = await axios.get(url, { headers });
 
-                const headers = {
-                    "Content-Type": "application/json",
-                    "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
-                };
-
-                const { data } = await axios.get(url, { headers });
-
-                if (!data?.length) {
-                    console.warn(`No document IDs found for query: ${JSON.stringify(query)}`);
-                    throw new NotFoundError("No document IDs found for the given query.");
-                }
-
-                data.forEach(record => {
-                    partiesRecordsDocumentIds.add(record.document_id);
-                });
-
-                if (data.length < limit) {
-                    hasMoreRecords = false;
-                } else {
-                    offset += limit;
-                }
+            if (!data?.length) {
+                console.warn(`No document IDs found for query for partiesQueryParams: ${JSON.stringify(partiesQueryParams)} from Real Property Parties API`);
+                throw new NotFoundError("No document IDs found for the given query from Real Property Parties API.");
             }
 
-            return Array.from(partiesRecordsDocumentIds);
+            return data.map(record => record.document_id);
         } catch (err) {
-            console.error("Error fetching document IDs from ACRIS API:", err.message);
-            throw new Error("Failed to fetch document IDs from ACRIS API");
+            console.error("'fetchAcrisDocumentIds' related error fetching document IDs from Real Property Parties API:", err.message);
+            throw new Error("Failed to fetch document IDs from Real Property Parties API");
         }
     }
 
     /**
-     * Fetch `document_id` values from the ACRIS Real Property Parties dataset (cross-referenced with Master dataset).
-     *
-     * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
-     * @param {Array<string>} masterRecordsDocumentIds - Array of document IDs to cross-reference.
-     * @returns {Array} - Fetched `document_id` values.
-     */
-
-    static async fetchDocIdsFromAcrisCrossRefMaster(partiesQueryParams, masterRecordsDocumentIds, batchSize = 500) {
+         * Fetch `document_id` values from the ACRIS Real Property Parties dataset (cross-referenced with Master dataset).
+         *
+         * @param {Object} partiesQueryParams - Query parameters for the Parties dataset.
+         * @param {Array<string>} masterRecordsDocumentIds - Array of document IDs to cross-reference.
+         * @returns {Array} - Fetched `document_id` values.
+         * 
+         */
+    static async fetchAcrisDocumentIdsCrossRef(partiesQueryParams, masterRecordsDocumentIds, batchSize = 500) {
         try {
-            // Construct query URLs in batches
-            const queryUrls = this.constructPartiesUrlCrossRefMasterSelectDocIds(partiesQueryParams, masterRecordsDocumentIds, batchSize);
+            // Extract document_id values if masterRecordsDocumentIds contains objects
+            const documentIds = masterRecordsDocumentIds.map(record =>
+                typeof record === "object" && record.document_id ? record.document_id : record
+            );
+
+            const queryUrls = SoqlUrl.constructUrlBatches(partiesQueryParams, documentIds, "PartiesRealPropApi", batchSize);
+            console.log(queryUrls[0], "PartiesRealPropApi queryUrls", `queryUrls.length: ${queryUrls.length}`);
+
             const allDocumentIds = new Set();
 
             for (const url of queryUrls) {
@@ -265,9 +119,6 @@ class PartiesRealPropApi {
 
                 while (hasMoreRecords) {
                     const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
-                    console.log("Fetching URL:", paginatedUrl);
-
-                    // Define the headers object
                     const headers = {
                         "Content-Type": "application/json",
                         "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -276,23 +127,22 @@ class PartiesRealPropApi {
                     const { data } = await axios.get(paginatedUrl, { headers });
 
                     if (!data?.length) {
-                        console.warn(`No records found for query: ${JSON.stringify(query)}`);
-                        throw new NotFoundError("No records found for the given query.");
-                    }
-
-                    data.forEach(record => allDocumentIds.add(record.document_id));
-
-                    if (records.length < 1000) {
                         hasMoreRecords = false;
                     } else {
+                        data.forEach(record => allDocumentIds.add(record.document_id));
                         offset += 1000;
                     }
                 }
             }
+
+            if (allDocumentIds.size === 0) {
+                throw new NotFoundError("No Real Property Parties records found for the given query.");
+            }
+
             return Array.from(allDocumentIds);
         } catch (err) {
-            console.error("Error fetching document IDs from ACRIS API:", err.message);
-            throw new Error("Failed to fetch document IDs from ACRIS API");
+            console.error("'fetchAcrisDocumentIdsCrossRef' related error fetching document IDs from Real Property Parties API:", err.message);
+            throw new Error("Failed to fetch document IDs from Real Property Parties API");
         }
     }
 }

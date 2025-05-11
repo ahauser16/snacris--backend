@@ -11,6 +11,7 @@ const {
   queryAcrisAddressParcel,
   queryAcrisDocIdCrfn,
   queryAcrisPartyName,
+  queryAcrisDocumentType,
   masterRealPropApiRoutes,
   legalsRealPropApiRoutes,
   partiesRealPropApiRoutes,
@@ -63,6 +64,7 @@ app.use("/users", usersRoutes);
 app.use("/queryAcrisAddressParcel", queryAcrisAddressParcel); 
 app.use("/queryAcrisDocIdCrfn", queryAcrisDocIdCrfn);
 app.use("/queryAcrisPartyName", queryAcrisPartyName);
+app.use("/queryAcrisDocumentType", queryAcrisDocumentType);
 app.use("/realPropertyMaster", masterRealPropApiRoutes); 
 app.use("/realPropertyLegals", legalsRealPropApiRoutes);
 app.use("/realPropertyParties", partiesRealPropApiRoutes);

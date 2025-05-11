@@ -1,7 +1,4 @@
 "use strict";
-
-/** Routes for ACRIS Real Property Legals API calls. */
-
 const express = require("express");
 const LegalsRealPropApi = require("../../../thirdPartyApi/acris/real-property/LegalsRealPropApi");
 const { transformForUrl } = require("../../../thirdPartyApi/utils");
@@ -15,6 +12,7 @@ const router = new express.Router();
  * @returns {Array} - An array of unique objects containing only the specified keys.
  */
 function findUniqueProperties(records) {
+    if (!records || records.length === 0) return [];
     const uniqueRecords = [];
     const seen = new Set();
 
@@ -28,7 +26,6 @@ function findUniqueProperties(records) {
             street_name: record.street_name,
         };
 
-        // Create a unique identifier string for the record
         const identifier = JSON.stringify(filteredRecord);
 
         // Add the record to the result if it hasn't been seen before
@@ -98,16 +95,34 @@ router.get("/fetchRecord", async function (req, res, next) {
 
         // Ensure at least one valid parameter is provided
         if (Object.keys(queryParams).length === 0) {
-            return res.status(400).json({ error: "At least one query parameter is required." });
+            return res.status(400).json({
+                status: "error",
+                message: "At least one query parameter is required.",
+                records: [],
+            });
         }
 
         // Fetch data from the ACRIS API
-        const records = await LegalsRealPropApi.fetchFromAcris(queryParams);
+        const records = await LegalsRealPropApi.fetchAcrisRecords(queryParams);
+        console.log(records, "records from LegalsRealPropApi");
+
+        if (!records || records.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "No records found for the provided query parameters.",
+                records: [],
+            });
+        }
 
         // Find unique properties
         const uniqueRecords = findUniqueProperties(records);
+        console.log(uniqueRecords, "uniqueRecords");
 
-        return res.json({ records: uniqueRecords });
+        return res.json({
+            status: "success",
+            message: `${uniqueRecords.length} unique properties found.`,
+            records: uniqueRecords,
+        });
     } catch (err) {
         return next(err);
     }

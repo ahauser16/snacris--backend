@@ -13,25 +13,10 @@ const router = new express.Router();
 
 router.get("/fetchRecord", async function (req, res, next) {
     try {
-        console.log("Received request with query parameters:", req.query);
+        //console.log("Received request with query parameters:", req.query);
 
-        // Extract search terms and dataset flags from the request query
-        const { masterSearchTerms, partySearchTerms, legalsSearchTerms, primaryApiSources, secondaryApiSources } = req.query;
-
-        // Extracting Primary Dataset Flags
-        const primaryDatasets = {
-            masterDataset: primaryApiSources?.masterDataset === "true",
-            partiesDataset: primaryApiSources?.partiesDataset === "true",
-            legalsDataset: primaryApiSources?.legalsDataset === "true",
-        };
-
-        // Extracting Secondary Dataset Flags
-        const secondaryDatasets = {
-            referencesDataset: secondaryApiSources?.referencesDataset === "true",
-            remarksDataset: secondaryApiSources?.remarksDataset === "true",
-        };
-
-        // Construct query parameters for Master dataset
+        const { masterSearchTerms, partySearchTerms, legalsSearchTerms } = req.query;
+        //console.log(masterSearchTerms, partySearchTerms, legalsSearchTerms)
         const masterQueryParams = {};
         if (masterSearchTerms?.document_date_range)
             masterQueryParams.document_date_range = masterSearchTerms.document_date_range;
@@ -44,12 +29,12 @@ router.get("/fetchRecord", async function (req, res, next) {
         if (masterSearchTerms?.doc_type === "doc-type-default" && masterSearchTerms?.doc_class) {
             if (masterSearchTerms.doc_class !== "all-class-default") {
                 try {
-                    console.log(`Fetching doc_type values for class: ${masterSearchTerms.doc_class}`);
+                    //console.log(`Fetching doc_type values for class: ${masterSearchTerms.doc_class}`);
                     const docTypes = await DocTypesCodeMapModel.getDocTypesByClass(masterSearchTerms.doc_class);
                     masterQueryParams.doc_type = docTypes; // Pass the array of `doc_type` values
-                    console.log(`Fetched doc_type values: ${docTypes}`);
+                    //console.log(`Fetched doc_type values: ${docTypes}`);
                 } catch (err) {
-                    console.error(`Error fetching doc_type values for class: ${masterSearchTerms.doc_class}`, err.message);
+                    //console.error(`Error fetching doc_type values for class: ${masterSearchTerms.doc_class}`, err.message);
                     return res.status(400).json({ error: `Invalid doc_class: ${masterSearchTerms.doc_class}` });
                 }
             }
@@ -69,82 +54,59 @@ router.get("/fetchRecord", async function (req, res, next) {
         if (legalsSearchTerms?.borough)
             legalsQueryParams.borough = legalsSearchTerms.borough;
 
-        // Step 1: Determine the Query Order based on the (i) the presence of the `primaryDatasets`: `masterDataset`, `partiesDataset` and `legalsDataset`, make API calls for each dataset to see how many records are returned using the `fetchCountFromAcris` method and (3)  the subsequent API calls to datasets is ordered by the lowest number of records going first.  For example, `http://localhost:3001/api/real-property-master/fetchRecordCount?doc_type=DEED&document_date_start=2025-02-01&document_date_end=2025-03-31` returned 5776 records, `http://localhost:3001/api/real-property-parties/fetchRecordCount?party_type=1&name=EMPIRE` returned 16,840 records and `http://localhost:3001/api/real-property-legals/fetchRecordCount?borough=3` returned `7281986` records.  Therefore, based on these counts, the order of API calls would be: `masterDataset` first, then `partiesDataset` and then `legalsDataset`.  The API calls are made in parallel using `Promise.all()`.
-
-        // Step 2: Retrieve `document_id` Values  in the order determined by Step 1 using the `MasterRealPropApi.fetchDocIdsFromAcris` followed by `PartiesRealPropApi.fetchDocIdsFromAcrisCrossRefMasterDocIds` and then `LegalsRealPropApi.fetchDocIdsFromAcris` methods.  The `document_id` values are used to cross-reference the records in the `partiesDataset` and `legalsDataset` with the `masterDataset`.  [The API calls are made in parallel using `Promise.all()` ]<-- is this correct?
-        // Step 3: Cross-Reference `document_id` Values
-        // Step 4: Retrieve Full Records
-        // Step 5: Return Results to the Frontend
-
-        // Initialize arrays to hold records
-        let masterRecords = [];
-        let partyRecords = [];
-        let legalsRecords = [];
-        // let masterRecordsDocumentIds = [];
-
         // Fetch data from the Master dataset
-        if (primaryDatasets.masterDataset) {
-            try {
-                console.log("Fetching Master Dataset with query params:", masterQueryParams);
-                masterRecords = await MasterRealPropApi.fetchFromAcris(masterQueryParams);
-                console.log("Fetched Master Records:", masterRecords.length);
+        try {
+            // Step 1: Fetch master records
+            const masterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(masterQueryParams);
+            console.log(`Fetched ${masterRecordsDocumentIds.length} real property master document_id values`);
+            // console.log(masterRecordsDocumentIds, "masterRecordsDocumentIds");
 
-                // Extract document_id values from masterRecords
-                masterRecordsDocumentIds = masterRecords.map(record => record.document_id);
-                console.log("Master Records Document IDs:", masterRecordsDocumentIds);
-            } catch (err) {
-                console.error("Error fetching Master Dataset:", err.message);
-                masterRecords.push({
-                    dataFound: false,
-                    dataset: "masterDataset",
-                    error: err.message,
-                });
+            // Initialize these variables with empty arrays as defaults
+            let partyRecordsDocumentIds = [];
+            let legalsRecordsDocumentIds = [];
+
+            // Step 2: Only fetch party records if we have master records
+            if (masterRecordsDocumentIds && masterRecordsDocumentIds.length > 0) {
+                //partyRecordsDocumentIds = await PartiesRealPropApi.fetchFromAcrisCrossRef(
+                partyRecordsDocumentIds = await PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef(
+                    partiesQueryParams,
+                    masterRecordsDocumentIds
+                );
+                console.log(`Fetched ${partyRecordsDocumentIds.length} real property party document_id values`);
+
+                // Step 3: Only fetch legal records if we have party records
+                if (partyRecordsDocumentIds && partyRecordsDocumentIds.length > 0) {
+                    legalsRecordsDocumentIds = await LegalsRealPropApi.fetchFromAcrisCrossRef(
+                        legalsQueryParams,
+                        partyRecordsDocumentIds
+                    );
+                    console.log(`Fetched ${legalsRecordsDocumentIds.length} legal record IDs`);
+                } else {
+                    console.log("No party records found, skipping legal records fetch");
+                }
+            } else {
+                console.log("No master records found, skipping subsequent fetches");
             }
+
+            // Return all collected data
+            return {
+                masterRecordsDocumentIds,
+                partyRecordsDocumentIds,
+                legalsRecordsDocumentIds
+            };
+
+        } catch (err) {
+            console.error("Error fetching ACRIS dataset:", err.message);
+            // Return structured error information
+            return {
+                dataFound: false,
+                dataset: "acrisDataset",
+                error: err.message,
+                masterRecordsDocumentIds: [],
+                partyRecordsDocumentIds: [],
+                legalsRecordsDocumentIds: []
+            };
         }
-
-        // Fetch data from the Parties dataset
-        if (primaryDatasets.partiesDataset) {
-            try {
-                console.log("Fetching Parties Dataset with query params:", partiesQueryParams);
-                partyRecords = await PartiesRealPropApi.fetchFromAcris(partiesQueryParams, masterRecordsDocumentIds);
-                console.log("Fetched Parties Records:", partyRecords.length);
-            } catch (err) {
-                console.error("Error fetching Parties Dataset:", err.message);
-                partyRecords.push({
-                    dataFound: false,
-                    dataset: "partiesDataset",
-                    error: err.message,
-                });
-            }
-        }
-
-        // Fetch data from the Legals dataset
-        if (primaryDatasets.legalsDataset) {
-            try {
-                console.log("Fetching Legals Dataset with query params:", legalsQueryParams);
-                legalsRecords = await LegalsRealPropApi.fetchFromAcris(legalsQueryParams);
-                console.log("Fetched Legals Records:", legalsRecords.length);
-            } catch (err) {
-                console.error("Error fetching Legals Dataset:", err.message);
-                legalsRecords.push({
-                    dataFound: false,
-                    dataset: "legalsDataset",
-                    error: err.message,
-                });
-            }
-        }
-
-        // Combine Master, Parties, and Legals records into primaryRecords
-        const primaryRecords = [...masterRecords, ...partyRecords, ...legalsRecords];
-
-        // Extract unique document IDs from primaryRecords
-        const primaryRecordDocumentIds = [
-            ...new Set(primaryRecords.map((record) => record.document_id)),
-        ];
-
-        // Log the results
-        console.log("Primary Records:", primaryRecords.length);
-        console.log("Primary Record Document IDs:", primaryRecordDocumentIds.length);
 
         // Return the primary records as the response
         return res.json({ primaryRecords });

@@ -19,20 +19,23 @@ const router = new express.Router();
 
 router.get("/fetchRecord", async function (req, res, next) {
     try {
-      const query = req.query;
-      const masterRecords = await MasterRealPropApi.fetchFromAcris(query);
-      return res.json({ masterRecords });
+        const query = req.query;
+        // const masterRecords = await MasterRealPropApi.fetchFromAcris(query); //OLD CODE THAT WORKS BUT IS BEING REPLACED
+        const realPropMasterRecords = await MasterRealPropApi.fetchAcrisRecords(query); //NEW CODE TO TEST - success
+        // fetchAcrisRecords
+        return res.json({ realPropMasterRecords });
     } catch (err) {
-      return next(err);
+        return next(err);
     }
-  });
+});
 
-  
+
 router.get("/fetchRecordCount", async function (req, res, next) {
     try {
         const query = req.query;
-        const masterRecordCount = await MasterRealPropApi.fetchCountFromAcris(query);
-        return res.json({ masterRecordCount });
+        //const masterRecordCount = await MasterRealPropApi.fetchCountFromAcris(query); //OLD CODE THAT WORKS BUT IS BEING REPLACED
+        const realPropMasterRecordCount = await MasterRealPropApi.fetchAcrisRecordCount(query); //NEW CODE TO TEST - success
+        return res.json({ realPropMasterRecordCount });
     } catch (err) {
         return next(err);
     }
@@ -41,12 +44,14 @@ router.get("/fetchRecordCount", async function (req, res, next) {
 router.get("/fetchDocIds", async function (req, res, next) {
     try {
         const query = req.query;
-        const masterRecordsDocumentIds = await MasterRealPropApi.fetchDocIdsFromAcris(query);
+        //const masterRecordsDocumentIds = await MasterRealPropApi.fetchDocIdsFromAcris(query); //OLD CODE THAT WORKS BUT IS BEING REPLACED
+        const realPropMasterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(query); //NEW CODE TO TEST 
 
-        return res.json({ masterRecordsDocumentIds });
+        return res.json({ realPropMasterRecordsDocumentIds });
     } catch (err) {
         return next(err);
     }
 });
+
 
 module.exports = router;
