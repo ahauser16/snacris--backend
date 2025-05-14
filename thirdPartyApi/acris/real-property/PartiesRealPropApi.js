@@ -16,6 +16,7 @@ class PartiesRealPropApi {
     static async fetchAcrisRecords(partiesQueryParams) {
         try {
             const url = SoqlUrl.constructUrl(partiesQueryParams, "PartiesRealPropApi", "records");
+            console.log("'/fetchAcrisRecords(partiesQueryParams)' calls 'SoqlUrl.constructUrl' creating:", url);
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -44,6 +45,7 @@ class PartiesRealPropApi {
     static async fetchAcrisRecordCount(partiesQueryParams) {
         try {
             const url = SoqlUrl.constructUrl(partiesQueryParams, "PartiesRealPropApi", "countAll");
+            console.log("'/fetchAcrisRecordCount(partiesQueryParams)' calls 'SoqlUrl.constructUrl' creating:", url);
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -74,6 +76,7 @@ class PartiesRealPropApi {
     static async fetchAcrisDocumentIds(partiesQueryParams) {
         try {
             const url = SoqlUrl.constructUrl(partiesQueryParams, "PartiesRealPropApi", "document_id");
+            console.log("'/fetchAcrisDocumentIds(partiesQueryParams)' calls 'SoqlUrl.constructUrl' creating:", url);
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -103,13 +106,9 @@ class PartiesRealPropApi {
          */
     static async fetchAcrisDocumentIdsCrossRef(partiesQueryParams, masterRecordsDocumentIds, batchSize = 500) {
         try {
-            // Extract document_id values if masterRecordsDocumentIds contains objects
-            const documentIds = masterRecordsDocumentIds.map(record =>
-                typeof record === "object" && record.document_id ? record.document_id : record
-            );
-
-            const queryUrls = SoqlUrl.constructUrlBatches(partiesQueryParams, documentIds, "PartiesRealPropApi", batchSize);
-            console.log(queryUrls[0], "PartiesRealPropApi queryUrls", `queryUrls.length: ${queryUrls.length}`);
+            // Construct batch query URLs
+            const queryUrls = SoqlUrl.constructUrlBatches(partiesQueryParams, masterRecordsDocumentIds, "PartiesRealPropApi", batchSize);
+            //console.log(queryUrls[4], "PartiesRealPropApi queryUrls", `queryUrls.length: ${queryUrls.length}`);
 
             const allDocumentIds = new Set();
 

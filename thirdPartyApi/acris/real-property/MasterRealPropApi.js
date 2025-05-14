@@ -24,6 +24,7 @@ class MasterRealPropApi {
 
       while (hasMoreRecords) {
         const url = SoqlUrl.constructUrl(masterQueryParams, "MasterRealPropApi", "records", limit, offset);
+        console.log("'/fetchAcrisRecords(masterQueryParams)' calls 'SoqlUrl.constructUrl' creating:", url);
         const headers = {
           "Content-Type": "application/json",
           "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -63,6 +64,7 @@ class MasterRealPropApi {
   static async fetchAcrisRecordCount(masterQueryParams) {
     try {
       const url = SoqlUrl.constructUrl(masterQueryParams, "MasterRealPropApi", "countAll");
+      console.log("'/fetchAcrisRecordCount(masterQueryParams)' calls 'SoqlUrl.constructUrl' creating:", url);
       const headers = {
         "Content-Type": "application/json",
         "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -97,6 +99,7 @@ class MasterRealPropApi {
 
       while (hasMoreRecords) {
         const url = SoqlUrl.constructUrl(masterQueryParams, "MasterRealPropApi", "document_id", limit, offset);
+        console.log("'/fetchAcrisDocumentIds(masterQueryParams)' calls 'SoqlUrl.constructUrl' creating:", url);
         const headers = {
           "Content-Type": "application/json",
           "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,

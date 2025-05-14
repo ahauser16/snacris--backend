@@ -13,7 +13,7 @@ const router = new express.Router();
 
 router.get("/fetchRecord", async function (req, res, next) {
     try {
-        //console.log("Received request with query parameters:", req.query);
+        console.log("Received request with query parameters:", req.query);
 
         const { masterSearchTerms, partySearchTerms, legalsSearchTerms } = req.query;
         //console.log(masterSearchTerms, partySearchTerms, legalsSearchTerms)
@@ -24,6 +24,8 @@ router.get("/fetchRecord", async function (req, res, next) {
             masterQueryParams.document_date_start = masterSearchTerms.document_date_start;
         if (masterSearchTerms?.document_date_end)
             masterQueryParams.document_date_end = masterSearchTerms.document_date_end;
+
+
 
         // Handle `doc_type` and `doc_class` logic
         if (masterSearchTerms?.doc_type === "doc-type-default" && masterSearchTerms?.doc_class) {
@@ -58,8 +60,18 @@ router.get("/fetchRecord", async function (req, res, next) {
         try {
             // Step 1: Fetch master records
             const masterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(masterQueryParams);
-            console.log(`Fetched ${masterRecordsDocumentIds.length} real property master document_id values`);
-            // console.log(masterRecordsDocumentIds, "masterRecordsDocumentIds");
+            //console.log(`Fetched ${masterRecordsDocumentIds.length} real property master document_id values`);
+            console.log(masterRecordsDocumentIds, "masterRecordsDocumentIds");
+
+            // Check for the presence of specific document_id values
+            const documentIdsToCheck = ["2025040900070001", "2025021800719001", "2025040900509001"];
+            documentIdsToCheck.forEach(id => {
+                if (masterRecordsDocumentIds.includes(id)) {
+                    console.log(`Document ID ${id} is present in masterRecordsDocumentIds.`);
+                } else {
+                    console.log(`Document ID ${id} is missing from masterRecordsDocumentIds.`);
+                }
+            });
 
             // Initialize these variables with empty arrays as defaults
             let partyRecordsDocumentIds = [];
@@ -72,7 +84,7 @@ router.get("/fetchRecord", async function (req, res, next) {
                     partiesQueryParams,
                     masterRecordsDocumentIds
                 );
-                console.log(`Fetched ${partyRecordsDocumentIds.length} real property party document_id values`);
+                console.log(`Fetched ${partyRecordsDocumentIds.length} real property party document_id values`, partyRecordsDocumentIds);
 
                 // Step 3: Only fetch legal records if we have party records
                 if (partyRecordsDocumentIds && partyRecordsDocumentIds.length > 0) {
