@@ -115,7 +115,7 @@ router.get("/fetchRecord", async function (req, res, next) {
             ]);
 
             // Build newResults array
-            const newResults = crossReferencedDocumentIds.map(document_id => ({
+            const results = crossReferencedDocumentIds.map(document_id => ({
                 document_id,
                 masterRecords: (masterRecords || []).filter(r => r.document_id === document_id),
                 partiesRecords: (partiesRecords || []).filter(r => r.document_id === document_id),
@@ -124,9 +124,9 @@ router.get("/fetchRecord", async function (req, res, next) {
                 remarksRecords: (remarksRecords || []).filter(r => r.document_id === document_id)
             }));
 
-            console.log(newResults);
+            //console.log(results);
 
-            return res.json(newResults);
+            return res.json(results);
         } catch (err) {
             console.error("Error fetching full records from datasets:", err.message);
             return res.status(500).json({
