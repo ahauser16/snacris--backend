@@ -83,4 +83,23 @@ router.get("/fetchDocIdsCrossRefPartyDocIds", async function (req, res, next) {
     }
 });
 
+
+router.get("/fetchAcrisRecordsByDocumentIds", async function (req, res, next) {
+    try {
+        let { documentIds } = req.query;
+        // Support both comma-separated and JSON array
+        if (typeof documentIds === "string") {
+            if (documentIds.startsWith("[")) {
+                documentIds = JSON.parse(documentIds);
+            } else {
+                documentIds = documentIds.split(",");
+            }
+        }
+        const realPropLegalsRecords = await LegalsRealPropApi.fetchAcrisRecordsByDocumentIds(documentIds);  
+        return res.json({ realPropLegalsRecords });
+    } catch (err) {
+        return next(err);
+    }
+});
+
 module.exports = router;

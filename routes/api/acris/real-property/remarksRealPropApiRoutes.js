@@ -23,8 +23,60 @@ const router = new express.Router();
 router.get("/fetchRecord", async function (req, res, next) {
     try {
         const query = req.query;
-        const records = await RemarksRealPropApi.fetchFromAcris(query);
-        return res.json({ records });
+        const realPropRemarksRecords = await RemarksRealPropApi.fetchAcrisRecords(query); 
+        return res.json({ realPropRemarksRecords });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+
+/** GET /fetchRecordCount => { count: { partiesRecordCount: number } }
+ *
+ * Fetch the count of matching records from the ACRIS-Real Property Parties dataset.
+ *
+ * Authorization required: yes
+ */
+router.get("/fetchRecordCount", async function (req, res, next) {
+    try {
+        const query = req.query;
+        const realPropRemarksRecordCount = await RemarksRealPropApi.fetchAcrisRecordCount(query);
+        return res.json({ realPropRemarksRecordCount });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+/** GET /fetchRecordCount => { count: { partiesRecordsDocumentIds: [...] } }
+ *
+ * Fetch the `document_id` values associated with the matching records from the ACRIS-Real Property Parties dataset.
+ *
+ * Authorization required: yes
+ */
+
+router.get("/fetchDocIds", async function (req, res, next) {
+    try {
+        const query = req.query;
+        const realPropRemarksRecordsDocumentIds = await RemarksRealPropApi.fetchAcrisDocumentIds(query); // <-- old code
+        return res.json({ realPropRemarksRecordsDocumentIds });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+router.get("/fetchAcrisRecordsByDocumentIds", async function (req, res, next) {
+    try {
+        let { documentIds } = req.query;
+        // Support both comma-separated and JSON array
+        if (typeof documentIds === "string") {
+            if (documentIds.startsWith("[")) {
+                documentIds = JSON.parse(documentIds);
+            } else {
+                documentIds = documentIds.split(",");
+            }
+        }
+        const realPropRemarksRecords = await RemarksRealPropApi.fetchAcrisRecordsByDocumentIds(documentIds);  
+        return res.json({ realPropRemarksRecords });
     } catch (err) {
         return next(err);
     }

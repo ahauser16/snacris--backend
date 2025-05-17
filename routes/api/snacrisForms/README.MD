@@ -14,7 +14,8 @@ Then I need to package or normalize the response from the Real Property ACRIS da
   - [Search By Party Name (current focust 4/22/25)](#search-by-party-name-current-focust-42225)
     - [Background](#background)
     - [NYC Open Data - free ACRIS data](#nyc-open-data---free-acris-data)
-    - [Current testing notes (as of 5/13/25)](#current-testing-notes-as-of-51325)
+    - [Testing Notes (as of 5/16/25)](#testing-notes-as-of-51625)
+      - [query values received from frontend](#query-values-received-from-frontend)
     - [Current Architecture (ARCHIVED 5/13/25)](#current-architecture-archived-51325)
       - [test case EMPIRE](#test-case-empire)
     - [How To Send API GET Requests and Cross Reference Results](#how-to-send-api-get-requests-and-cross-reference-results)
@@ -99,29 +100,23 @@ Code Maps:
 - [State Codes](https://data.cityofnewyork.us/City-Government/ACRIS-State-Codes/5c9e-33xj/about_data)
 - [Country Codes](https://data.cityofnewyork.us/City-Government/ACRIS-Country-Codes/j2iz-mwzu/about_data)
 
-### Current testing notes (as of 5/13/25)
+### Testing Notes (as of 5/16/25)
 
 See `README.MD` files in the `/thirdPartyApi/acris/real-property` and `/thirdPartyApi/acris/utils` for documentation on the current architecture of the Axios fetch methods that make API specific GET requests and the Socrata Query Language syntax (Soql) used to generate query URLs invoked by those GET requests.
 
 The rest of this section are my notes that test the `queryAcrisPartyName` route that is a complex search feature. The route receives the query parameters from a form on the front end and is received in the format below. Since there are too many records associated with each independent search I've decided to make the three GET requests in a sequence where the second GET request includes the `document_id` values received from the first search. In effect the results of the second GET request represent a cross reference of the two datasets. This reduces the amount of data received if I were to download the results of each search independently and then cross reference all the records using a common `document_id`, however, it makes the route's logic more complex. My testing notes below will bring me closer to achieving the desired search.
 
-**Testing Checklist (Sequentially Ordered)**
+I discovered the ACRIS Search By Party Name feature I was trying to copy did not search by the `document_date` value but by the `recorded_datetime` value.  This caused one of the three `document_id` values to not appear in the results of the `MasterRealPropApi.fetchAcrisDocumentIds` GET request.  I refactored the front and backend to ensure the GET request to the Real Property Master API includes a query with values representing the `recorded_datetime` column.
 
-- [x] Determine Number of Records for Each Real Property GET request.
-  - For now the order is "hard-coded" starting with **Master**, then **Party** and then **Legals** based on the query parameters below. Eventually this will be dynamic.
-- [x] `MasterRealPropApi.fetchAcrisDocumentIds` successfully returns the `document_id` values saved in **masterRecordsDocumentIds**.
-  - I've determined the first GET request `MasterRealPropApi.fetchAcrisDocumentIds` received 9,082 **unique** `document_id` values (they are saved to a Set then converted to an array).
-- [ ] `PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef(partiesQueryParams, masterRecordsDocumentIds, batchSize = 500)` successfully returns the `document_id` values saved in **partyRecordsDocumentIds**. Keep in mind that **partyRecordsDocumentIds** represents the cross-reference of two datasets since `fetchAcrisDocumentIdsCrossRef` includes `masterRecordsDocumentIds` in its query URL using SoQL syntax.
-- [ ] `LegalsRealPropApi.fetchAcrisDocumentIdsCrossRef(legalsQueryParams, partyRecordsDocumentIds, batchSize = 500)` successfully returns the `document_id` values saved in **legalsRecordsDocumentIds**. Keep in mind that **legalsRecordsDocumentIds** represents the cross-reference of all three datasets since `fetchAcrisDocumentIdsCrossRef` includes `partyRecordsDocumentIds` in its query URL using SoQL syntax and that `partyRecordsDocumentIds` represents the cross reference of the first two datasets; this completes the total cross reference of the Real Property Master, Parties and Legals datasets.
+I also discovered that the ACRIS Search By Party Name feature treats any user query for the `name` column (associated with the Real Property Parties dataset) as the beginning term to search for.  For example, searching for "EMPIRE" will return "EMPIRE HOLDINGS II, LLC" but not "GREAT EMPIRE BEVERLY REALTY LLC" unlike my search feature which returns both.  I've decided to keep my search feature's behavior even though this means I did not copy the ACRIS search feature exactly.  This was a good discovery and raises the question of additional search features that could be helpful to include in the future.
 
-current testing data sent from the front end:
-
+#### query values received from frontend
 ```bash
 Received request with query parameters: {
   masterSearchTerms: {
-    document_date_range: 'last-90-days',
-    document_date_start: '2025-02-12',
-    document_date_end: '2025-05-13',
+    recorded_date_range: 'last-90-days',
+    recorded_date_start: '2025-02-15',
+    recorded_date_end: '2025-05-16',
     doc_type: 'doc-type-default',
     doc_class: 'DEEDS AND OTHER CONVEYANCES'
   },
@@ -130,26 +125,45 @@ Received request with query parameters: {
 }
 ```
 
-**MasterRealPropApi.fetchAcrisRecordCount** returns 9,503 records.
-**PartiesRealPropApi.fetchAcrisRecordCount** returns 16,867 records.
-**LegalsRealPropApi.fetchAcrisRecordCount** returns 7,292,860 records.
+Then I confirmed that these **eight** `document_id` values are included in the 3rd and final GET request via `LegalsRealPropApi.fetchAcrisDocumentIdsCrossRef` which returned **four** unique `document_id` values (see below).  The search that I'm trying to copy from the ACRIS website returned three
 
-For testing purposes the Real Property dataset GET rests will be ordered starting from the lowest number of records to the highest. This means the first call will be `MasterRealPropApi.fetchAcrisDocumentIds` which will return an array of `document_id` values saved in `masterRecordsDocumentIds`. This **9,503** number includes duplicates which the `$select=count(*)` statement used in `fetchAcrisRecordCount` does not recognize. For now this is an undesireable behavior of the dataset and since I only use that function to determine the call order it won't effect my search feature (for now). 
+```bash
+[
+  '2025040700480001', <--this was unexpected
+  '2025040900070001',
+  '2025040900509001',
+  '2025021800719001'
+] legalsRecordsDocumentIds
+```
 
-After adding a console.log: **console.log(`Fetched ${masterRecordsDocumentIds.length} real property master document_id values`);** to `queryAcrisPartyName.js` I've determined the first GET request `MasterRealPropApi.fetchAcrisDocumentIds` received 9,082 **unique** `document_id` values (they are saved to a Set then converted to an array).
-
-After adding a console.log: **console.log(`Fetched ${partyRecordsDocumentIds.length} real property party document_id values`);** to `queryAcrisPartyName.js` and another console.log: **console.log(`Fetched ${partyRecordsDocumentIds.length} real property party document_id values`, partyRecordsDocumentIds);** to `PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef` I've determined that 19 query URLs were created and 2 `document_id` values were retrieved in total from those 19 query URLs: `Fetched 2 real property party document_id values [ '2025040900070001', '2025032500301001' ]`.  After testing the `2025040900070001` was returned in the 5th batch URL.
-
-My search on ACRIS for the same query parameters returned the three `document_id` values below.  Only one was included in my cross-referenced search of the Master and Parties datasets.  This is troublesome because the values below should be returned from `partyRecordsDocumentIds = await PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef( partiesQueryParams, masterRecordsDocumentIds );`.  After confirming the three values below are in fact in the dataset using Postman I need to understand the behavior of `PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef` better and refactor it to make sure it returns `2025040900070001`, `2025021800719001` and `2025040900509001` in addition to what is being returned.  
-
-The issue was that the ACRIS website's search behavior is different than my own.  My search used SoQL syntax to query the dataset's endpoint called `"document_date"` for any date `between` the current date, as the end date, `and` a date calculated 90 days prior, as the start date.  The ACRIS website queried the `"recorded_datetime"` instead!!!  I was expecting to find the value `2025021800719001` in my results but because its `document_date` was 1/30/2025 it didn't show up within the last 90s in my search since today is 5/13/25 and 90 days before today is 2/12/25.
-
-However, I'm still missing `2025040900509001` (DEED `doc_type`, 4/3/2025 `document_date`, Brooklyn `borough`, EMPIRE STATE GRAND COUNCIL ANCIENT AND ACCEPTED SC `name`) 
-
-Actual ACRIS search returns: 
-- [x] `2025040900070001`: DEED `doc_type`, 4/3/2025 `document_date`, Brooklyn `borough`, EMPIRE HOLDINGS II, LLC `name`
-- [ ] `2025021800719001`: MLEA `doc_type`, 1/30/2025 `document_date`, Brooklyn `borough`, EMPIRE STATE DAIRY LLC `name`
-- [ ] `2025040900509001`: DEED `doc_type`, 4/3/2025 `document_date`, Brooklyn `borough`, EMPIRE STATE GRAND COUNCIL ANCIENT AND ACCEPTED SC `name`
+- `2025040900070001`
+  - DOC. TYPE:	DEED
+  - DOC. DATE:	4/3/2025
+  - RECORDED / FILED:	4/10/2025 10:40:53 AM
+  - BBL: 3-1596-56
+  - PARTY_TYPE: 1
+  - NAME: EMPIRE HOLDINGS II, LLC
+- `2025021800719001`
+  - DOC. TYPE: MEMORANDUM OF LEASE
+  - DOC. DATE:	1/30/2025
+  - RECORDED / FILED:	2/28/2025 11:49:31 AM
+  - BBL 3-3964-1001
+  - PARTY_TYPE: 1
+  - NAME: EMPIRE STATE DAIRY LLC
+- `2025040900509001`
+  - DOC. TYPE:	DEED
+  - DOC. DATE:	4/3/2025
+  - RECORDED / FILED:	4/14/2025 9:57:56 AM
+  - BBL: 3-2105-1
+  - PARTY_TYPE: 1
+  - NAME: EMPIRE STATE GRAND COUNCIL ANCIENT AND ACCEPTED SC
+- `2025040700480001`
+  - DOC. TYPE:	DEED
+  - DOC. DATE:	3/24/2025
+  - RECORDED / FILED:	4/8/2025 10:17:37 AM
+  - BBL: 3-6553-69, 71 & 73
+  - PARTY_TYPE: 1
+  - NAME: GREAT EMPIRE BEVERLY REALTY LLC
 
 ### Current Architecture (ARCHIVED 5/13/25)
 

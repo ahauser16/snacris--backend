@@ -2,70 +2,121 @@
 
 const axios = require("axios");
 const { NotFoundError } = require("../../../expressError");
-const API_ENDPOINTS = require("../../apiEndpoints");
-
-/** Functions for interacting with the ACRIS Real Property References API. */
+const SoqlUrl = require("../utils/SoqlUrl");
 
 class ReferencesRealPropApi {
-
-  static constructReferencesUrl({
-    document_id,
-    record_type,
-    reference_by_crfn_,
-    reference_by_doc_id,
-    reference_by_reel_year,
-    reference_by_reel_borough,
-    reference_by_reel_nbr,
-    reference_by_reel_page,
-    good_through_date,
-  } = {}) {
-    const conditions = [];
-
-    if (document_id) conditions.push(`upper(document_id)=upper('${document_id}')`);
-    if (record_type) conditions.push(`record_type='${record_type}'`);
-    if (reference_by_crfn_) conditions.push(`reference_by_crfn_='${reference_by_crfn_}'`);
-    if (reference_by_doc_id) conditions.push(`reference_by_doc_id='${reference_by_doc_id}'`);
-    if (reference_by_reel_year) conditions.push(`reference_by_reel_year='${reference_by_reel_year}'`);
-    if (reference_by_reel_borough) conditions.push(`reference_by_reel_borough='${reference_by_reel_borough}'`);
-    if (reference_by_reel_nbr) conditions.push(`reference_by_reel_nbr='${reference_by_reel_nbr}'`);
-    if (reference_by_reel_page) conditions.push(`reference_by_reel_page='${reference_by_reel_page}'`);
-    if (good_through_date) conditions.push(`good_through_date='${good_through_date}'`);
-
-    const whereClause = conditions.length > 0 ? `$where=${conditions.join(" AND ")}` : "";
-
-    const url = `${API_ENDPOINTS.realPropertyRemarks}?${whereClause}`;
-    return url;
-  }
-
-  /** Fetch data from the ACRIS-Real Property References dataset based on user-data sent from the frontend.
-   *
-   * `URLSearchParams` is a built-in JavaScript class that provides utility methods to work with the query string of a URL. It is part of the Web API and is available in modern browsers and Node.js environments. The URLSearchParams class allows you to create and manipulate the query string of a URL. You can add, delete, and retrieve query parameters easily. This class is useful when you need to work with query parameters in a URL.
-   * 
-   * Returns [{ document_id, record_type, reference_by_crfn_, reference_by_doc_id, reference_by_reel_year, reference_by_reel_borough, reference_by_reel_nbr, reference_by_reel_page, good_through_date }]
-   * 
-   **/
-
-  static async fetchFromAcris(query) {
-    try {
-      const url = this.constructReferencesUrl(query);
-
-      const { data } = await axios.get(url, {
-        headers: {
-          "Content-Type": "application/json",
-          "X-App-Token": process.env.APP_TOKEN, // Ensure APP_TOKEN is set in your environment
-        },
-      });
-
-      if (!data?.length) {
-        console.warn(`No records found for query: ${JSON.stringify(query)}`);
-        return []; 
-      }
-
-      return data;
-    } catch (err) {
-      throw new Error("Failed to fetch data from ACRIS API");
+    static async fetchAcrisRecords(referencesQueryParams) {
+        try {
+            const url = SoqlUrl.constructUrl(referencesQueryParams, "ReferencesRealPropApi", "records");
+            const headers = {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+            };
+            const { data } = await axios.get(url, { headers });
+            if (!data?.length) {
+                throw new NotFoundError("No records found for the given query from Real Property References API.");
+            }
+            return data;
+        } catch (err) {
+            console.error("Error fetching records from Real Property References API:", err.message);
+            throw new Error("Failed to fetch records from Real Property References API");
+        }
     }
-  }
+
+    static async fetchAcrisRecordCount(referencesQueryParams) {
+        try {
+            const url = SoqlUrl.constructUrl(referencesQueryParams, "ReferencesRealPropApi", "countAll");
+            const headers = {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+            };
+            const { data } = await axios.get(url, { headers });
+            if (!data?.length || !data[0]?.count) {
+                throw new NotFoundError("No count data found for the given query from Real Property References API.");
+            }
+            return Number(data[0].count);
+        } catch (err) {
+            console.error("Error fetching record count from Real Property References API:", err.message);
+            throw new Error("Failed to fetch record count from Real Property References API");
+        }
+    }
+
+    static async fetchAcrisDocumentIds(referencesQueryParams) {
+        try {
+            const url = SoqlUrl.constructUrl(referencesQueryParams, "ReferencesRealPropApi", "document_id");
+            const headers = {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+            };
+            const { data } = await axios.get(url, { headers });
+            if (!data?.length) {
+                throw new NotFoundError("No document IDs found for the given query from Real Property References API.");
+            }
+            return data.map(record => record.document_id);
+        } catch (err) {
+            console.error("Error fetching document IDs from Real Property References API:", err.message);
+            throw new Error("Failed to fetch document IDs from Real Property References API");
+        }
+    }
+
+    static async fetchAcrisDocumentIdsCrossRef(referencesQueryParams, crossRefDocumentIds, batchSize = 500) {
+        try {
+            const queryUrls = SoqlUrl.constructUrlBatches(referencesQueryParams, crossRefDocumentIds, "ReferencesRealPropApi", batchSize);
+            const allDocumentIds = new Set();
+            for (const url of queryUrls) {
+                let offset = 0;
+                let hasMoreRecords = true;
+                while (hasMoreRecords) {
+                    const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
+                    const headers = {
+                        "Content-Type": "application/json",
+                        "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+                    };
+                    const { data } = await axios.get(paginatedUrl, { headers });
+                    if (!data?.length) {
+                        hasMoreRecords = false;
+                    } else {
+                        data.forEach(record => allDocumentIds.add(record.document_id));
+                        offset += 1000;
+                    }
+                }
+            }
+            if (allDocumentIds.size === 0) {
+                throw new NotFoundError("No Real Property References records found for the given query.");
+            }
+            return Array.from(allDocumentIds);
+        } catch (err) {
+            console.error("Error fetching document IDs from Real Property References API:", err.message);
+            throw new Error("Failed to fetch document IDs from Real Property References API");
+        }
+    }
+
+    static async fetchAcrisRecordsByDocumentIds(documentIds, queryParams = {}, limit = 1000) {
+        try {
+            let offset = 0;
+            let hasMoreRecords = true;
+            const allRecords = [];
+            while (hasMoreRecords) {
+                const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "ReferencesRealPropApi", documentIds, limit, offset);
+                const headers = {
+                    "Content-Type": "application/json",
+                    "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+                };
+                const { data } = await axios.get(url, { headers });
+                if (!data?.length) {
+                    hasMoreRecords = false;
+                } else {
+                    allRecords.push(...data);
+                    offset += limit;
+                    if (data.length < limit) hasMoreRecords = false;
+                }
+            }
+            return allRecords.length ? allRecords : null;
+        } catch (err) {
+            console.error("Error fetching records by document IDs from Real Property References API:", err.message);
+            return null;
+        }
+    }
 }
 
 module.exports = ReferencesRealPropApi;

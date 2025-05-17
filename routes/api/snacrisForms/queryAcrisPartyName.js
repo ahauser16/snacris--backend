@@ -6,6 +6,8 @@ const express = require("express");
 const MasterRealPropApi = require("../../../thirdPartyApi/acris/real-property/MasterRealPropApi");
 const LegalsRealPropApi = require("../../../thirdPartyApi/acris/real-property/LegalsRealPropApi");
 const PartiesRealPropApi = require("../../../thirdPartyApi/acris/real-property/PartiesRealPropApi");
+const ReferencesRealPropApi = require("../../../thirdPartyApi/acris/real-property/ReferencesRealPropApi");
+const RemarksRealPropApi = require("../../../thirdPartyApi/acris/real-property/RemarksRealPropApi");
 const DocTypesCodeMapModel = require("../../../models/acris/code-maps/DocTypesCodeMapModel");
 const { transformForUrl } = require("../../../thirdPartyApi/utils");
 
@@ -16,27 +18,19 @@ router.get("/fetchRecord", async function (req, res, next) {
         console.log("Received request with query parameters:", req.query);
 
         const { masterSearchTerms, partySearchTerms, legalsSearchTerms } = req.query;
-        //console.log(masterSearchTerms, partySearchTerms, legalsSearchTerms)
         const masterQueryParams = {};
-        if (masterSearchTerms?.document_date_range)
-            masterQueryParams.document_date_range = masterSearchTerms.document_date_range;
-        if (masterSearchTerms?.document_date_start)
-            masterQueryParams.document_date_start = masterSearchTerms.document_date_start;
-        if (masterSearchTerms?.document_date_end)
-            masterQueryParams.document_date_end = masterSearchTerms.document_date_end;
-
-
-
-        // Handle `doc_type` and `doc_class` logic
+        if (masterSearchTerms?.recorded_date_range)
+            masterQueryParams.recorded_date_range = masterSearchTerms.recorded_date_range;
+        if (masterSearchTerms?.recorded_date_start)
+            masterQueryParams.recorded_date_start = masterSearchTerms.recorded_date_start;
+        if (masterSearchTerms?.recorded_date_end)
+            masterQueryParams.recorded_date_end = masterSearchTerms.recorded_date_end;
         if (masterSearchTerms?.doc_type === "doc-type-default" && masterSearchTerms?.doc_class) {
             if (masterSearchTerms.doc_class !== "all-class-default") {
                 try {
-                    //console.log(`Fetching doc_type values for class: ${masterSearchTerms.doc_class}`);
                     const docTypes = await DocTypesCodeMapModel.getDocTypesByClass(masterSearchTerms.doc_class);
                     masterQueryParams.doc_type = docTypes; // Pass the array of `doc_type` values
-                    //console.log(`Fetched doc_type values: ${docTypes}`);
                 } catch (err) {
-                    //console.error(`Error fetching doc_type values for class: ${masterSearchTerms.doc_class}`, err.message);
                     return res.status(400).json({ error: `Invalid doc_class: ${masterSearchTerms.doc_class}` });
                 }
             }
@@ -44,28 +38,25 @@ router.get("/fetchRecord", async function (req, res, next) {
             masterQueryParams.doc_type = masterSearchTerms.doc_type;
         }
 
-        // Construct query parameters for Parties dataset
         const partiesQueryParams = {};
         if (partySearchTerms?.name)
             partiesQueryParams.name = transformForUrl(partySearchTerms.name);
         if (partySearchTerms?.party_type)
             partiesQueryParams.party_type = partySearchTerms.party_type;
 
-        // Construct query parameters for Legals dataset
         const legalsQueryParams = {};
         if (legalsSearchTerms?.borough)
             legalsQueryParams.borough = legalsSearchTerms.borough;
 
-        // Fetch data from the Master dataset
+        let crossReferencedDocumentIds = [];
+        // Fetch data from the Master, Parties and Legals datasets
         try {
             // Step 1: Fetch master records
             const masterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(masterQueryParams);
-            //console.log(`Fetched ${masterRecordsDocumentIds.length} real property master document_id values`);
-            console.log(masterRecordsDocumentIds, "masterRecordsDocumentIds");
 
             // Check for the presence of specific document_id values
-            const documentIdsToCheck = ["2025040900070001", "2025021800719001", "2025040900509001"];
-            documentIdsToCheck.forEach(id => {
+            const firstCrossRefDocumentIdsToCheck = ["2025040900070001", "2025021800719001", "2025040900509001"];
+            firstCrossRefDocumentIdsToCheck.forEach(id => {
                 if (masterRecordsDocumentIds.includes(id)) {
                     console.log(`Document ID ${id} is present in masterRecordsDocumentIds.`);
                 } else {
@@ -73,26 +64,22 @@ router.get("/fetchRecord", async function (req, res, next) {
                 }
             });
 
-            // Initialize these variables with empty arrays as defaults
             let partyRecordsDocumentIds = [];
             let legalsRecordsDocumentIds = [];
 
-            // Step 2: Only fetch party records if we have master records
+            // Step 2: Fetch Party records while including results from the Master dataset
             if (masterRecordsDocumentIds && masterRecordsDocumentIds.length > 0) {
-                //partyRecordsDocumentIds = await PartiesRealPropApi.fetchFromAcrisCrossRef(
                 partyRecordsDocumentIds = await PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef(
                     partiesQueryParams,
                     masterRecordsDocumentIds
                 );
-                console.log(`Fetched ${partyRecordsDocumentIds.length} real property party document_id values`, partyRecordsDocumentIds);
 
                 // Step 3: Only fetch legal records if we have party records
                 if (partyRecordsDocumentIds && partyRecordsDocumentIds.length > 0) {
-                    legalsRecordsDocumentIds = await LegalsRealPropApi.fetchFromAcrisCrossRef(
+                    legalsRecordsDocumentIds = await LegalsRealPropApi.fetchAcrisDocumentIdsCrossRef(
                         legalsQueryParams,
                         partyRecordsDocumentIds
                     );
-                    console.log(`Fetched ${legalsRecordsDocumentIds.length} legal record IDs`);
                 } else {
                     console.log("No party records found, skipping legal records fetch");
                 }
@@ -100,28 +87,54 @@ router.get("/fetchRecord", async function (req, res, next) {
                 console.log("No master records found, skipping subsequent fetches");
             }
 
-            // Return all collected data
-            return {
-                masterRecordsDocumentIds,
-                partyRecordsDocumentIds,
-                legalsRecordsDocumentIds
-            };
+            crossReferencedDocumentIds = legalsRecordsDocumentIds;
 
         } catch (err) {
             console.error("Error fetching ACRIS dataset:", err.message);
-            // Return structured error information
-            return {
+            return res.status(500).json({
                 dataFound: false,
-                dataset: "acrisDataset",
-                error: err.message,
-                masterRecordsDocumentIds: [],
-                partyRecordsDocumentIds: [],
-                legalsRecordsDocumentIds: []
-            };
+                datasets: "Real Property: Master, Parties, Legals",
+                error: err.message
+            });
         }
 
-        // Return the primary records as the response
-        return res.json({ primaryRecords });
+        // Fetch full records from all datasets in parallel using crossReferencedDocumentIds
+        try {
+            const [
+                masterRecords,
+                partiesRecords,
+                legalsRecords,
+                referencesRecords,
+                remarksRecords
+            ] = await Promise.all([
+                MasterRealPropApi.fetchAcrisRecordsByDocumentIds(crossReferencedDocumentIds),
+                PartiesRealPropApi.fetchAcrisRecordsByDocumentIds(crossReferencedDocumentIds),
+                LegalsRealPropApi.fetchAcrisRecordsByDocumentIds(crossReferencedDocumentIds),
+                ReferencesRealPropApi.fetchAcrisRecordsByDocumentIds(crossReferencedDocumentIds),
+                RemarksRealPropApi.fetchAcrisRecordsByDocumentIds(crossReferencedDocumentIds)
+            ]);
+
+            // Build newResults array
+            const newResults = crossReferencedDocumentIds.map(document_id => ({
+                document_id,
+                masterRecords: (masterRecords || []).filter(r => r.document_id === document_id),
+                partiesRecords: (partiesRecords || []).filter(r => r.document_id === document_id),
+                legalsRecords: (legalsRecords || []).filter(r => r.document_id === document_id),
+                referencesRecords: (referencesRecords || []).filter(r => r.document_id === document_id),
+                remarksRecords: (remarksRecords || []).filter(r => r.document_id === document_id)
+            }));
+
+            console.log(newResults);
+
+            return res.json(newResults);
+        } catch (err) {
+            console.error("Error fetching full records from datasets:", err.message);
+            return res.status(500).json({
+                dataFound: false,
+                error: "Failed to fetch full records from all datasets",
+                details: err.message
+            });
+        }
     } catch (err) {
         console.error("Error in queryAcrisPartyName route:", err.message);
         return next(err);

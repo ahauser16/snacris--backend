@@ -108,7 +108,7 @@ class PartiesRealPropApi {
         try {
             // Construct batch query URLs
             const queryUrls = SoqlUrl.constructUrlBatches(partiesQueryParams, masterRecordsDocumentIds, "PartiesRealPropApi", batchSize);
-            //console.log(queryUrls[4], "PartiesRealPropApi queryUrls", `queryUrls.length: ${queryUrls.length}`);
+            console.log(queryUrls[0], "PartiesRealPropApi queryUrls", `queryUrls.length: ${queryUrls.length}`);
 
             const allDocumentIds = new Set();
 
@@ -142,6 +142,41 @@ class PartiesRealPropApi {
         } catch (err) {
             console.error("'fetchAcrisDocumentIdsCrossRef' related error fetching document IDs from Real Property Parties API:", err.message);
             throw new Error("Failed to fetch document IDs from Real Property Parties API");
+        }
+    }
+
+    /**
+       * Fetch all records from the ACRIS Real Property Parties dataset for an array of document_id values.
+       * @param {Array<string>} documentIds - Array of document_id values.
+       * @param {Object} [queryParams={}] - Additional query parameters.
+       * @param {number} [limit=1000] - Pagination limit.
+       * @returns {Array} - Fetched records.
+       */
+    static async fetchAcrisRecordsByDocumentIds(documentIds, queryParams = {}, limit = 1000) {
+        try {
+            let offset = 0;
+            let hasMoreRecords = true;
+            const allRecords = [];
+            while (hasMoreRecords) {
+                const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "PartiesRealPropApi", documentIds, limit, offset);
+                console.log(url, "PartiesRealPropApi.fetchAcrisRecordsByDocumentIds url");
+                const headers = {
+                    "Content-Type": "application/json",
+                    "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+                };
+                const { data } = await axios.get(url, { headers });
+                if (!data?.length) {
+                    hasMoreRecords = false;
+                } else {
+                    allRecords.push(...data);
+                    offset += limit;
+                    if (data.length < limit) hasMoreRecords = false;
+                }
+            }
+            return allRecords.length ? allRecords : null;
+        } catch (err) {
+            console.error("Error fetching records by document IDs:", err.message);
+            return null;
         }
     }
 }

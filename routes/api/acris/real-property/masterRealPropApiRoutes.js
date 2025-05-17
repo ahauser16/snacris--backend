@@ -20,9 +20,7 @@ const router = new express.Router();
 router.get("/fetchRecord", async function (req, res, next) {
     try {
         const query = req.query;
-        // const masterRecords = await MasterRealPropApi.fetchFromAcris(query); //OLD CODE THAT WORKS BUT IS BEING REPLACED
-        const realPropMasterRecords = await MasterRealPropApi.fetchAcrisRecords(query); //NEW CODE TO TEST - success
-        // fetchAcrisRecords
+        const realPropMasterRecords = await MasterRealPropApi.fetchAcrisRecords(query); 
         return res.json({ realPropMasterRecords });
     } catch (err) {
         return next(err);
@@ -33,8 +31,7 @@ router.get("/fetchRecord", async function (req, res, next) {
 router.get("/fetchRecordCount", async function (req, res, next) {
     try {
         const query = req.query;
-        //const masterRecordCount = await MasterRealPropApi.fetchCountFromAcris(query); //OLD CODE THAT WORKS BUT IS BEING REPLACED
-        const realPropMasterRecordCount = await MasterRealPropApi.fetchAcrisRecordCount(query); //NEW CODE TO TEST - success
+        const realPropMasterRecordCount = await MasterRealPropApi.fetchAcrisRecordCount(query); 
         return res.json({ realPropMasterRecordCount });
     } catch (err) {
         return next(err);
@@ -44,10 +41,27 @@ router.get("/fetchRecordCount", async function (req, res, next) {
 router.get("/fetchDocIds", async function (req, res, next) {
     try {
         const query = req.query;
-        //const masterRecordsDocumentIds = await MasterRealPropApi.fetchDocIdsFromAcris(query); //OLD CODE THAT WORKS BUT IS BEING REPLACED
-        const realPropMasterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(query); //NEW CODE TO TEST 
+        const realPropMasterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(query); 
 
         return res.json({ realPropMasterRecordsDocumentIds });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+router.get("/fetchAcrisRecordsByDocumentIds", async function (req, res, next) {
+    try {
+        let { documentIds } = req.query;
+        // Support both comma-separated and JSON array
+        if (typeof documentIds === "string") {
+            if (documentIds.startsWith("[")) {
+                documentIds = JSON.parse(documentIds);
+            } else {
+                documentIds = documentIds.split(",");
+            }
+        }
+        const realPropMasterRecords = await MasterRealPropApi.fetchAcrisRecordsByDocumentIds(documentIds);  
+        return res.json({ realPropMasterRecords });
     } catch (err) {
         return next(err);
     }

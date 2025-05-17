@@ -106,7 +106,7 @@ class LegalsRealPropApi {
             );
 
             const queryUrls = SoqlUrl.constructUrlBatches(legalsQueryParams, documentIds, "LegalsRealPropApi", batchSize);
-            console.log(queryUrls[0], "LegalsRealPropApi queryUrls");
+            console.log(queryUrls[0], queryUrls.length, "LegalsRealPropApi queryUrls");
 
             const allDocumentIds = new Set();
 
@@ -140,6 +140,41 @@ class LegalsRealPropApi {
         } catch (err) {
             console.error("Error fetching document IDs from Real Property Legals API:", err.message);
             throw new Error("Failed to fetch document IDs from Real Property Legals API");
+        }
+    }
+
+    /**
+       * Fetch all records from the ACRIS Real Property Legals dataset for an array of document_id values.
+       * @param {Array<string>} documentIds - Array of document_id values.
+       * @param {Object} [queryParams={}] - Additional query parameters.
+       * @param {number} [limit=1000] - Pagination limit.
+       * @returns {Array} - Fetched records.
+       */
+    static async fetchAcrisRecordsByDocumentIds(documentIds, queryParams = {}, limit = 1000) {
+        try {
+            let offset = 0;
+            let hasMoreRecords = true;
+            const allRecords = [];
+            while (hasMoreRecords) {
+                const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "LegalsRealPropApi", documentIds, limit, offset);
+                console.log(url, "LegalsRealPropApi.fetchAcrisRecordsByDocumentIds url");
+                const headers = {
+                    "Content-Type": "application/json",
+                    "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+                };
+                const { data } = await axios.get(url, { headers });
+                if (!data?.length) {
+                    hasMoreRecords = false;
+                } else {
+                    allRecords.push(...data);
+                    offset += limit;
+                    if (data.length < limit) hasMoreRecords = false;
+                }
+            }
+            return allRecords.length ? allRecords : null;
+        } catch (err) {
+            console.error("Error fetching records by document IDs:", err.message);
+            return null;
         }
     }
 }

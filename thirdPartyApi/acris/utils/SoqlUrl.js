@@ -38,6 +38,29 @@ class SoqlUrl {
     }
 
     /**
+     * Constructs a SoQL query URL to fetch full records for an array of document_id values.
+     * @param {Object} queryParams - Additional query parameters.
+     * @param {string} apiCaller - The name of the API caller.
+     * @param {Array<string>} documentIds - Array of document_id values.
+     * @param {number} [limit] - Optional limit.
+     * @param {number} [offset] - Optional offset.
+     * @returns {string} - Constructed SoQL query URL.
+     */
+    static constructUrlForDocumentIds(queryParams, apiCaller, documentIds, limit, offset) {
+        if (!Array.isArray(documentIds) || documentIds.length === 0) {
+            throw new Error("'constructUrlForDocumentIds' requires a non-empty array of documentIds.");
+        }
+        const conditions = this.setConditionsConfig(queryParams, apiCaller);
+        conditions.push(`document_id IN (${documentIds.map(id => `'${id}'`).join(", ")})`);
+        const selectClause = this.setSelectConfig("records");
+        const whereClause = this.setWhereConfig(conditions);
+        const limitOffsetClause = this.setLimitOffsetConfig("records", limit, offset);
+        const apiEndpoint = this.setApiEndpointConfig(apiCaller);
+        const clauses = [selectClause, whereClause, limitOffsetClause].filter(Boolean).join("&");
+        return `${apiEndpoint}?${clauses}`;
+    }
+
+    /**
      * Constructs SoQL query URLs in batches.
      *
      * @param {Object} queryParams - Query parameters for the dataset. Possible values: `masterQueryParams`, `partiesQueryParams`, `legalsQueryParams`, `remarksQueryParams`, `referencesQueryParams`.
@@ -109,14 +132,20 @@ class SoqlUrl {
             if (queryParams.document_date_start && queryParams.document_date_end) {
                 conditions.push(`document_date between '${queryParams.document_date_start}' and '${queryParams.document_date_end}'`);
             }
+            if (queryParams.recorded_date_start && queryParams.recorded_date_end) {
+                conditions.push(`recorded_datetime between '${queryParams.recorded_date_start}' and '${queryParams.recorded_date_end}'`);
+            }
+            if (queryParams.modified_date_start && queryParams.modified_date_end) {
+                conditions.push(`modified_date between '${queryParams.modified_date_start}' and '${queryParams.modified_date_end}'`);
+            }
+            if (queryParams.good_through_date_start && queryParams.good_through_date_end) {
+                conditions.push(`good_through_date between '${queryParams.good_through_date_start}' and '${queryParams.good_through_date_end}'`);
+            }
             if (queryParams.document_amt) conditions.push(`document_amt='${queryParams.document_amt}'`);
-            if (queryParams.recorded_datetime) conditions.push(`recorded_datetime='${queryParams.recorded_datetime}'`);
-            if (queryParams.modified_date) conditions.push(`modified_date='${queryParams.modified_date}'`);
             if (queryParams.reel_yr) conditions.push(`reel_yr='${queryParams.reel_yr}'`);
             if (queryParams.reel_nbr) conditions.push(`reel_nbr='${queryParams.reel_nbr}'`);
             if (queryParams.reel_pg) conditions.push(`reel_pg='${queryParams.reel_pg}'`);
             if (queryParams.percent_trans) conditions.push(`percent_trans='${queryParams.percent_trans}'`);
-            if (queryParams.good_through_date) conditions.push(`good_through_date='${queryParams.good_through_date}'`);
         } else if (apiCaller === "LegalsRealPropApi") {
             if (queryParams.document_id) conditions.push(`upper(document_id)=upper('${queryParams.document_id}')`);
             if (queryParams.record_type) conditions.push(`record_type='${queryParams.record_type}'`);
