@@ -9,6 +9,7 @@ const {
   authRoutes,
   usersRoutes,
   queryAcrisAddressParcel,
+  queryAcrisParcel,
   queryAcrisDocIdCrfn,
   queryAcrisPartyName,
   queryAcrisDocumentType,
@@ -62,6 +63,7 @@ app.use(authenticateJWT);
 app.use("/auth", authRoutes);
 app.use("/users", usersRoutes); 
 app.use("/queryAcrisAddressParcel", queryAcrisAddressParcel); 
+app.use("/queryAcrisParcel", queryAcrisParcel);
 app.use("/queryAcrisDocIdCrfn", queryAcrisDocIdCrfn);
 app.use("/queryAcrisPartyName", queryAcrisPartyName);
 app.use("/queryAcrisDocumentType", queryAcrisDocumentType);

@@ -71,6 +71,7 @@ class LegalsRealPropApi {
     static async fetchAcrisDocumentIds(legalsQueryParams) {
         try {
             const url = SoqlUrl.constructUrl(legalsQueryParams, "LegalsRealPropApi", "document_id");
+            console.log(url, "LegalsRealPropApi.fetchAcrisDocumentIds url");
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,

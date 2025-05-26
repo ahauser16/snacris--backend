@@ -165,6 +165,60 @@ class MasterRealPropApi {
       return null;
     }
   }
+
+  /**
+   * Fetch `document_id` values from the ACRIS Real Property Master dataset (cross-referenced with Legals dataset).
+   *
+   * @param {Object} masterQueryParams - Query parameters for the Master dataset.
+   * @param {Array<string>} legalsRecordsDocumentIds - Array of document IDs to cross-reference.
+   * @param {number} [batchSize=500] - Number of document IDs per batch.
+   * @returns {Array<string>} - Fetched `document_id` values.
+   */
+  static async fetchAcrisDocumentIdsCrossRef(masterQueryParams, legalsRecordsDocumentIds, batchSize = 500) {
+    try {
+      // Ensure we have an array of document_id strings
+      const documentIds = legalsRecordsDocumentIds.map(record =>
+        typeof record === "object" && record.document_id ? record.document_id : record
+      );
+      //console.log(documentIds, "documentIds in MasterRealPropApi.fetchAcrisDocumentIdsCrossRef");
+
+      const queryUrls = SoqlUrl.constructUrlBatches(masterQueryParams, documentIds, "MasterRealPropApi", batchSize);
+      console.log(queryUrls[0], queryUrls.length, "first queryUrl created by 'MasterRealPropApi.fetchAcrisDocumentIdsCrossRef': ");
+
+      const allDocumentIds = new Set();
+
+      for (const url of queryUrls) {
+        let offset = 0;
+        let hasMoreRecords = true;
+
+        while (hasMoreRecords) {
+          const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
+          const headers = {
+            "Content-Type": "application/json",
+            "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+          };
+
+          const { data } = await axios.get(paginatedUrl, { headers });
+
+          if (!data?.length) {
+            hasMoreRecords = false;
+          } else {
+            data.forEach(record => allDocumentIds.add(record.document_id));
+            offset += 1000;
+          }
+        }
+      }
+
+      if (allDocumentIds.size === 0) {
+        throw new NotFoundError("No Real Property Master records found for the given query.");
+      }
+
+      return Array.from(allDocumentIds);
+    } catch (err) {
+      //console.error("Error fetching document IDs from Real Property Master API (cross-ref):", err.message);
+      throw new Error("Failed to fetch document IDs from Real Property Master API (cross-ref)");
+    }
+  }
 }
 
 module.exports = MasterRealPropApi;

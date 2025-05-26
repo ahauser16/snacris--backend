@@ -1,6 +1,6 @@
 "use strict";
 
-/** Routes for ACRIS Real Property Legals API calls. */
+/** Routes for ACRIS Real Property Parcel (Master + Legals) API calls. */
 
 const express = require("express");
 const MasterRealPropApi = require("../../../thirdPartyApi/acris/real-property/MasterRealPropApi");
@@ -14,12 +14,9 @@ const router = new express.Router();
 
 router.get("/fetchRecord", async function (req, res, next) {
     try {
-        console.log("'queryAcrisDocumentType' received request with query parameters:", req.query);
+        console.log("Received request with query parameters:", req.query);
 
-        // Extract search terms and dataset flags from the request query
         const { masterSearchTerms, legalsSearchTerms } = req.query;
-
-        // Construct query parameters for Master dataset
         const masterQueryParams = {};
         if (masterSearchTerms?.recorded_date_range)
             masterQueryParams.recorded_date_range = masterSearchTerms.recorded_date_range;
@@ -31,7 +28,7 @@ router.get("/fetchRecord", async function (req, res, next) {
             if (masterSearchTerms.doc_class !== "all-class-default") {
                 try {
                     const docTypes = await DocTypesCodeMapModel.getDocTypesByClass(masterSearchTerms.doc_class);
-                    masterQueryParams.doc_type = docTypes; // Pass the array of `doc_type` values
+                    masterQueryParams.doc_type = docTypes;
                 } catch (err) {
                     return res.status(400).json({ error: `Invalid doc_class: ${masterSearchTerms.doc_class}` });
                 }
@@ -40,31 +37,41 @@ router.get("/fetchRecord", async function (req, res, next) {
             masterQueryParams.doc_type = masterSearchTerms.doc_type;
         }
 
-        // Construct query parameters for Legals dataset
+        // Legals: borough, block, lot (required), unit (optional)
         const legalsQueryParams = {};
         if (legalsSearchTerms?.borough)
             legalsQueryParams.borough = legalsSearchTerms.borough;
+        if (legalsSearchTerms?.block)
+            legalsQueryParams.block = legalsSearchTerms.block;
+        if (legalsSearchTerms?.lot)
+            legalsQueryParams.lot = legalsSearchTerms.lot;
+        if (legalsSearchTerms?.unit)
+            legalsQueryParams.unit = legalsSearchTerms.unit;
+
+        // Validate required fields for legals
+        if (!legalsQueryParams.borough || !legalsQueryParams.block || !legalsQueryParams.lot) {
+            return res.status(400).json({ error: "borough, block, and lot are required in legalsSearchTerms." });
+        }
 
         let crossReferencedDocumentIds = [];
-
         try {
-            // Step 1: Fetch master records
-            const masterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(masterQueryParams);
-            console.log(masterRecordsDocumentIds.length, "'masterRecordsDocumentIds' count is: ");
+            // Step 1: Fetch legals document IDs
+            const legalsRecordsDocumentIds = await LegalsRealPropApi.fetchAcrisDocumentIds(legalsQueryParams);
+            console.log(legalsRecordsDocumentIds, "legalsRecordsDocumentIds");
 
-            let legalsRecordsDocumentIds = [];
-
-            // Step 2: Fetch Party records while including results from the Master dataset
-            if (masterRecordsDocumentIds && masterRecordsDocumentIds.length > 0) {
-                legalsRecordsDocumentIds = await LegalsRealPropApi.fetchAcrisDocumentIdsCrossRef(
-                    legalsQueryParams,
-                    masterRecordsDocumentIds
+            // Step 2: Fetch master document IDs cross-referenced with legals
+            let masterRecordsDocumentIds = [];
+            if (legalsRecordsDocumentIds && legalsRecordsDocumentIds.length > 0) {
+                masterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIdsCrossRef(
+                    masterQueryParams,
+                    legalsRecordsDocumentIds
                 );
+                console.log(masterRecordsDocumentIds, "masterRecordsDocumentIds"); //<-- this never ran which means there is an issue with `MasterRealPropApi.fetchAcrisDocumentIdsCrossRef`
             } else {
-                console.log("No master records found, skipping subsequent fetches");
+                console.log("No legals records found, skipping master records fetch");
             }
-
-            crossReferencedDocumentIds = legalsRecordsDocumentIds;
+            crossReferencedDocumentIds = masterRecordsDocumentIds;
+            console.log(crossReferencedDocumentIds, "crossReferencedDocumentIds");
 
         } catch (err) {
             console.error("Error fetching ACRIS dataset:", err.message);
@@ -101,7 +108,7 @@ router.get("/fetchRecord", async function (req, res, next) {
                 remarksRecords: (remarksRecords || []).filter(r => r.document_id === document_id)
             }));
 
-            //console.log(results);
+            console.log(results);
 
             return res.json(results);
         } catch (err) {
@@ -113,7 +120,7 @@ router.get("/fetchRecord", async function (req, res, next) {
             });
         }
     } catch (err) {
-        console.error("Error in queryAcrisPartyName route:", err.message);
+        console.error("Error in queryAcrisParcel route:", err.message);
         return next(err);
     }
 });

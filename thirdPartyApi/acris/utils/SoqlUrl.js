@@ -120,7 +120,7 @@ class SoqlUrl {
             if (queryParams.zip) conditions.push(`zip='${queryParams.zip}'`);
             if (queryParams.good_through_date) conditions.push(`good_through_date='${queryParams.good_through_date}'`);
         } else if (apiCaller === "MasterRealPropApi") {
-            if (queryParams.document_id) conditions.push(`upper(document_id)=upper('${queryParams.document_id}')`);
+            if (queryParams.document_id) conditions.push(`document_id='${queryParams.document_id}'`);
             if (queryParams.crfn) conditions.push(`crfn='${queryParams.crfn}'`);
             if (queryParams.recorded_borough) conditions.push(`recorded_borough='${queryParams.recorded_borough}'`);
             if (queryParams.doc_type) {
@@ -147,7 +147,7 @@ class SoqlUrl {
             if (queryParams.reel_pg) conditions.push(`reel_pg='${queryParams.reel_pg}'`);
             if (queryParams.percent_trans) conditions.push(`percent_trans='${queryParams.percent_trans}'`);
         } else if (apiCaller === "LegalsRealPropApi") {
-            if (queryParams.document_id) conditions.push(`upper(document_id)=upper('${queryParams.document_id}')`);
+            if (queryParams.document_id) conditions.push(`document_id='${queryParams.document_id}'`);
             if (queryParams.record_type) conditions.push(`record_type='${queryParams.record_type}'`);
             if (queryParams.borough) conditions.push(`borough=${queryParams.borough}`);
             if (queryParams.block) conditions.push(`block=${queryParams.block}`);
@@ -162,7 +162,7 @@ class SoqlUrl {
             if (queryParams.unit) conditions.push(`unit='${queryParams.unit}'`);
             if (queryParams.good_through_date) conditions.push(`good_through_date='${queryParams.good_through_date}'`);
         } else if (apiCaller === "ReferencesRealPropApi") {
-            if (queryParams.document_id) conditions.push(`upper(document_id)=upper('${queryParams.document_id}')`);
+            if (queryParams.document_id) conditions.push(`document_id='${queryParams.document_id}'`);
             if (queryParams.record_type) conditions.push(`record_type='${queryParams.record_type}'`);
             // the reference to `reference_by_crfn_` is intentional
             if (queryParams.reference_by_crfn_) conditions.push(`reference_by_crfn_='${queryParams.reference_by_crfn_}'`);
@@ -173,7 +173,7 @@ class SoqlUrl {
             if (queryParams.reference_by_reel_page) conditions.push(`reference_by_reel_page='${queryParams.reference_by_reel_page}'`);
             if (queryParams.good_through_date) conditions.push(`good_through_date='${queryParams.good_through_date}'`);
         } else if (apiCaller === "RemarksRealPropApi") {
-            if (queryParams.document_id) conditions.push(`upper(document_id)=upper('${queryParams.document_id}')`);
+            if (queryParams.document_id) conditions.push(`document_id='${queryParams.document_id}'`);
             if (queryParams.record_type) conditions.push(`record_type='${queryParams.record_type}'`);
             if (queryParams.sequence_number) conditions.push(`sequence_number='${queryParams.sequence_number}'`);
             if (queryParams.remark_text) conditions.push(`remark_text='${queryParams.remark_text}'`);

@@ -1,7 +1,5 @@
 "use strict";
 
-/** Routes for ACRIS Real Property Legals API calls. */
-
 const express = require("express");
 const MasterRealPropApi = require("../../../thirdPartyApi/acris/real-property/MasterRealPropApi");
 const LegalsRealPropApi = require("../../../thirdPartyApi/acris/real-property/LegalsRealPropApi");
@@ -12,84 +10,82 @@ const { transformForUrl } = require("../../../thirdPartyApi/utils");
 
 const router = new express.Router();
 
-/**
- * Filters records to include only unique properties based on specific keys.
- *
- * @param {Array} records - The array of record objects.
- * @returns {Array} - An array of unique objects containing only the specified keys.
- */
-
 router.get("/fetchRecord", async function (req, res, next) {
     try {
-        console.log("Received request with query parameters:", req.query);
-        // Extract query parameters from the request
-        const { document_id, crfn, masterDataset, lotDataset, partiesDataset, referencesDataset, remarksDataset } = req.query;
+        console.log("'queryAcrisDocIdCrfn' received request with query parameters:", req.query);
 
-        // Convert dataset flags to booleans
-        const datasets = {
-            masterDataset: masterDataset === "true",
-            lotDataset: lotDataset === "true",
-            partiesDataset: partiesDataset === "true",
-            referencesDataset: referencesDataset === "true",
-            remarksDataset: remarksDataset === "true",
-        };
+        const { masterSearchTerms } = req.query;
+        const masterQueryParams = {};
+        let documentIdToQuery = null;
 
-        // Validate and construct query parameters
-        const queryParams = {};
-        if (document_id) queryParams.document_id = transformForUrl(document_id);
-        if (crfn) queryParams.crfn = transformForUrl(crfn);
-
-        // Ensure at least one valid parameter is provided
-        if (Object.keys(queryParams).length === 0) {
-            return res.status(400).json({ error: "At least one query parameter is required." });
-        }
-
-        // Ensure at least one dataset is selected
-        if (!Object.values(datasets).some((value) => value)) {
-            return res.status(400).json({ error: "At least one dataset must be selected." });
-        }
-
-        // Initialize an empty array to hold the records
-        let records = [];
-
-        // Helper function to fetch data and handle errors
-        async function fetchDataset(apiMethod, datasetName) {
-            try {
-                const datasetRecords = await apiMethod(queryParams);
-                if (datasetRecords.length === 0) {
-                    console.warn(`No records found for ${datasetName}`);
-                    records.push({ dataFound: false, dataset: datasetName });
-                } else {
-                    records.push(...datasetRecords);
-                }
-            } catch (err) {
-                console.error(`Error fetching data from ${datasetName}:`, err.message);
-                records.push({ dataFound: false, dataset: datasetName, error: err.message });
+        if (masterSearchTerms?.document_id) {
+            masterQueryParams.document_id = masterSearchTerms.document_id;
+            documentIdToQuery = masterSearchTerms.document_id;
+        } else if (masterSearchTerms?.crfn) {
+            masterQueryParams.crfn = masterSearchTerms.crfn;
+            // Fetch the master record to get the document_id
+            const masterRecords = await MasterRealPropApi.fetchAcrisRecords(masterQueryParams);
+            if (!masterRecords.length) {
+                return res.status(404).json({ error: "No master record found for the given crfn." });
             }
+            documentIdToQuery = masterRecords[0].document_id;
+            // Overwrite masterRecords for later use
+            masterQueryParams.document_id = documentIdToQuery;
+        } else {
+            return res.status(400).json({ error: "Must provide either document_id or crfn." });
         }
 
-        // Fetch data from the ACRIS API based on the selected datasets
-        if (datasets.masterDataset) {
-            await fetchDataset(MasterRealPropApi.fetchFromAcris, "masterDataset");
-        }
-        if (datasets.lotDataset) {
-            await fetchDataset(LegalsRealPropApi.fetchFromAcris, "lotDataset");
-        }
-        if (datasets.partiesDataset) {
-            await fetchDataset(PartiesRealPropApi.fetchFromAcris, "partiesDataset");
-        }
-        if (datasets.referencesDataset) {
-            await fetchDataset(ReferencesRealPropApi.fetchFromAcris, "referencesDataset");
-        }
-        if (datasets.remarksDataset) {
-            await fetchDataset(RemarksRealPropApi.fetchFromAcris, "remarksDataset");
-        }
+        // Now fetch all datasets using the document_id
+        try {
+            const [
+                masterResult,
+                partiesResult,
+                legalsResult,
+                referencesResult,
+                remarksResult
+            ] = await Promise.allSettled([
+                MasterRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery }),
+                PartiesRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery }),
+                LegalsRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery }),
+                ReferencesRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery }),
+                RemarksRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery })
+            ]);
 
-        // Fetch data from the ACRIS API
-        console.log("Fetched records:", records);
+            const masterRecords = masterResult.status === "fulfilled" ? masterResult.value : [];
+            const partiesRecords = partiesResult.status === "fulfilled" ? partiesResult.value : [];
+            const legalsRecords = legalsResult.status === "fulfilled" ? legalsResult.value : [];
+            const referencesRecords = referencesResult.status === "fulfilled" ? referencesResult.value : [];
+            const remarksRecords = remarksResult.status === "fulfilled" ? remarksResult.value : [];
 
-        return res.json({ records });
+            const allDocumentIds = new Set([
+                ...(masterRecords || []).map(r => r.document_id),
+                ...(partiesRecords || []).map(r => r.document_id),
+                ...(legalsRecords || []).map(r => r.document_id),
+                ...(referencesRecords || []).map(r => r.document_id),
+                ...(remarksRecords || []).map(r => r.document_id)
+            ]);
+
+            const results = Array.from(allDocumentIds).map(document_id => ({
+                document_id,
+                masterRecords: (masterRecords || []).filter(r => r.document_id === document_id),
+                partiesRecords: (partiesRecords || []).filter(r => r.document_id === document_id),
+                legalsRecords: (legalsRecords || []).filter(r => r.document_id === document_id),
+                referencesRecords: (referencesRecords || []).filter(r => r.document_id === document_id),
+                remarksRecords: (remarksRecords || []).filter(r => r.document_id === document_id)
+            }));
+            console.log(results.length, "number of results from all datasets");
+
+            return res.json(results);
+        } catch (err) {
+            console.error("Error fetching full records from datasets:", err.message);
+            return res.status(500).json({
+                dataFound: false,
+                error: "Failed to fetch full records from all datasets",
+                details: err.message
+            });
+        }
     } catch (err) {
+        console.error("Error in queryAcrisDocIdCrfn route:", err.message);
         return next(err);
     }
 });
