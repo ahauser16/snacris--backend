@@ -46,7 +46,10 @@ const {
 } = require("./routes");
 
 const app = express();
-const origin = ["https://react-snacris-frontend-web.onrender.com"]
+const origin = [
+  "https://react-snacris-frontend-web.onrender.com",
+  "https://snacris.nyc"
+];
 if (process.env.NODE_ENV === "development") {
   origin.push("http://localhost:3000");
 }
