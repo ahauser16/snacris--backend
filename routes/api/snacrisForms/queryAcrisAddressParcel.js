@@ -6,32 +6,25 @@ const { transformForUrl } = require("../../../thirdPartyApi/utils");
 const router = new express.Router();
 
 /**
- * Filters records to include only unique properties based on specific keys.
+ * Filters records to include only unique records based on all key/value pairs except document_id.
  *
  * @param {Array} records - The array of record objects.
- * @returns {Array} - An array of unique objects containing only the specified keys.
+ * @returns {Array} - An array of unique full record objects.
  */
-function findUniqueProperties(records) {
+function findUniqueFullRecords(records) {
     if (!records || records.length === 0) return [];
     const uniqueRecords = [];
     const seen = new Set();
 
     for (let record of records) {
-        // Extract only the relevant keys
-        const filteredRecord = {
-            borough: record.borough,
-            block: record.block,
-            lot: record.lot,
-            street_number: record.street_number,
-            street_name: record.street_name,
-        };
+        // Create a shallow copy of the record without document_id
+        const { document_id, ...rest } = record;
+        // Use JSON.stringify to create a unique identifier for the rest of the record
+        const identifier = JSON.stringify(rest);
 
-        const identifier = JSON.stringify(filteredRecord);
-
-        // Add the record to the result if it hasn't been seen before
         if (!seen.has(identifier)) {
             seen.add(identifier);
-            uniqueRecords.push(filteredRecord);
+            uniqueRecords.push(record); // Push the full record, including document_id
         }
     }
 
@@ -104,7 +97,7 @@ router.get("/fetchRecord", async function (req, res, next) {
 
         // Fetch data from the ACRIS API
         const records = await LegalsRealPropApi.fetchAcrisRecords(queryParams);
-        console.log(records, "records from LegalsRealPropApi");
+        console.log(records.length, records[0], "records from 'LegalsRealPropApi.fetchAcrisRecords'");
 
         if (!records || records.length === 0) {
             return res.status(404).json({
@@ -114,8 +107,8 @@ router.get("/fetchRecord", async function (req, res, next) {
             });
         }
 
-        // Find unique properties
-        const uniqueRecords = findUniqueProperties(records);
+        // Find unique full records (excluding document_id from uniqueness check)
+        const uniqueRecords = findUniqueFullRecords(records);
         console.log(uniqueRecords, "uniqueRecords");
 
         return res.json({
