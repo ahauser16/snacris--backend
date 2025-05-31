@@ -31,6 +31,54 @@ function findUniqueFullRecords(records) {
     return uniqueRecords;
 }
 
+////////////////////////////////////////////////
+// ...existing code...
+function analyzeResults(records) {
+    if (!records || records.length === 0) return {};
+
+    const keysToCheck = [
+        'borough', 'block', 'lot',
+        'street_number', 'street_name',
+        'record_type', 'easement', 'partial_lot',
+        'air_rights', 'subterranean_rights', 'property_type'
+    ];
+
+    const summary = {};
+
+    keysToCheck.forEach(key => {
+        const valueCounts = {};
+        const valueToDocs = {};
+
+        for (const rec of records) {
+            const val = rec[key] === undefined ? null : rec[key];
+            valueCounts[val] = (valueCounts[val] || 0) + 1;
+            if (!valueToDocs[val]) valueToDocs[val] = [];
+            valueToDocs[val].push(rec.document_id);
+        }
+
+        // Sort values by count descending
+        const sortedValues = Object.entries(valueCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([val]) => val === "null" ? null : val);
+
+        summary[key] = sortedValues;
+
+        // Consistency: count of most common value / total
+        const mostCommonCount = valueCounts[sortedValues[0] === null ? "null" : sortedValues[0]] || 0;
+        summary[`${key}_consistency`] = `${mostCommonCount}/${records.length}`;
+
+        // Exceptions: all values except the most common, with doc_ids and count
+        summary[`${key}_exceptions`] = sortedValues.slice(1).map(val => ({
+            [key]: val,
+            count: valueCounts[val === null ? "null" : val],
+            document_ids: valueToDocs[val === null ? "null" : val]
+        }));
+    });
+
+    return summary;
+}
+// ...existing code...
+////////////////////////////////////////////////
 
 /** GET /fetchRecord => { records: [...] }
  *
@@ -107,14 +155,14 @@ router.get("/fetchRecord", async function (req, res, next) {
             });
         }
 
-        // Find unique full records (excluding document_id from uniqueness check)
-        const uniqueRecords = findUniqueFullRecords(records);
-        console.log(uniqueRecords, "uniqueRecords");
+        // Analyze the results (snapshot/summary and groupings)
+        const analysis = analyzeResults(records);
+        console.log(analysis, "analysis");
 
         return res.json({
             status: "success",
-            message: `${uniqueRecords.length} unique properties found.`,
-            records: uniqueRecords,
+            message: `Analysis complete for ${records.length} records.`,
+            analysis
         });
     } catch (err) {
         return next(err);
