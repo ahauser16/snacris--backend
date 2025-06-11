@@ -176,23 +176,30 @@ class MasterRealPropApi {
    */
   static async fetchAcrisDocumentIdsCrossRef(masterQueryParams, legalsRecordsDocumentIds, batchSize = 500) {
     try {
-      // Ensure we have an array of document_id strings
-      const documentIds = legalsRecordsDocumentIds.map(record =>
-        typeof record === "object" && record.document_id ? record.document_id : record
-      );
-      //console.log(documentIds, "documentIds in MasterRealPropApi.fetchAcrisDocumentIdsCrossRef");
 
-      const queryUrls = SoqlUrl.constructUrlBatches(masterQueryParams, documentIds, "MasterRealPropApi", batchSize);
-      console.log(queryUrls[0], queryUrls.length, "first queryUrl created by 'MasterRealPropApi.fetchAcrisDocumentIdsCrossRef': ");
+      // 1. Log input parameters
+      console.log("fetchAcrisDocumentIdsCrossRef called with masterQueryParams:", masterQueryParams);
+      console.log("fetchAcrisDocumentIdsCrossRef called with legalsRecordsDocumentIds (first 10):", legalsRecordsDocumentIds.slice(0, 10));
+      console.log("fetchAcrisDocumentIdsCrossRef batchSize:", batchSize);
 
+      // 2. Build batch URLs for querying the API with document_id IN (...)
+      const queryUrls = SoqlUrl.constructUrlBatches(masterQueryParams, legalsRecordsDocumentIds, "MasterRealPropApi", batchSize);
+      console.log("Constructed queryUrls (count):", queryUrls.length);
+      if (queryUrls.length > 0) {
+        console.log("First queryUrl:", queryUrls[0]);
+      }
+
+      // 3. Prepare a set to collect unique document_ids from all batches
       const allDocumentIds = new Set();
 
+      // 4. For each batch URL
       for (const url of queryUrls) {
         let offset = 0;
         let hasMoreRecords = true;
 
         while (hasMoreRecords) {
           const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
+          console.log("About to fetch:", paginatedUrl);
           const headers = {
             "Content-Type": "application/json",
             "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -209,13 +216,17 @@ class MasterRealPropApi {
         }
       }
 
+      console.log("Total unique document_ids found:", allDocumentIds.size);
+
+      // 9. If no document_ids found, throw error
       if (allDocumentIds.size === 0) {
-        throw new NotFoundError("No Real Property Master records found for the given query.");
+        throw new NotFoundError("No Real Property Master records found from 'MasterRealPropApi.fetchAcrisDocumentIdsCrossRef'.");
       }
 
+      // 10. Return array of unique document_ids
       return Array.from(allDocumentIds);
     } catch (err) {
-      //console.error("Error fetching document IDs from Real Property Master API (cross-ref):", err.message);
+      console.error("Error fetching document IDs from Real Property Master API (cross-ref):", err.message);
       throw new Error("Failed to fetch document IDs from Real Property Master API (cross-ref)");
     }
   }

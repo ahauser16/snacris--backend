@@ -5,6 +5,14 @@ const API_ENDPOINTS = require("../../apiEndpoints");
 class SoqlUrl {
 
     /**
+        * Escapes single quotes for SoQL and ensures value is a string.
+        */
+    static escapeSoqlString(val) {
+        if (val === undefined || val === null) return "";
+        return String(val).replace(/'/g, "''");
+    }
+
+    /**
          * Constructs a SoQL query URL.
          *
          * @param {Object} queryParams - Query parameters for the dataset.
@@ -34,7 +42,10 @@ class SoqlUrl {
         const limitOffsetClause = this.setLimitOffsetConfig(selectOption, limit, offset);
 
         const clauses = [selectClause, whereClause, limitOffsetClause].filter(Boolean).join("&");
-        return `${apiEndpoint}?${clauses}`;
+        const url = `${apiEndpoint}?${clauses}`;
+        // ADD THIS LOG:
+        console.log("DEBUG: Final constructed SoQL URL:", url);
+        return url;
     }
 
     /**
@@ -51,13 +62,14 @@ class SoqlUrl {
             throw new Error("'constructUrlForDocumentIds' requires a non-empty array of documentIds.");
         }
         const conditions = this.setConditionsConfig(queryParams, apiCaller);
-        conditions.push(`document_id IN (${documentIds.map(id => `'${id}'`).join(", ")})`);
+        conditions.push(`document_id IN (${documentIds.map(id => `'${this.escapeSoqlString(id)}'`).join(", ")})`);
         const selectClause = this.setSelectConfig("records");
         const whereClause = this.setWhereConfig(conditions);
         const limitOffsetClause = this.setLimitOffsetConfig("records", limit, offset);
         const apiEndpoint = this.setApiEndpointConfig(apiCaller);
         const clauses = [selectClause, whereClause, limitOffsetClause].filter(Boolean).join("&");
-        return `${apiEndpoint}?${clauses}`;
+        const url = `${apiEndpoint}?${clauses}`;
+        return url;
     }
 
     /**
@@ -75,7 +87,6 @@ class SoqlUrl {
         if (!Array.isArray(documentIdsCrossRef)) {
             throw new Error("'constructUrlBatches' received invalid 'documentIdsCrossRef' parameter: Expected an array.");
         }
-
         if (typeof batchSize !== "number" || batchSize <= 0) {
             throw new Error("'constructUrlBatches' received invalid 'batchSize' parameter: Expected a positive number.");
         }
@@ -85,7 +96,7 @@ class SoqlUrl {
 
         for (let i = 0; i < documentIdsCrossRef.length; i += batchSize) {
             const batch = documentIdsCrossRef.slice(i, i + batchSize);
-            const documentIdsCondition = `document_id IN (${batch.map(id => `'${id}'`).join(", ")})`;
+            const documentIdsCondition = `document_id IN (${batch.map(id => `'${this.escapeSoqlString(id)}'`).join(", ")})`;
             const separator = baseUrl.includes("$where=") ? " AND " : "$where=";
             batches.push(`${baseUrl}${separator}${documentIdsCondition}`);
         }
@@ -105,79 +116,82 @@ class SoqlUrl {
             throw new Error("'setConditionsConfig' received invalid 'apiCaller' parameter: Expected a non-empty string.");
         }
 
+        const escape = this.escapeSoqlString;
         const conditions = [];
-
+        //console.log("doc_type array for doc_class", masterSearchTerms.doc_class, docTypes); //Check if any value contains ', &, or other problematic characters.
         if (apiCaller === "PartiesRealPropApi") {
-            if (queryParams.document_id) conditions.push(`document_id='${queryParams.document_id}'`);
-            if (queryParams.record_type) conditions.push(`record_type='${queryParams.record_type}'`);
-            if (queryParams.party_type) conditions.push(`party_type='${queryParams.party_type}'`);
-            if (queryParams.name) conditions.push(`name like '%25${queryParams.name}%25'`);
-            if (queryParams.address_1) conditions.push(`address_1='${queryParams.address_1}'`);
-            if (queryParams.address_2) conditions.push(`address_2='${queryParams.address_2}'`);
-            if (queryParams.country) conditions.push(`country='${queryParams.country}'`);
-            if (queryParams.city) conditions.push(`city='${queryParams.city}'`);
-            if (queryParams.state) conditions.push(`state='${queryParams.state}'`);
-            if (queryParams.zip) conditions.push(`zip='${queryParams.zip}'`);
-            if (queryParams.good_through_date) conditions.push(`good_through_date='${queryParams.good_through_date}'`);
+            if (queryParams.document_id) conditions.push(`document_id='${escape(queryParams.document_id)}'`);
+            if (queryParams.record_type) conditions.push(`record_type='${escape(queryParams.record_type)}'`);
+            if (queryParams.party_type) conditions.push(`party_type='${escape(queryParams.party_type)}'`);
+            if (queryParams.name) conditions.push(`name like '%${escape(queryParams.name)}%'`);
+            if (queryParams.address_1) conditions.push(`address_1='${escape(queryParams.address_1)}'`);
+            if (queryParams.address_2) conditions.push(`address_2='${escape(queryParams.address_2)}'`);
+            if (queryParams.country) conditions.push(`country='${escape(queryParams.country)}'`);
+            if (queryParams.city) conditions.push(`city='${escape(queryParams.city)}'`);
+            if (queryParams.state) conditions.push(`state='${escape(queryParams.state)}'`);
+            if (queryParams.zip) conditions.push(`zip='${escape(queryParams.zip)}'`);
+            if (queryParams.good_through_date) conditions.push(`good_through_date='${escape(queryParams.good_through_date)}'`);
         } else if (apiCaller === "MasterRealPropApi") {
-            if (queryParams.document_id) conditions.push(`document_id='${queryParams.document_id}'`);
-            if (queryParams.crfn) conditions.push(`crfn='${queryParams.crfn}'`);
-            if (queryParams.recorded_borough) conditions.push(`recorded_borough='${queryParams.recorded_borough}'`);
+            if (queryParams.document_id) conditions.push(`document_id='${escape(queryParams.document_id)}'`);
+            if (queryParams.crfn) conditions.push(`crfn='${escape(queryParams.crfn)}'`);
+            if (queryParams.recorded_borough) conditions.push(`recorded_borough='${escape(queryParams.recorded_borough)}'`);
             if (queryParams.doc_type) {
                 const docTypes = Array.isArray(queryParams.doc_type)
                     ? queryParams.doc_type
                     : queryParams.doc_type.split(",");
-                conditions.push(`doc_type IN (${docTypes.map(type => `'${type.trim()}'`).join(", ")})`);
+                console.log("DEBUG: doc_type array for doc_class", queryParams.doc_class, docTypes);
+                conditions.push(
+                    `doc_type IN (${docTypes.map(type => `'${escape(type.trim())}'`).join(", ")})`
+                );
             }
             if (queryParams.document_date_start && queryParams.document_date_end) {
-                conditions.push(`document_date between '${queryParams.document_date_start}' and '${queryParams.document_date_end}'`);
+                conditions.push(`document_date between '${escape(queryParams.document_date_start)}' and '${escape(queryParams.document_date_end)}'`);
             }
             if (queryParams.recorded_date_start && queryParams.recorded_date_end) {
-                conditions.push(`recorded_datetime between '${queryParams.recorded_date_start}' and '${queryParams.recorded_date_end}'`);
+                conditions.push(`recorded_datetime between '${escape(queryParams.recorded_date_start)}' and '${escape(queryParams.recorded_date_end)}'`);
             }
             if (queryParams.modified_date_start && queryParams.modified_date_end) {
-                conditions.push(`modified_date between '${queryParams.modified_date_start}' and '${queryParams.modified_date_end}'`);
+                conditions.push(`modified_date between '${escape(queryParams.modified_date_start)}' and '${escape(queryParams.modified_date_end)}'`);
             }
             if (queryParams.good_through_date_start && queryParams.good_through_date_end) {
-                conditions.push(`good_through_date between '${queryParams.good_through_date_start}' and '${queryParams.good_through_date_end}'`);
+                conditions.push(`good_through_date between '${escape(queryParams.good_through_date_start)}' and '${escape(queryParams.good_through_date_end)}'`);
             }
-            if (queryParams.document_amt) conditions.push(`document_amt='${queryParams.document_amt}'`);
-            if (queryParams.reel_yr) conditions.push(`reel_yr='${queryParams.reel_yr}'`);
-            if (queryParams.reel_nbr) conditions.push(`reel_nbr='${queryParams.reel_nbr}'`);
-            if (queryParams.reel_pg) conditions.push(`reel_pg='${queryParams.reel_pg}'`);
-            if (queryParams.percent_trans) conditions.push(`percent_trans='${queryParams.percent_trans}'`);
+            if (queryParams.document_amt) conditions.push(`document_amt='${escape(queryParams.document_amt)}'`);
+            if (queryParams.reel_yr) conditions.push(`reel_yr='${escape(queryParams.reel_yr)}'`);
+            if (queryParams.reel_nbr) conditions.push(`reel_nbr='${escape(queryParams.reel_nbr)}'`);
+            if (queryParams.reel_pg) conditions.push(`reel_pg='${escape(queryParams.reel_pg)}'`);
+            if (queryParams.percent_trans) conditions.push(`percent_trans='${escape(queryParams.percent_trans)}'`);
         } else if (apiCaller === "LegalsRealPropApi") {
-            if (queryParams.document_id) conditions.push(`document_id='${queryParams.document_id}'`);
-            if (queryParams.record_type) conditions.push(`record_type='${queryParams.record_type}'`);
-            if (queryParams.borough) conditions.push(`borough=${queryParams.borough}`);
-            if (queryParams.block) conditions.push(`block=${queryParams.block}`);
-            if (queryParams.lot) conditions.push(`lot=${queryParams.lot}`);
-            if (queryParams.easement) conditions.push(`easement='${queryParams.easement}'`);
-            if (queryParams.partial_lot) conditions.push(`partial_lot='${queryParams.partial_lot}'`);
-            if (queryParams.air_rights) conditions.push(`air_rights='${queryParams.air_rights}'`);
-            if (queryParams.subterranean_rights) conditions.push(`subterranean_rights='${queryParams.subterranean_rights}'`);
-            if (queryParams.property_type) conditions.push(`property_type='${queryParams.property_type}'`);
-            if (queryParams.street_number) conditions.push(`street_number='${queryParams.street_number}'`);
-            if (queryParams.street_name) conditions.push(`street_name='${queryParams.street_name}'`);
-            if (queryParams.unit) conditions.push(`unit='${queryParams.unit}'`);
-            if (queryParams.good_through_date) conditions.push(`good_through_date='${queryParams.good_through_date}'`);
+            if (queryParams.document_id) conditions.push(`document_id='${escape(queryParams.document_id)}'`);
+            if (queryParams.record_type) conditions.push(`record_type='${escape(queryParams.record_type)}'`);
+            if (queryParams.borough) conditions.push(`borough=${escape(queryParams.borough)}`);
+            if (queryParams.block) conditions.push(`block=${escape(queryParams.block)}`);
+            if (queryParams.lot) conditions.push(`lot=${escape(queryParams.lot)}`);
+            if (queryParams.easement) conditions.push(`easement='${escape(queryParams.easement)}'`);
+            if (queryParams.partial_lot) conditions.push(`partial_lot='${escape(queryParams.partial_lot)}'`);
+            if (queryParams.air_rights) conditions.push(`air_rights='${escape(queryParams.air_rights)}'`);
+            if (queryParams.subterranean_rights) conditions.push(`subterranean_rights='${escape(queryParams.subterranean_rights)}'`);
+            if (queryParams.property_type) conditions.push(`property_type='${escape(queryParams.property_type)}'`);
+            if (queryParams.street_number) conditions.push(`street_number='${escape(queryParams.street_number)}'`);
+            if (queryParams.street_name) conditions.push(`street_name='${escape(queryParams.street_name)}'`);
+            if (queryParams.unit) conditions.push(`unit='${escape(queryParams.unit)}'`);
+            if (queryParams.good_through_date) conditions.push(`good_through_date='${escape(queryParams.good_through_date)}'`);
         } else if (apiCaller === "ReferencesRealPropApi") {
-            if (queryParams.document_id) conditions.push(`document_id='${queryParams.document_id}'`);
-            if (queryParams.record_type) conditions.push(`record_type='${queryParams.record_type}'`);
-            // the reference to `reference_by_crfn_` is intentional
-            if (queryParams.reference_by_crfn_) conditions.push(`reference_by_crfn_='${queryParams.reference_by_crfn_}'`);
-            if (queryParams.reference_by_doc_id) conditions.push(`reference_by_doc_id='${queryParams.reference_by_doc_id}'`);
-            if (queryParams.reference_by_reel_year) conditions.push(`reference_by_reel_year='${queryParams.reference_by_reel_year}'`);
-            if (queryParams.reference_by_reel_borough) conditions.push(`reference_by_reel_borough='${queryParams.reference_by_reel_borough}'`);
-            if (queryParams.reference_by_reel_nbr) conditions.push(`reference_by_reel_nbr='${queryParams.reference_by_reel_nbr}'`);
-            if (queryParams.reference_by_reel_page) conditions.push(`reference_by_reel_page='${queryParams.reference_by_reel_page}'`);
-            if (queryParams.good_through_date) conditions.push(`good_through_date='${queryParams.good_through_date}'`);
+            if (queryParams.document_id) conditions.push(`document_id='${escape(queryParams.document_id)}'`);
+            if (queryParams.record_type) conditions.push(`record_type='${escape(queryParams.record_type)}'`);
+            if (queryParams.reference_by_crfn_) conditions.push(`reference_by_crfn_='${escape(queryParams.reference_by_crfn_)}'`);
+            if (queryParams.reference_by_doc_id) conditions.push(`reference_by_doc_id='${escape(queryParams.reference_by_doc_id)}'`);
+            if (queryParams.reference_by_reel_year) conditions.push(`reference_by_reel_year='${escape(queryParams.reference_by_reel_year)}'`);
+            if (queryParams.reference_by_reel_borough) conditions.push(`reference_by_reel_borough='${escape(queryParams.reference_by_reel_borough)}'`);
+            if (queryParams.reference_by_reel_nbr) conditions.push(`reference_by_reel_nbr='${escape(queryParams.reference_by_reel_nbr)}'`);
+            if (queryParams.reference_by_reel_page) conditions.push(`reference_by_reel_page='${escape(queryParams.reference_by_reel_page)}'`);
+            if (queryParams.good_through_date) conditions.push(`good_through_date='${escape(queryParams.good_through_date)}'`);
         } else if (apiCaller === "RemarksRealPropApi") {
-            if (queryParams.document_id) conditions.push(`document_id='${queryParams.document_id}'`);
-            if (queryParams.record_type) conditions.push(`record_type='${queryParams.record_type}'`);
-            if (queryParams.sequence_number) conditions.push(`sequence_number='${queryParams.sequence_number}'`);
-            if (queryParams.remark_text) conditions.push(`remark_text='${queryParams.remark_text}'`);
-            if (queryParams.good_through_date) conditions.push(`good_through_date='${queryParams.good_through_date}'`);
+            if (queryParams.document_id) conditions.push(`document_id='${escape(queryParams.document_id)}'`);
+            if (queryParams.record_type) conditions.push(`record_type='${escape(queryParams.record_type)}'`);
+            if (queryParams.sequence_number) conditions.push(`sequence_number='${escape(queryParams.sequence_number)}'`);
+            if (queryParams.remark_text) conditions.push(`remark_text='${escape(queryParams.remark_text)}'`);
+            if (queryParams.good_through_date) conditions.push(`good_through_date='${escape(queryParams.good_through_date)}'`);
         }
         return conditions;
     }
@@ -222,7 +236,7 @@ class SoqlUrl {
      */
     static setWhereConfig(conditions) {
         if (conditions.length > 0) {
-            return `$where=${conditions.join(" AND ")}`;
+            return `$where=${encodeURIComponent(conditions.join(" AND "))}`;
         }
         return "";
     }

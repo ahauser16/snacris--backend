@@ -92,7 +92,7 @@ class PartiesRealPropApi {
             return data.map(record => record.document_id);
         } catch (err) {
             console.error("'fetchAcrisDocumentIds' related error fetching document IDs from Real Property Parties API:", err.message);
-            throw new Error("Failed to fetch document IDs from Real Property Parties API");
+            throw new Error("Failed to fetch document IDs from PartiesRealPropApi.fetchAcrisDocumentIds");
         }
     }
 
@@ -108,7 +108,7 @@ class PartiesRealPropApi {
         try {
             // Construct batch query URLs
             const queryUrls = SoqlUrl.constructUrlBatches(partiesQueryParams, masterRecordsDocumentIds, "PartiesRealPropApi", batchSize);
-            console.log(queryUrls[0], "PartiesRealPropApi queryUrls", `queryUrls.length: ${queryUrls.length}`);
+            console.log('PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef creates URLs: ', queryUrls[0], "PartiesRealPropApi queryUrls", `queryUrls.length: ${queryUrls.length}`);
 
             const allDocumentIds = new Set();
 
@@ -135,13 +135,13 @@ class PartiesRealPropApi {
             }
 
             if (allDocumentIds.size === 0) {
-                throw new NotFoundError("No Real Property Parties records found for the given query.");
+                throw new NotFoundError("No Real Property Parties records found from 'fetchAcrisDocumentIdsCrossRef'.");
             }
 
             return Array.from(allDocumentIds);
         } catch (err) {
-            console.error("'fetchAcrisDocumentIdsCrossRef' related error fetching document IDs from Real Property Parties API:", err.message);
-            throw new Error("Failed to fetch document IDs from Real Property Parties API");
+            //console.error("'fetchAcrisDocumentIdsCrossRef' related error fetching document IDs from Real Property Parties API:", err.message);
+            throw new Error("Failed to fetch document IDs from PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef");
         }
     }
 

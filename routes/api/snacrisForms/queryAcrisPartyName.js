@@ -53,16 +53,7 @@ router.get("/fetchRecord", async function (req, res, next) {
         try {
             // Step 1: Fetch master records
             const masterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(masterQueryParams);
-
-            // Check for the presence of specific document_id values
-            const firstCrossRefDocumentIdsToCheck = ["2025040900070001", "2025021800719001", "2025040900509001"];
-            firstCrossRefDocumentIdsToCheck.forEach(id => {
-                if (masterRecordsDocumentIds.includes(id)) {
-                    console.log(`Document ID ${id} is present in masterRecordsDocumentIds.`);
-                } else {
-                    console.log(`Document ID ${id} is missing from masterRecordsDocumentIds.`);
-                }
-            });
+            console.log(masterRecordsDocumentIds.length, "'masterRecordsDocumentIds' count is: ");
 
             let partyRecordsDocumentIds = [];
             let legalsRecordsDocumentIds = [];

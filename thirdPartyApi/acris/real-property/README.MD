@@ -22,7 +22,10 @@
       - [Pagination Logic](#pagination-logic-1)
       - [Example:](#example)
       - [Behavior](#behavior-2)
-    - [`fetchAcrisDocumentIdsCrossRef`](#fetchacrisdocumentidscrossref)
+    - [Search By Parcel \& `fetchAcrisDocumentIdsCrossRef`](#search-by-parcel--fetchacrisdocumentidscrossref)
+      - [refactor notes on 6/10/25](#refactor-notes-on-61025)
+        - [TEST 1 - SUCCESS - BBL + recorded\_date\_range: 'to-current-date-default' + doc\_class: 'DEEDS AND OTHER CONVEYANCES'](#test-1---success---bbl--recorded_date_range-to-current-date-default--doc_class-deeds-and-other-conveyances)
+        - [TEST 2 - FAILED - BBL + recorded\_date\_range: 'to-current-date-default' + doc\_class: 'MORTGAGES \& INSTRUMENTS'/'UCC AND FEDERAL LIENS'/'OTHER DOCUMENTS'](#test-2---failed---bbl--recorded_date_range-to-current-date-default--doc_class-mortgages--instrumentsucc-and-federal-liensother-documents)
       - [Purpose](#purpose-3)
       - [How It Works](#how-it-works-3)
       - [Pagination Logic](#pagination-logic-2)
@@ -160,7 +163,81 @@ console.log(documentIds); // Array of unique document IDs
 
 [Back to TOC](#table-of-contents)
 
-### `fetchAcrisDocumentIdsCrossRef`
+### Search By Parcel & `fetchAcrisDocumentIdsCrossRef`
+
+http://localhost:3000/ParcelIdentifierSearch
+
+
+#### refactor notes on 6/10/25
+
+The `MasterRealPropApi.fetchAcrisDocumentIdsCrossRef` is behaving strangely.  I was able to successfully submit a search request from the frontend via the `queryAcrisParcel` route with the query parameters below and returned 9 records (with `document_id` values: 'BK_6830029501877', 'BK_6830029501879', 'BK_7230060101439', 'BK_7230060101441', 'BK_7730091601981', 'BK_7730091601987', 'FT_3030001026203', 'FT_3150000953315' and 'FT_3160005545216') which displayed correctly without any issue on the website.  
+
+##### TEST 1 - SUCCESS - BBL + recorded_date_range: 'to-current-date-default' + doc_class: 'DEEDS AND OTHER CONVEYANCES'
+
+```bash
+Received request with query parameters: {
+  masterSearchTerms: {
+    recorded_date_range: 'to-current-date-default',
+    recorded_date_start: '',
+    recorded_date_end: '',
+    doc_type: 'doc-type-default',
+    doc_class: 'DEEDS AND OTHER CONVEYANCES'
+  },
+  legalsSearchTerms: { borough: '3', block: '05159', lot: '47', unit: '' }
+}
+```
+
+##### TEST 2 - FAILED - BBL + recorded_date_range: 'to-current-date-default' + doc_class: 'MORTGAGES & INSTRUMENTS'/'UCC AND FEDERAL LIENS'/'OTHER DOCUMENTS'
+
+```bash
+Received request with query parameters: {
+  masterSearchTerms: {
+    recorded_date_range: 'to-current-date-default',
+    recorded_date_start: '',
+    recorded_date_end: '',
+    doc_type: 'doc-type-default',
+    doc_class: 'MORTGAGES & INSTRUMENTS'
+  },
+  legalsSearchTerms: { borough: '3', block: '05159', lot: '47', unit: '' }
+}
+```
+
+
+It accepts `masterQueryParams`, `legalsRecordsDocumentIds` and `batchSize` and should return the two `document_id` values: '2020100700809001' and '2020100700809002' after cross referencing the results against the `document_id` values contained in `legalsRecordsDocumentIds`.
+
+- `queryAcrisParcel` receives the query parameters below.
+- `MasterRealPropApi.fetchAcrisDocumentIdsCrossRef` creates a query URL that does NOT return any records when it should.
+- 
+
+query parameters sent by frontend:
+```bash
+Received request with query parameters: {
+  masterSearchTerms: {
+    recorded_date_range: 'last-5-years',
+    recorded_date_start: '2020-06-11',
+    recorded_date_end: '2025-06-10',
+    doc_type: 'doc-type-default',
+    doc_class: 'MORTGAGES & INSTRUMENTS'
+  },
+  legalsSearchTerms: { borough: '3', block: '05159', lot: '47', unit: '' }
+}
+```
+
+URL Criteria to check:
+- [x] Each function is referencing the correct API.  
+  - `MasterRealPropApi` references "https://data.cityofnewyork.us/resource/bnx9-e6tj.json"
+  - `PartiesRealPropApi` references "https://data.cityofnewyork.us/resource/636b-3b5g.json"
+  - `LegalsRealPropApi` references "https://data.cityofnewyork.us/resource/8h5j-fqxa.json"
+
+`MasterRealPropApi.fetchAcrisDocumentIdsCrossRef` UNsuccessfully creates the query URL below.  Also, the query url is missing the `&$limit=1000` at the end.  
+```bash
+https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=document_id&$where=doc_type IN ('AGMT', 'ASPM', 'ASST', 'CERR', 'DEMM', 'MMTG', 'MTGE', 'PSAT', 'REL', 'SAT', 'SMTG', 'WSAT', 'AL&R', 'AMTX', 'AALR', 'M&CON', 'SPRD', 'SUBM', 'PREL', 'CORRM', 'XXXX', 'CMTG', 'APPRT') AND recorded_datetime between '2023-06-11' and '2025-06-10' AND document_id IN ('2020100700809001', '2020100700809002', '2017062800007002', '2017062800007001', 'FT_3210005545221', 'BK_7230060101447', 'FT_3720005010972', 'BK_8030116700912', 'FT_3160000953316', 'BK_7530078101736', 'FT_3290005545229', 'FT_3390001095739', '2013053000805003', '2005010600534002', 'FT_3030001026203', 'BK_7230060101439', 'FT_3840001246684', 'FT_3260005545226', 'FT_3810001502381', 'FT_3280005545228', '2005010600534004', 'BK_7730091601983', 'FT_3220005545222', '2013053000805002', 'FT_3810001246681', 'FT_3150000953315', 'BK_6830029501885', 'FT_3400001002240', 'FT_3530004500253', 'FT_3820001502382', 'BK_6830029501879', 'FT_3450001247145', '2005010600534001', 'BK_6830029501881', 'FT_3850001246685', 'FT_3830001246683', 'FT_3400001095740', 'FT_3820001246682', 'BK_7530078101731', 'FT_3800001246680', 'FT_3160005545216', '2013053000805005', 'FT_3170005545217', 'BK_7230060101443', 'FT_3270005545227', '2005010600534003', 'FT_3910000966591', 'BK_7730090900605', 'FT_3860001246686', 'BK_6830029501877', '2013053000805001', 'BK_7730091601981', 'BK_7730091601987', 'BK_7230060101441', 'FT_3520001266352', 'BK_7730090900603')
+```
+
+`'/fetchAcrisDocumentIds(masterQueryParams)' calls 'SoqlUrl.constructUrl' creates:`
+```bash
+https://data.cityofnewyork.us/resource/8h5j-fqxa.json?$select=document_id&$where=borough=1 AND document_id IN ('2025040900070001', '2025040900509001', '2025032500301001', '2025021800719001', '2025021801206001', '2024092300336001', '2024081600122002', '2024071700353001', '2024071700810001', '2024061800801001') 1 LegalsRealPropApi queryUrls
+```
 
 #### Purpose
 - Fetches `document_id` values from the ACRIS Real Property Parties dataset that match the provided query parameters and are cross-referenced with a list of `document_id` values from another dataset (e.g., Master dataset).

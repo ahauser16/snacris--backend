@@ -37,6 +37,8 @@ router.get("/fetchRecord", async function (req, res, next) {
             masterQueryParams.doc_type = masterSearchTerms.doc_type;
         }
 
+        //console.log("doc_type array for doc_class", masterSearchTerms.doc_class, docTypes); //Check if any value contains ', &, or other problematic characters.
+
         // Legals: borough, block, lot (required), unit (optional)
         const legalsQueryParams = {};
         if (legalsSearchTerms?.borough)
@@ -54,10 +56,11 @@ router.get("/fetchRecord", async function (req, res, next) {
         }
 
         let crossReferencedDocumentIds = [];
+        // Fetch data from the Legals and Master datasets
         try {
             // Step 1: Fetch legals document IDs
             const legalsRecordsDocumentIds = await LegalsRealPropApi.fetchAcrisDocumentIds(legalsQueryParams);
-            console.log(legalsRecordsDocumentIds, "legalsRecordsDocumentIds");
+            //console.log('queryAcrisParcel executes "LegalsRealPropApi.fetchAcrisDocumentIds" which returns: ', legalsRecordsDocumentIds);
 
             // Step 2: Fetch master document IDs cross-referenced with legals
             let masterRecordsDocumentIds = [];
@@ -66,9 +69,9 @@ router.get("/fetchRecord", async function (req, res, next) {
                     masterQueryParams,
                     legalsRecordsDocumentIds
                 );
-                console.log(masterRecordsDocumentIds, "masterRecordsDocumentIds"); //<-- this never ran which means there is an issue with `MasterRealPropApi.fetchAcrisDocumentIdsCrossRef`
+                console.log(masterRecordsDocumentIds, "masterRecordsDocumentIds");
             } else {
-                console.log("No legals records found, skipping master records fetch");
+                console.log("No master records found, skipping master records fetch");
             }
             crossReferencedDocumentIds = masterRecordsDocumentIds;
             console.log(crossReferencedDocumentIds, "crossReferencedDocumentIds");
