@@ -118,7 +118,13 @@ class SoqlUrl {
 
         const escape = this.escapeSoqlString;
         const conditions = [];
-        //console.log("doc_type array for doc_class", masterSearchTerms.doc_class, docTypes); //Check if any value contains ', &, or other problematic characters.
+
+        // Add this block for all relevant APIs:
+        if (queryParams.transaction_number) {
+            // Use LIKE for prefix match
+            conditions.push(`document_id LIKE '${escape(queryParams.transaction_number)}%'`);
+        }
+
         if (apiCaller === "PartiesRealPropApi") {
             if (queryParams.document_id) conditions.push(`document_id='${escape(queryParams.document_id)}'`);
             if (queryParams.record_type) conditions.push(`record_type='${escape(queryParams.record_type)}'`);

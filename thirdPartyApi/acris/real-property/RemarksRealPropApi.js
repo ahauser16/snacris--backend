@@ -3,6 +3,8 @@
 const axios = require("axios");
 const { NotFoundError } = require("../../../expressError");
 const SoqlUrl = require("../utils/SoqlUrl");
+const batchArray = require("../utils/CreateUrlBatchesArray");
+
 
 class RemarksRealPropApi {
     static async fetchAcrisRecords(remarksQueryParams) {
@@ -93,27 +95,35 @@ class RemarksRealPropApi {
 
     static async fetchAcrisRecordsByDocumentIds(documentIds, queryParams = {}, limit = 1000) {
         try {
-            let offset = 0;
-            let hasMoreRecords = true;
-            const allRecords = [];
-            while (hasMoreRecords) {
-                const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "RemarksRealPropApi", documentIds, limit, offset);
-                const headers = {
-                    "Content-Type": "application/json",
-                    "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
-                };
-                const { data } = await axios.get(url, { headers });
-                if (!data?.length) {
-                    hasMoreRecords = false;
-                } else {
-                    allRecords.push(...data);
-                    offset += limit;
-                    if (data.length < limit) hasMoreRecords = false;
+            const BATCH_SIZE = 75; // Try 50-100, adjust if needed
+            let allRecords = [];
+            const batches = batchArray(documentIds, BATCH_SIZE);
+
+            for (const batch of batches) {
+                let offset = 0;
+                let hasMoreRecords = true;
+                while (hasMoreRecords) {
+                    const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "RemarksRealPropApi", batch, limit, offset);
+                    console.log(url, "RemarksRealPropApi.fetchAcrisRecordsByDocumentIds url");
+                    const headers = {
+                        "Content-Type": "application/json",
+                        "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
+                    };
+                    const { data } = await axios.get(url, { headers });
+                    if (!data?.length) {
+                        hasMoreRecords = false;
+                    } else {
+                        allRecords.push(...data);
+                        offset += limit;
+                        if (data.length < limit) hasMoreRecords = false;
+                    }
                 }
             }
+
+            //console.log(allRecords, "MasterRealPropApi.fetchAcrisRecordsByDocumentIds returns allRecords");
             return allRecords.length ? allRecords : null;
         } catch (err) {
-            console.error("Error fetching records by document IDs from Real Property Remarks API:", err.message);
+            console.error("Error fetching records by document IDs:", err.message);
             return null;
         }
     }

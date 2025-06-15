@@ -111,7 +111,7 @@ router.get("/fetchRecord", async function (req, res, next) {
                 remarksRecords: (remarksRecords || []).filter(r => r.document_id === document_id)
             }));
 
-            console.log(results);
+            console.log(results, "queryAcrisParcel");
 
             return res.json(results);
         } catch (err) {

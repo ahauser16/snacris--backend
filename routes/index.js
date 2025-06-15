@@ -15,6 +15,7 @@ const queryAcrisParcel = require("./api/snacrisForms/queryAcrisParcel");
 const queryAcrisDocIdCrfn = require("./api/snacrisForms/queryAcrisDocIdCrfn");
 const queryAcrisPartyName = require("./api/snacrisForms/queryAcrisPartyName");
 const queryAcrisDocumentType = require("./api/snacrisForms/queryAcrisDocumentType");
+const queryAcrisTransactionNumber = require("./api/snacrisForms/queryAcrisTransactionNumber");
 
 /*
 * routes associated with specific webpages that make single calls to the SNACRIS database for code maps associated with the Document Control Codes, Property Type Codes, UCC Codes, State (USA) Codes and Country Code datasets that I seeded the database from the original ACRIS datasets.
@@ -90,6 +91,7 @@ module.exports = {
     queryAcrisDocIdCrfn,
     queryAcrisPartyName,
     queryAcrisDocumentType,
+    queryAcrisTransactionNumber,
     getDocTypeCodeMap,
     masterRealPropApiRoutes,
     legalsRealPropApiRoutes,

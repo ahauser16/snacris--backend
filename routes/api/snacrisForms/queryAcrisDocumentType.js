@@ -50,7 +50,7 @@ router.get("/fetchRecord", async function (req, res, next) {
         try {
             // Step 1: Fetch master records
             const masterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(masterQueryParams);
-            console.log(masterRecordsDocumentIds.length, "'masterRecordsDocumentIds' count is: ");
+            console.log("'masterRecordsDocumentIds' count is: ", masterRecordsDocumentIds.length);
 
             let legalsRecordsDocumentIds = [];
 
@@ -60,11 +60,14 @@ router.get("/fetchRecord", async function (req, res, next) {
                     legalsQueryParams,
                     masterRecordsDocumentIds
                 );
+                console.log("'legalsRecordsDocumentIds' count is: ", legalsRecordsDocumentIds.length);
             } else {
                 console.log("No master records found, skipping subsequent fetches");
             }
 
             crossReferencedDocumentIds = legalsRecordsDocumentIds;
+            console.log("'crossReferencedDocumentIds' count is: ", crossReferencedDocumentIds.length);
+            console.log("the first document_id within 'crossReferencedDocumentIds' is: ", crossReferencedDocumentIds[0]);
 
         } catch (err) {
             console.error("Error fetching ACRIS dataset:", err.message);
@@ -91,6 +94,8 @@ router.get("/fetchRecord", async function (req, res, next) {
                 RemarksRealPropApi.fetchAcrisRecordsByDocumentIds(crossReferencedDocumentIds)
             ]);
 
+            //console.log(masterRecords, "masterRecords");
+
             // Build newResults array
             const results = crossReferencedDocumentIds.map(document_id => ({
                 document_id,
@@ -101,7 +106,7 @@ router.get("/fetchRecord", async function (req, res, next) {
                 remarksRecords: (remarksRecords || []).filter(r => r.document_id === document_id)
             }));
 
-            //console.log(results);
+            //console.log(results, "queryAcrisDocumentType results");
 
             return res.json(results);
         } catch (err) {
