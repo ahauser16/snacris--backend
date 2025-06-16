@@ -2,34 +2,129 @@
 
 const axios = require("axios");
 const { NotFoundError } = require("../../../expressError");
-const API_ENDPOINTS = require("../../apiEndpoints");
+const SoqlUrl = require("../utils/SoqlUrl");
+const batchArray = require("../utils/CreateUrlBatchesArray");
 
 /** Functions for interacting with the ACRIS Personal Property References API. */
-
 class ReferencesPersPropApi {
-    /** Fetch data from the ACRIS-Personal Property References dataset based on user-data sent from the frontend.
-     *
-     * `URLSearchParams` is a built-in JavaScript class that provides utility methods to work with the query string of a URL. It is part of the Web API and is available in modern browsers and Node.js environments. The URLSearchParams class allows you to create and manipulate the query string of a URL. You can add, delete, and retrieve query parameters easily. This class is useful when you need to work with query parameters in a URL.
-     * 
-     * Returns [{ document_id, record_type, crfn, doc_id_ref, file_nbr, good_through_date }]
-     * 
-     **/
-
-    static async fetchFromAcris(query) {
-        const url = `${API_ENDPOINTS.personalPropertyReferences}?${new URLSearchParams(query).toString()}`;
-        console.log("Constructed URL:", url);
-        const response = await axios.get(url, {
-            headers: {
-                'Content-Type': 'application/json',
-                'X-App-Token': process.env.APP_TOKEN,
-            },
-        });
-
-        if (response.data.length === 0) {
-            throw new NotFoundError(`No records found for query: ${JSON.stringify(query)}`);
+    static async fetchAcrisRecords(referencesQueryParams) {
+        try {
+            const url = SoqlUrl.constructUrl(referencesQueryParams, "ReferencesPersPropApi", "records");
+            const headers = {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.APP_TOKEN,
+            };
+            const { data } = await axios.get(url, { headers });
+            if (!data?.length) {
+                throw new NotFoundError("No records found for the given query from Personal Property References API.");
+            }
+            return data;
+        } catch (err) {
+            console.error("Error fetching records from Personal Property References API:", err.message);
+            throw new Error("Failed to fetch records from Personal Property References API");
         }
+    }
 
-        return response.data;
+    static async fetchAcrisRecordCount(referencesQueryParams) {
+        try {
+            const url = SoqlUrl.constructUrl(referencesQueryParams, "ReferencesPersPropApi", "countAll");
+            const headers = {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.APP_TOKEN,
+            };
+            const { data } = await axios.get(url, { headers });
+            if (!data?.length || !data[0]?.count) {
+                throw new NotFoundError("No count data found for the given query from Personal Property References API.");
+            }
+            return Number(data[0].count);
+        } catch (err) {
+            console.error("Error fetching record count from Personal Property References API:", err.message);
+            throw new Error("Failed to fetch record count from Personal Property References API");
+        }
+    }
+
+    static async fetchAcrisDocumentIds(referencesQueryParams) {
+        try {
+            const url = SoqlUrl.constructUrl(referencesQueryParams, "ReferencesPersPropApi", "document_id");
+            const headers = {
+                "Content-Type": "application/json",
+                "X-App-Token": process.env.APP_TOKEN,
+            };
+            const { data } = await axios.get(url, { headers });
+            if (!data?.length) {
+                throw new NotFoundError("No document IDs found for the given query from Personal Property References API.");
+            }
+            return data.map(record => record.document_id);
+        } catch (err) {
+            console.error("Error fetching document IDs from Personal Property References API:", err.message);
+            throw new Error("Failed to fetch document IDs from Personal Property References API");
+        }
+    }
+
+    static async fetchAcrisDocumentIdsCrossRef(referencesQueryParams, crossRefDocumentIds, batchSize = 500) {
+        try {
+            const queryUrls = SoqlUrl.constructUrlBatches(referencesQueryParams, crossRefDocumentIds, "ReferencesPersPropApi", batchSize);
+            const allDocumentIds = new Set();
+            for (const url of queryUrls) {
+                let offset = 0;
+                let hasMoreRecords = true;
+                while (hasMoreRecords) {
+                    const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
+                    const headers = {
+                        "Content-Type": "application/json",
+                        "X-App-Token": process.env.APP_TOKEN,
+                    };
+                    const { data } = await axios.get(paginatedUrl, { headers });
+                    if (!data?.length) {
+                        hasMoreRecords = false;
+                    } else {
+                        data.forEach(record => allDocumentIds.add(record.document_id));
+                        offset += 1000;
+                    }
+                }
+            }
+            if (allDocumentIds.size === 0) {
+                throw new NotFoundError("No Personal Property References records found for the given query.");
+            }
+            return Array.from(allDocumentIds);
+        } catch (err) {
+            console.error("Error fetching document IDs from Personal Property References API:", err.message);
+            throw new Error("Failed to fetch document IDs from Personal Property References API");
+        }
+    }
+
+    static async fetchAcrisRecordsByDocumentIds(documentIds, queryParams = {}, limit = 1000) {
+        try {
+            const BATCH_SIZE = 75;
+            let allRecords = [];
+            const batches = batchArray(documentIds, BATCH_SIZE);
+
+            for (const batch of batches) {
+                let offset = 0;
+                let hasMoreRecords = true;
+                while (hasMoreRecords) {
+                    const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "ReferencesPersPropApi", batch, limit, offset);
+                    console.log(url, "ReferencesPersPropApi.fetchAcrisRecordsByDocumentIds url");
+                    const headers = {
+                        "Content-Type": "application/json",
+                        "X-App-Token": process.env.APP_TOKEN,
+                    };
+                    const { data } = await axios.get(url, { headers });
+                    if (!data?.length) {
+                        hasMoreRecords = false;
+                    } else {
+                        allRecords.push(...data);
+                        offset += limit;
+                        if (data.length < limit) hasMoreRecords = false;
+                    }
+                }
+            }
+
+            return allRecords.length ? allRecords : null;
+        } catch (err) {
+            console.error("Error fetching records by document IDs:", err.message);
+            return null;
+        }
     }
 }
 
