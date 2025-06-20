@@ -39,8 +39,7 @@ CREATE TABLE saved_personal_property_legals (
     street_number VARCHAR(12),
     street_name VARCHAR(32),
     addr_unit VARCHAR(7),
-    good_through_date DATE,
-    CONSTRAINT uq_saved_pp_legals_per_master UNIQUE (saved_master_id)
+    good_through_date DATE
 );
 
 CREATE INDEX idx_saved_pp_legals_bbl ON saved_personal_property_legals (borough, block, lot);
@@ -60,8 +59,7 @@ CREATE TABLE saved_personal_property_parties (
     city VARCHAR(30),
     state CHAR(2),
     zip VARCHAR(9),
-    good_through_date DATE,
-    CONSTRAINT uq_saved_pp_parties_per_index UNIQUE (saved_master_id, party_index)
+    good_through_date DATE
 );
 
 CREATE INDEX idx_saved_pp_parties_name ON saved_personal_property_parties (name);
@@ -73,8 +71,7 @@ CREATE TABLE saved_personal_property_references (
     crfn VARCHAR(13),
     doc_id_ref VARCHAR(16),
     file_nbr VARCHAR(50),
-    good_through_date DATE,
-    CONSTRAINT uq_saved_pp_references_per_master UNIQUE (saved_master_id)
+    good_through_date DATE
 );
 
 CREATE TABLE saved_personal_property_remarks (
@@ -83,6 +80,5 @@ CREATE TABLE saved_personal_property_remarks (
     record_type CHAR(1),
     sequence_number INTEGER,
     remark_text VARCHAR(232),
-    good_through_date DATE,
-    CONSTRAINT uq_saved_pp_remarks_per_seq UNIQUE (saved_master_id, sequence_number)
+    good_through_date DATE
 );

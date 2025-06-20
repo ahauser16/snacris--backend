@@ -38,8 +38,7 @@ CREATE TABLE
         street_number VARCHAR(12),
         street_name VARCHAR(32),
         unit_address VARCHAR(7),
-        good_through_date DATE,
-        CONSTRAINT uq_saved_rp_legals_per_master UNIQUE (saved_master_id)
+        good_through_date DATE
     );
 
 CREATE INDEX idx_saved_rp_legals_bbl ON saved_real_property_legals (borough, block, lot);
@@ -60,8 +59,7 @@ CREATE TABLE
         city VARCHAR(30),
         state CHAR(2),
         zip VARCHAR(9),
-        good_through_date DATE,
-        CONSTRAINT uq_saved_rp_parties_per_index UNIQUE (saved_master_id, party_index)
+        good_through_date DATE
     );
 
 CREATE INDEX idx_saved_rp_parties_name ON saved_real_property_parties (name);
@@ -77,8 +75,7 @@ CREATE TABLE
         reference_by_reel_borough INTEGER,
         reference_by_reel_nbr INTEGER,
         reference_by_reel_page INTEGER,
-        good_through_date DATE,
-        CONSTRAINT uq_saved_rp_references_per_master UNIQUE (saved_master_id)
+        good_through_date DATE
     );
 
 CREATE TABLE
@@ -88,6 +85,5 @@ CREATE TABLE
         record_type CHAR(1),
         sequence_number INTEGER,
         remark_text VARCHAR(232),
-        good_through_date DATE,
-        CONSTRAINT uq_saved_rp_remarks_per_seq UNIQUE (saved_master_id, sequence_number)
+        good_through_date DATE
     );

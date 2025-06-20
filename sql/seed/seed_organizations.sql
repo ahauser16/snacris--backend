@@ -4,17 +4,42 @@ INSERT INTO
 VALUES
     (
         'NEW YORK CITY ECONOMIC DEVELOPMENT CORPORATION',
-        NULL,
+        'NEW YORK CITY ECONOMIC DEVELOPMENT CORPORATION is looking for new members! This entity is involved in economic development on all levels. This is a test update.',
         'testadmin'
     ),
     (
         'BUILD NYC RESOURCE CORPORATION',
-        NULL,
+        'BUILD NYC RESOURCE CORPORATION is looking for new members! This entity provides tax exempt financing for not-for-profits such as charter schools and hospitals.',
         'testadmin'
     ),
     (
         'NEW YORK CITY INDUSTRIAL DEVELOPMENT AGENCY',
-        NULL,
+        'NEW YORK CITY INDUSTRIAL DEVELOPMENT AGENCY is looking for new members! This entity provides tax exempt financing for industrial companies.',
+        'testadmin'
+    ),
+    (
+        'Brooklyn Bondsmen',
+        'Brooklyn Bondsmen is looking for new members!',
+        'testadmin'
+    ),
+    (
+        'Queens Quitclaimers',
+        'Queens Quitclaimers is looking for new members!',
+        'testadmin'
+    ),
+    (
+        'Manhattan Mortgagors',
+        'Manhattan Mortgagors is looking for new members!',
+        'testadmin'
+    ),
+    (
+        'Staten Island Deed Collective',
+        'Staten Island Deed Collective is looking for new members!',
+        'testadmin'
+    ),
+    (
+        'Bronx Easement Collective',
+        'Bronx Easement Collective is looking for new members!',
         'testadmin'
     );
 
