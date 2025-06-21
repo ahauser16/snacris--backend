@@ -7,6 +7,11 @@
 const authRoutes = require("./auth");
 const usersRoutes = require("./users");
 
+// routes associated with organization
+const organizationRoutes = require("./api/organization/organization");
+
+
+
 /*
 * routes associated with specific webpages that make single/multiple external API calls to the ACRIS Real Property or Personal Property.
 */
@@ -88,6 +93,7 @@ const propTypesCodeMapDbRoutes = require("./db/acris/code-maps/propTypesCodeMapD
 module.exports = {
     authRoutes,
     usersRoutes,
+    organizationRoutes,
     queryAcrisAddressParcel,
     queryAcrisParcel,
     queryAcrisDocIdCrfn,

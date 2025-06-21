@@ -211,34 +211,45 @@ class User {
     if (!user) throw new NotFoundError(`No user: ${username}`);
   }
 
-  /** Apply for job: update db, returns undefined.
-   *
-   * - username: username applying for job
-   * - jobId: job id
-   **/
+  /** Join an organization.
+     * Returns { id, organization_id, username, role, status }
+     * Throws BadRequestError if already a member.
+     */
+  static async joinOrganization(username, organizationId, role = "member") {
+    try {
+      const result = await db.query(
+        `INSERT INTO organization_memberships
+           (organization_id, username, role, status)
+         VALUES ($1, $2, $3, 'pending')
+         RETURNING id, organization_id, username, role, status`,
+        [organizationId, username, role]
+      );
+      return result.rows[0];
+    } catch (err) {
+      if (err.code === "23505") { // unique_violation
+        throw new BadRequestError(`User already a member of organization: ${organizationId}`);
+      }
+      throw err;
+    }
+  }
 
-  // static async applyToJob(username, jobId) {
-  //   const preCheck = await db.query(
-  //         `SELECT id
-  //          FROM jobs
-  //          WHERE id = $1`, [jobId]);
-  //   const job = preCheck.rows[0];
+  /** Leave an organization.
+   * Returns { id, organization_id, username }
+   * Throws NotFoundError if not a member.
+   */
+  static async leaveOrganization(username, organizationId) {
+    const result = await db.query(
+      `DELETE FROM organization_memberships
+       WHERE organization_id = $1 AND username = $2
+       RETURNING id, organization_id, username`,
+      [organizationId, username]
+    );
+    const membership = result.rows[0];
+    if (!membership) throw new NotFoundError(`Membership not found for user: ${username} and org: ${organizationId}`);
+    return membership;
+  }
 
-  //   if (!job) throw new NotFoundError(`No job: ${jobId}`);
 
-  //   const preCheck2 = await db.query(
-  //         `SELECT username
-  //          FROM users
-  //          WHERE username = $1`, [username]);
-  //   const user = preCheck2.rows[0];
-
-  //   if (!user) throw new NotFoundError(`No username: ${username}`);
-
-  //   await db.query(
-  //         `INSERT INTO applications (job_id, username)
-  //          VALUES ($1, $2)`,
-  //       [jobId, username]);
-  // }
 }
 
 
