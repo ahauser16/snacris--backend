@@ -107,6 +107,7 @@ class LegalsPersPropApi {
             );
 
             const queryUrls = SoqlUrl.constructUrlBatches(legalsQueryParams, documentIds, "LegalsPersPropApi", batchSize);
+            console.log(queryUrls, "LegalsPersPropApi.fetchAcrisDocumentIdsCrossRef queryUrls");
 
             const allDocumentIds = new Set();
 

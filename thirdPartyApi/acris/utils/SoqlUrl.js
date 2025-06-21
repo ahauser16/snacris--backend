@@ -91,14 +91,15 @@ class SoqlUrl {
             throw new Error("'constructUrlBatches' received invalid 'batchSize' parameter: Expected a positive number.");
         }
 
-        const baseUrl = this.constructUrl(queryParams, apiCaller, "document_id");
         const batches = [];
 
         for (let i = 0; i < documentIdsCrossRef.length; i += batchSize) {
             const batch = documentIdsCrossRef.slice(i, i + batchSize);
-            const documentIdsCondition = `document_id IN (${batch.map(id => `'${this.escapeSoqlString(id)}'`).join(", ")})`;
-            const separator = baseUrl.includes("$where=") ? " AND " : "$where=";
-            batches.push(`${baseUrl}${separator}${documentIdsCondition}`);
+            // Clone queryParams so we don't mutate the original
+            const batchQueryParams = { ...queryParams };
+            // Use constructUrlForDocumentIds to combine all conditions into one $where
+            const url = this.constructUrlForDocumentIds(batchQueryParams, apiCaller, batch);
+            batches.push(url);
         }
 
         return batches;
@@ -224,7 +225,7 @@ class SoqlUrl {
         } else if (apiCaller === "LegalsPersPropApi") {
             if (queryParams.document_id) conditions.push(`document_id='${escape(queryParams.document_id)}'`);
             if (queryParams.record_type) conditions.push(`record_type='${escape(queryParams.record_type)}'`);
-            if (queryParams.borough) conditions.push(`borough=${escape(queryParams.borough)}`);
+            if (queryParams.borough) conditions.push(`borough='${escape(queryParams.borough)}'`);
             if (queryParams.block) conditions.push(`block=${escape(queryParams.block)}`);
             if (queryParams.lot) conditions.push(`lot=${escape(queryParams.lot)}`);
             if (queryParams.easement) conditions.push(`easement='${escape(queryParams.easement)}'`);
