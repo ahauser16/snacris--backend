@@ -2,92 +2,97 @@
 
 const express = require("express");
 const MasterRealPropApi = require("../../../thirdPartyApi/acris/real-property/MasterRealPropApi");
-const LegalsRealPropApi = require("../../../thirdPartyApi/acris/real-property/LegalsRealPropApi");
 const PartiesRealPropApi = require("../../../thirdPartyApi/acris/real-property/PartiesRealPropApi");
-const RemarksRealPropApi = require("../../../thirdPartyApi/acris/real-property/RemarksRealPropApi");
+const LegalsRealPropApi = require("../../../thirdPartyApi/acris/real-property/LegalsRealPropApi");
 const ReferencesRealPropApi = require("../../../thirdPartyApi/acris/real-property/ReferencesRealPropApi");
-const { transformForUrl } = require("../../../thirdPartyApi/utils");
+const RemarksRealPropApi = require("../../../thirdPartyApi/acris/real-property/RemarksRealPropApi");
 
 const router = new express.Router();
 
 router.get("/fetchRecord", async function (req, res, next) {
+  const errMsg = [];
+  const { masterSearchTerms = {} } = req.query;
+
+  // 1) Determine document_id (direct or via CRFN)
+  let documentIdToQuery = null;
+  if (masterSearchTerms.document_id) {
+    documentIdToQuery = masterSearchTerms.document_id;
+  } else if (masterSearchTerms.crfn) {
     try {
-        console.log("'queryAcrisDocIdCrfn' received request with query parameters:", req.query);
-
-        const { masterSearchTerms } = req.query;
-        const masterQueryParams = {};
-        let documentIdToQuery = null;
-
-        if (masterSearchTerms?.document_id) {
-            masterQueryParams.document_id = masterSearchTerms.document_id;
-            documentIdToQuery = masterSearchTerms.document_id;
-        } else if (masterSearchTerms?.crfn) {
-            masterQueryParams.crfn = masterSearchTerms.crfn;
-            // Fetch the master record to get the document_id
-            const masterRecords = await MasterRealPropApi.fetchAcrisRecords(masterQueryParams);
-            if (!masterRecords.length) {
-                return res.status(404).json({ error: "No master record found for the given crfn." });
-            }
-            documentIdToQuery = masterRecords[0].document_id;
-            // Overwrite masterRecords for later use
-            masterQueryParams.document_id = documentIdToQuery;
-        } else {
-            return res.status(400).json({ error: "Must provide either document_id or crfn." });
-        }
-
-        // Now fetch all datasets using the document_id
-        try {
-            const [
-                masterResult,
-                partiesResult,
-                legalsResult,
-                referencesResult,
-                remarksResult
-            ] = await Promise.allSettled([
-                MasterRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery }),
-                PartiesRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery }),
-                LegalsRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery }),
-                ReferencesRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery }),
-                RemarksRealPropApi.fetchAcrisRecords({ document_id: documentIdToQuery })
-            ]);
-
-            const masterRecords = masterResult.status === "fulfilled" ? masterResult.value : [];
-            const partiesRecords = partiesResult.status === "fulfilled" ? partiesResult.value : [];
-            const legalsRecords = legalsResult.status === "fulfilled" ? legalsResult.value : [];
-            const referencesRecords = referencesResult.status === "fulfilled" ? referencesResult.value : [];
-            const remarksRecords = remarksResult.status === "fulfilled" ? remarksResult.value : [];
-
-            const allDocumentIds = new Set([
-                ...(masterRecords || []).map(r => r.document_id),
-                ...(partiesRecords || []).map(r => r.document_id),
-                ...(legalsRecords || []).map(r => r.document_id),
-                ...(referencesRecords || []).map(r => r.document_id),
-                ...(remarksRecords || []).map(r => r.document_id)
-            ]);
-
-            const results = Array.from(allDocumentIds).map(document_id => ({
-                document_id,
-                masterRecords: (masterRecords || []).filter(r => r.document_id === document_id),
-                partiesRecords: (partiesRecords || []).filter(r => r.document_id === document_id),
-                legalsRecords: (legalsRecords || []).filter(r => r.document_id === document_id),
-                referencesRecords: (referencesRecords || []).filter(r => r.document_id === document_id),
-                remarksRecords: (remarksRecords || []).filter(r => r.document_id === document_id)
-            }));
-            console.log(results.length, "number of results from all datasets");
-
-            return res.json(results);
-        } catch (err) {
-            console.error("Error fetching full records from datasets:", err.message);
-            return res.status(500).json({
-                dataFound: false,
-                error: "Failed to fetch full records from all datasets",
-                details: err.message
-            });
-        }
+      const recs = await MasterRealPropApi.fetchAcrisRecords({
+        crfn: masterSearchTerms.crfn,
+      });
+      if (!Array.isArray(recs) || recs.length === 0) {
+        errMsg.push(
+          `No master record found for crfn: ${masterSearchTerms.crfn}`
+        );
+      } else {
+        documentIdToQuery = recs[0].document_id;
+      }
     } catch (err) {
-        console.error("Error in queryAcrisDocIdCrfn route:", err.message);
-        return next(err);
+      errMsg.push(`Master Records: ${err.message}`);
     }
+  } else {
+    errMsg.push("Must provide either document_id or crfn.");
+  }
+
+  if (errMsg.length || !documentIdToQuery) {
+    return res.json({ dataFound: false, errMsg });
+  }
+
+  const finalIds = [documentIdToQuery];
+  console.log(`finalIds is equal to: `, finalIds);
+
+  // 2) Fetch full records in parallel
+  const [
+    masterRecsRes,
+    partiesRecsRes,
+    legalRecsRes,
+    refRecsRes,
+    remarkRecsRes,
+  ] = await Promise.allSettled([
+    MasterRealPropApi.fetchAcrisRecordsByDocumentIds(finalIds),
+    PartiesRealPropApi.fetchAcrisRecordsByDocumentIds(finalIds),
+    LegalsRealPropApi.fetchAcrisRecordsByDocumentIds(finalIds),
+    ReferencesRealPropApi.fetchAcrisRecordsByDocumentIds(finalIds),
+    RemarksRealPropApi.fetchAcrisRecordsByDocumentIds(finalIds),
+  ]);
+
+  // 3) Collect any full-records errors
+  if (masterRecsRes.status === "rejected")
+    errMsg.push(`Master Records: ${masterRecsRes.reason.message}`);
+  if (partiesRecsRes.status === "rejected")
+    errMsg.push(`Party Records: ${partiesRecsRes.reason.message}`);
+  if (legalRecsRes.status === "rejected")
+    errMsg.push(`Legal Records: ${legalRecsRes.reason.message}`);
+  if (refRecsRes.status === "rejected")
+    errMsg.push(`Reference Records: ${refRecsRes.reason.message}`);
+  if (remarkRecsRes.status === "rejected")
+    errMsg.push(`Remark Records: ${remarkRecsRes.reason.message}`);
+
+  if (errMsg.length) {
+    return res.json({ dataFound: false, errMsg });
+  }
+
+  // 4) Unwrap and build results
+  const masterRecords = masterRecsRes.value || [];
+  const partyRecords = partiesRecsRes.value || [];
+  const legalRecords = legalRecsRes.value || [];
+  const referencesRecords = refRecsRes.value || [];
+  const remarksRecords = remarkRecsRes.value || [];
+
+  const results = finalIds.map((document_id) => ({
+    document_id,
+    masterRecords: masterRecords.filter((r) => r.document_id === document_id),
+    partiesRecords: partyRecords.filter((r) => r.document_id === document_id),
+    legalsRecords: legalRecords.filter((r) => r.document_id === document_id),
+    referencesRecords: referencesRecords.filter(
+      (r) => r.document_id === document_id
+    ),
+    remarksRecords: remarksRecords.filter((r) => r.document_id === document_id),
+  }));
+
+  return res.json({ dataFound: true, results });
 });
 
 module.exports = router;
