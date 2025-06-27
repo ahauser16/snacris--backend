@@ -25,6 +25,5 @@
       "format": "email"
     }
   },
-  "additionalProperties": false,
-  "required": ["password", "firstName", "lastName", "email"]
+  "additionalProperties": false
 }

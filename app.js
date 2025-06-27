@@ -51,23 +51,9 @@ app.use("/codeMapStates", routes.statesCodeMapApiRoutes);
 app.use("/codeMapDocumentTypes", routes.docTypesCodeMapApiRoutes);
 app.use("/codeMapPropertyTypes", routes.propTypesCodeMapApiRoutes);
 app.use("/codeMapUccLiens", routes.uccTypesCodeMapApiRoutes);
-// app.use("/db/real-property-master", routes.masterRealPropDbRoutes);
 app.use("/realPropertyDbRoutes", routes.realPropertyDbRoutes);
-// app.use("/db/real-propersRealPropDbRoutes);
-// app.use("/db/real-property-references", referencesRealPropDbRoutes);
-// app.use("/db/personal-property-masterty-legals", legalsRealPropDbRoutes);
-// app.use("/db/real-property-parties", partiesRealPropDbRoutes);
-// app.use("/db/real-property-remarks", remark", masterPersPropDbRoutes);
-// app.use("/db/personal-property-legals", legalsPersPropDbRoutes);
-// app.use("/db/personal-property-parties", partiesPersPropDbRoutes);
-// app.use("/db/personal-property-remarks", remarksPersPropDbRoutes);
-// app.use("/db/personal-property-references", referencesPersPropDbRoutes);
-// app.use("/db/personal-property-references", referencesPersPropDbRoutes);
-// app.use("/db/code-map-countries", countriesCodeMapDbRoutes);
-// app.use("/db/code-map-states", statesCodeMapDbRoutes);
 app.use("/db/code-map-documents", routes.docTypesCodeMapDbRoutes);
-// app.use("/db/code-map-properties", propTypesCodeMapDbRoutes);
-// app.use("/db/code-map-ucc", uccTypesCodeMapDbRoutes);
+
 
 /** Handle 404 errors -- this matches everything */
 app.use(function (req, res, next) {
