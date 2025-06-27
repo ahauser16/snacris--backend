@@ -4,34 +4,8 @@
 
 - [REAL PROPERTY API NOTES](#real-property-api-notes)
   - [Table of Contents](#table-of-contents)
-  - [API File Architecture](#api-file-architecture)
-    - [`fetchAcrisRecords`](#fetchacrisrecords)
-      - [Purpose](#purpose)
-      - [How It Works](#how-it-works)
-      - [Pagination Logic](#pagination-logic)
-      - [Examples](#examples)
-      - [Behavior](#behavior)
-    - [`fetchAcrisRecordCount`](#fetchacrisrecordcount)
-      - [Purpose](#purpose-1)
-      - [How It Works](#how-it-works-1)
-      - [Examples](#examples-1)
-      - [Behavior](#behavior-1)
-    - [`fetchAcrisDocumentIds`](#fetchacrisdocumentids)
-      - [Purpose](#purpose-2)
-      - [How It Works](#how-it-works-2)
-      - [Pagination Logic](#pagination-logic-1)
-      - [Example:](#example)
-      - [Behavior](#behavior-2)
-    - [Search By Parcel \& `fetchAcrisDocumentIdsCrossRef`](#search-by-parcel--fetchacrisdocumentidscrossref)
-      - [refactor notes on 6/10/25](#refactor-notes-on-61025)
-        - [TEST 1 - SUCCESS - BBL + recorded\_date\_range: 'to-current-date-default' + doc\_class: 'DEEDS AND OTHER CONVEYANCES'](#test-1---success---bbl--recorded_date_range-to-current-date-default--doc_class-deeds-and-other-conveyances)
-        - [TEST 2 - FAILED - BBL + recorded\_date\_range: 'to-current-date-default' + doc\_class: 'MORTGAGES \& INSTRUMENTS'/'UCC AND FEDERAL LIENS'/'OTHER DOCUMENTS'](#test-2---failed---bbl--recorded_date_range-to-current-date-default--doc_class-mortgages--instrumentsucc-and-federal-liensother-documents)
-      - [Purpose](#purpose-3)
-      - [How It Works](#how-it-works-3)
-      - [Pagination Logic](#pagination-logic-2)
-      - [Example](#example-1)
-      - [Behavior](#behavior-3)
-      - [Combined Example: Using `MasterRealPropApi` and `PartiesRealPropApi`](#combined-example-using-masterrealpropapi-and-partiesrealpropapi)
+- [API File Architecture](#api-file-architecture)
+  - [Real Property Overview](#real-property-overview)
   - [`MasterRealPropApi`](#masterrealpropapi)
     - [NYC Open Data URL: http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj](#nyc-open-data-url-httpdatacityofnewyorkuscity-governmentacris-real-property-masterbnx9-e6tj)
     - [NYS OPEN DATA Name: ACRIS - Real Property Master](#nys-open-data-name-acris---real-property-master)
@@ -58,232 +32,32 @@
     - [NYS OPEN DATA Description: Document Remarks for Real Property Related Documents Recorded in ACRIS](#nys-open-data-description-document-remarks-for-real-property-related-documents-recorded-in-acris)
     - [API Endpoint URL: https://data.cityofnewyork.us/resource/9p4w-7npp.json](#api-endpoint-url-httpsdatacityofnewyorkusresource9p4w-7nppjson)
 
-## API File Architecture
+# API File Architecture
 
-The Real Property API files: `MasterRealPropApi.js`, `PartiesRealPropApi.js`, `LegalsRealPropApi.js`, `ReferencesRealPropApi.js` and `RemarksRealPropApi.js` located in `/real-property` are all constructed according to the same class based architecture.  Each class has the same methods `fetchAcrisRecords`, `fetchAcrisRecordCount`, `fetchAcrisDocumentIds` and `fetchAcrisDocumentIdsCrossRef` (this function is the exception and only exists in `PartiesRealPropApi.js` and `LegalsRealPropApi.js` until further testing is complete).  Each of these methods are structured the same and invoke methods from the `SoqlUrl` class to dynamically generate Socrata Query Language syntax (Soql) URLs based on query parameters, API-specific configurations, and pagination.
+## Real Property Overview
 
-### `fetchAcrisRecords`
-
-#### Purpose
-
-- Fetches all records from the ACRIS Real Property Master dataset that match the provided query parameters.
-
-#### How It Works
-- Constructs a URL using `SoqlUrl.constructUrl` with the `selectOption` set to `"records"`.
-- Implements pagination using the `limit` and `offset` parameters.
-- Iteratively fetches records until all matching records are retrieved.
-
-#### Pagination Logic
-
-- Starts with `offset = 0` and increments it by `limit` after each request.
-- Stops fetching when the number of records returned is less than the `limit`.
-
-#### Examples
-
-```js
-const masterQueryParams = { doc_type: "DEED", recorded_borough: "3" };
-const records = await MasterRealPropApi.fetchAcrisRecords(masterQueryParams, 1000);
-console.log(records.length); // Total number of records fetched
+```mermaid
+erDiagram
+    REAL_PROPERTY_MASTER {
+        TEXT document_id "primary key"
+    }
+    REAL_PROPERTY_LEGALS {
+        TEXT document_id "foreign key"
+    }
+    REAL_PROPERTY_PARTIES {
+        TEXT document_id "foreign key"
+    }
+    REAL_PROPERTY_REFERENCES {
+        TEXT document_id "foreign key"
+    }
+    REAL_PROPERTY_REMARKS {
+        TEXT document_id "foreign key"
+    }
+    REAL_PROPERTY_MASTER ||--|| REAL_PROPERTY_LEGALS : "document_id"
+    REAL_PROPERTY_MASTER ||--|| REAL_PROPERTY_PARTIES : "document_id"
+    REAL_PROPERTY_MASTER ||--|| REAL_PROPERTY_REFERENCES : "document_id"
+    REAL_PROPERTY_MASTER ||--|| REAL_PROPERTY_REMARKS : "document_id"
 ```
-
-```js
-const partiesQueryParams = { party_type: "1", city: "NEW YORK" };
-const records = await PartiesRealPropApi.fetchAcrisRecords(partiesQueryParams);
-console.log(records); // Array of matching records
-```
-
-#### Behavior
-
-- Returns an array of all matching records.
-- If no records are found, throws a `NotFoundError`.
-
-[Back to TOC](#table-of-contents)
-
-### `fetchAcrisRecordCount`
-
-#### Purpose
-- Fetches the count of records that match the provided query parameters.
-
-#### How It Works
-- Constructs a URL using `SoqlUrl.constructUrl` with the `selectOption` set to `"countAll"`.
-- Makes a single GET request to retrieve the count.
-
-#### Examples
-
-```js
-const masterQueryParams = { doc_type: "DEED", recorded_borough: "3" };
-const count = await MasterRealPropApi.fetchAcrisRecordCount(masterQueryParams);
-console.log(count); // Total count of matching records
-```
-
-```js
-const partiesQueryParams = { party_type: "1", city: "NEW YORK" };
-const count = await PartiesRealPropApi.fetchAcrisRecordCount(partiesQueryParams);
-console.log(count); // Total count of matching records
-```
-
-#### Behavior
-- Returns the count as a number.
-- If no count is found, throws a `NotFoundError`.
-
-[Back to TOC](#table-of-contents)
-
-### `fetchAcrisDocumentIds`
-
-#### Purpose
-- Fetches all unique document_id values from the ACRIS Real Property Master dataset that match the provided query parameters.
-
-#### How It Works
-- Constructs a URL using `SoqlUrl.constructUrl` with the `selectOption` set to `"document_id"`.
-- Implements pagination using the `limit` and `offset` parameters.
-- Iteratively fetches `document_id` values until all are retrieved.
-
-#### Pagination Logic
-Starts with `offset = 0` and increments it by `limit` after each request.
-Stops fetching when the number of records returned is less than the `limit`.
-
-#### Example:
-
-```js
-const masterQueryParams = { doc_type: "DEED", recorded_borough: "3" };
-const documentIds = await MasterRealPropApi.fetchAcrisDocumentIds(masterQueryParams, 1000);
-console.log(documentIds); // Array of unique document IDs
-```
-
-```js
-const partiesQueryParams = { party_type: "1", city: "NEW YORK" };
-const documentIds = await PartiesRealPropApi.fetchAcrisDocumentIds(partiesQueryParams);
-console.log(documentIds); // Array of unique document IDs
-```
-
-#### Behavior
-
-- Returns an array of unique `document_id` values.
-- If no `document_id` values are found, throws a `NotFoundError`.
-
-[Back to TOC](#table-of-contents)
-
-### Search By Parcel & `fetchAcrisDocumentIdsCrossRef`
-
-http://localhost:3000/ParcelIdentifierSearch
-
-
-#### refactor notes on 6/10/25
-
-The `MasterRealPropApi.fetchAcrisDocumentIdsCrossRef` is behaving strangely.  I was able to successfully submit a search request from the frontend via the `queryAcrisParcel` route with the query parameters below and returned 9 records (with `document_id` values: 'BK_6830029501877', 'BK_6830029501879', 'BK_7230060101439', 'BK_7230060101441', 'BK_7730091601981', 'BK_7730091601987', 'FT_3030001026203', 'FT_3150000953315' and 'FT_3160005545216') which displayed correctly without any issue on the website.  
-
-##### TEST 1 - SUCCESS - BBL + recorded_date_range: 'to-current-date-default' + doc_class: 'DEEDS AND OTHER CONVEYANCES'
-
-```bash
-Received request with query parameters: {
-  masterSearchTerms: {
-    recorded_date_range: 'to-current-date-default',
-    recorded_date_start: '',
-    recorded_date_end: '',
-    doc_type: 'doc-type-default',
-    doc_class: 'DEEDS AND OTHER CONVEYANCES'
-  },
-  legalsSearchTerms: { borough: '3', block: '05159', lot: '47', unit: '' }
-}
-```
-
-##### TEST 2 - FAILED - BBL + recorded_date_range: 'to-current-date-default' + doc_class: 'MORTGAGES & INSTRUMENTS'/'UCC AND FEDERAL LIENS'/'OTHER DOCUMENTS'
-
-```bash
-Received request with query parameters: {
-  masterSearchTerms: {
-    recorded_date_range: 'to-current-date-default',
-    recorded_date_start: '',
-    recorded_date_end: '',
-    doc_type: 'doc-type-default',
-    doc_class: 'MORTGAGES & INSTRUMENTS'
-  },
-  legalsSearchTerms: { borough: '3', block: '05159', lot: '47', unit: '' }
-}
-```
-
-
-It accepts `masterQueryParams`, `legalsRecordsDocumentIds` and `batchSize` and should return the two `document_id` values: '2020100700809001' and '2020100700809002' after cross referencing the results against the `document_id` values contained in `legalsRecordsDocumentIds`.
-
-- `queryAcrisParcel` receives the query parameters below.
-- `MasterRealPropApi.fetchAcrisDocumentIdsCrossRef` creates a query URL that does NOT return any records when it should.
-- 
-
-query parameters sent by frontend:
-```bash
-Received request with query parameters: {
-  masterSearchTerms: {
-    recorded_date_range: 'last-5-years',
-    recorded_date_start: '2020-06-11',
-    recorded_date_end: '2025-06-10',
-    doc_type: 'doc-type-default',
-    doc_class: 'MORTGAGES & INSTRUMENTS'
-  },
-  legalsSearchTerms: { borough: '3', block: '05159', lot: '47', unit: '' }
-}
-```
-
-URL Criteria to check:
-- [x] Each function is referencing the correct API.  
-  - `MasterRealPropApi` references "https://data.cityofnewyork.us/resource/bnx9-e6tj.json"
-  - `PartiesRealPropApi` references "https://data.cityofnewyork.us/resource/636b-3b5g.json"
-  - `LegalsRealPropApi` references "https://data.cityofnewyork.us/resource/8h5j-fqxa.json"
-
-`MasterRealPropApi.fetchAcrisDocumentIdsCrossRef` UNsuccessfully creates the query URL below.  Also, the query url is missing the `&$limit=1000` at the end.  
-```bash
-https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$select=document_id&$where=doc_type IN ('AGMT', 'ASPM', 'ASST', 'CERR', 'DEMM', 'MMTG', 'MTGE', 'PSAT', 'REL', 'SAT', 'SMTG', 'WSAT', 'AL&R', 'AMTX', 'AALR', 'M&CON', 'SPRD', 'SUBM', 'PREL', 'CORRM', 'XXXX', 'CMTG', 'APPRT') AND recorded_datetime between '2023-06-11' and '2025-06-10' AND document_id IN ('2020100700809001', '2020100700809002', '2017062800007002', '2017062800007001', 'FT_3210005545221', 'BK_7230060101447', 'FT_3720005010972', 'BK_8030116700912', 'FT_3160000953316', 'BK_7530078101736', 'FT_3290005545229', 'FT_3390001095739', '2013053000805003', '2005010600534002', 'FT_3030001026203', 'BK_7230060101439', 'FT_3840001246684', 'FT_3260005545226', 'FT_3810001502381', 'FT_3280005545228', '2005010600534004', 'BK_7730091601983', 'FT_3220005545222', '2013053000805002', 'FT_3810001246681', 'FT_3150000953315', 'BK_6830029501885', 'FT_3400001002240', 'FT_3530004500253', 'FT_3820001502382', 'BK_6830029501879', 'FT_3450001247145', '2005010600534001', 'BK_6830029501881', 'FT_3850001246685', 'FT_3830001246683', 'FT_3400001095740', 'FT_3820001246682', 'BK_7530078101731', 'FT_3800001246680', 'FT_3160005545216', '2013053000805005', 'FT_3170005545217', 'BK_7230060101443', 'FT_3270005545227', '2005010600534003', 'FT_3910000966591', 'BK_7730090900605', 'FT_3860001246686', 'BK_6830029501877', '2013053000805001', 'BK_7730091601981', 'BK_7730091601987', 'BK_7230060101441', 'FT_3520001266352', 'BK_7730090900603')
-```
-
-`'/fetchAcrisDocumentIds(masterQueryParams)' calls 'SoqlUrl.constructUrl' creates:`
-```bash
-https://data.cityofnewyork.us/resource/8h5j-fqxa.json?$select=document_id&$where=borough=1 AND document_id IN ('2025040900070001', '2025040900509001', '2025032500301001', '2025021800719001', '2025021801206001', '2024092300336001', '2024081600122002', '2024071700353001', '2024071700810001', '2024061800801001') 1 LegalsRealPropApi queryUrls
-```
-
-#### Purpose
-- Fetches `document_id` values from the ACRIS Real Property Parties dataset that match the provided query parameters and are cross-referenced with a list of `document_id` values from another dataset (e.g., Master dataset).
-
-#### How It Works
-- Constructs batch URLs using `SoqlUrl.constructUrlBatches` with the `document_id` values from the Master dataset.
-- Iteratively fetches `document_id` values for each batch, implementing pagination for each batch.
-
-#### Pagination Logic
-- For each batch URL, starts with `offset = 0` and increments it by **1,000** after each request.
-- Stops fetching for a batch when the number of records returned is less than **1,000**.
-
-#### Example
-
-```js
-const partiesQueryParams = { party_type: "BUYER", city: "NEW YORK" };
-const masterRecordsDocumentIds = ["12345", "67890", "11223"];
-const documentIds = await PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef(partiesQueryParams, masterRecordsDocumentIds);
-console.log(documentIds); // Array of unique document IDs cross-referenced with Master dataset
-```
-
-#### Behavior
-
-- Returns an array of unique `document_id` values that match the query parameters and are cross-referenced with the provided `masterRecordsDocumentIds`.
-- If no `document_id` values are found, throws a `NotFoundError`.
-
-#### Combined Example: Using `MasterRealPropApi` and `PartiesRealPropApi`
-
-```js
-const masterQueryParams = { doc_type: "DEED", recorded_borough: "3" };
-const partiesQueryParams = { party_type: "1", city: "NEW YORK" };
-
-try {
-  // Step 1: Fetch document IDs from the Master dataset
-  const masterRecordsDocumentIds = await MasterRealPropApi.fetchAcrisDocumentIds(masterQueryParams);
-  console.log(`Fetched ${masterRecordsDocumentIds.length} document IDs from Master dataset`);
-
-  // Step 2: Use the Master document IDs to fetch cross-referenced document IDs from the Parties dataset
-  const partyRecordsDocumentIds = await PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef(partiesQueryParams, masterRecordsDocumentIds);
-  console.log(`Fetched ${partyRecordsDocumentIds.length} document IDs from Parties dataset cross-referenced with Master dataset`);
-} catch (err) {
-  console.error("Error:", err.message);
-}
-```
-
-[Back to TOC](#table-of-contents)
 
 ## `MasterRealPropApi`
 ### NYC Open Data URL: http://data.cityofnewyork.us/City-Government/ACRIS-Real-Property-Master/bnx9-e6tj
