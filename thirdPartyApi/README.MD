@@ -2,7 +2,6 @@
 
 This is a notepad for Socrata's simple filter and more complex SoQL Queries and the ACRIS datasets.
 
-## API Folder - ToDos
 
 
 

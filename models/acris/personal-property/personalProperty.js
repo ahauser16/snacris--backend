@@ -1,5 +1,5 @@
 // models/personalProperty.js
-const db = require("../db");
+const db = require("../../../db");
 
 /** Turn "" → null */
 function sanitize(obj = {}) {
@@ -73,7 +73,7 @@ async function getSavedPersonalPropertyDocument(username, documentId = null) {
  * Save or update a personal‐property document in one transaction.
  */
 async function savePersonalPropertyDocument(username, input) {
-  const client = await db.getClient();
+  const client = db;
   try {
     await client.query("BEGIN");
 
@@ -95,8 +95,23 @@ async function savePersonalPropertyDocument(username, input) {
           modified_date, reel_yr, reel_nbr, reel_pg, file_nbr,
           good_through_date)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
-       ON CONFLICT (username, document_id) DO UPDATE
-         SET modified_date = EXCLUDED.modified_date
+       ON CONFLICT (username, document_id) DO UPDATE SET
+         record_type = EXCLUDED.record_type,
+         crfn = EXCLUDED.crfn,
+         recorded_borough = EXCLUDED.recorded_borough,
+         doc_type = EXCLUDED.doc_type,
+         document_amt = EXCLUDED.document_amt,
+         recorded_datetime = EXCLUDED.recorded_datetime,
+         ucc_collateral = EXCLUDED.ucc_collateral,
+         fedtax_serial_nbr = EXCLUDED.fedtax_serial_nbr,
+         fedtax_assessment_date = EXCLUDED.fedtax_assessment_date,
+         rpttl_nbr = EXCLUDED.rpttl_nbr,
+         modified_date = EXCLUDED.modified_date,
+         reel_yr = EXCLUDED.reel_yr,
+         reel_nbr = EXCLUDED.reel_nbr,
+         reel_pg = EXCLUDED.reel_pg,
+         file_nbr = EXCLUDED.file_nbr,
+         good_through_date = EXCLUDED.good_through_date
        RETURNING id`,
       [
         username,
@@ -122,7 +137,14 @@ async function savePersonalPropertyDocument(username, input) {
     const mid = mRes.rows[0].id;
 
     // batch helper
-    async function batchInsert(table, rows, cols) {
+    async function batchInsert(table, rows, cols, clearExisting = false) {
+      // Clear existing records for this master if specified
+      if (clearExisting) {
+        await client.query(`DELETE FROM ${table} WHERE saved_master_id = $1`, [
+          mid,
+        ]);
+      }
+
       if (!rows.length) return;
       const colList = cols.join(", "),
         vals = [],
@@ -162,24 +184,30 @@ async function savePersonalPropertyDocument(username, input) {
         "street_name",
         "addr_unit",
         "good_through_date",
-      ]
+      ],
+      true
     );
 
     // 2) parties (1–3 rows)
-    await batchInsert("saved_personal_property_parties", doc.parties, [
-      "saved_master_id",
-      "party_index",
-      "record_type",
-      "party_type",
-      "name",
-      "address_1",
-      "address_2",
-      "country",
-      "city",
-      "state",
-      "zip",
-      "good_through_date",
-    ]);
+    await batchInsert(
+      "saved_personal_property_parties",
+      doc.parties,
+      [
+        "saved_master_id",
+        "party_index",
+        "record_type",
+        "party_type",
+        "name",
+        "address_1",
+        "address_2",
+        "country",
+        "city",
+        "state",
+        "zip",
+        "good_through_date",
+      ],
+      true
+    );
 
     // 3) references (0→1 row)
     await batchInsert(
@@ -192,7 +220,8 @@ async function savePersonalPropertyDocument(username, input) {
         "doc_id_ref",
         "file_nbr",
         "good_through_date",
-      ]
+      ],
+      true
     );
 
     // 4) remarks (0→1 row)
@@ -205,7 +234,8 @@ async function savePersonalPropertyDocument(username, input) {
         "sequence_number",
         "remark_text",
         "good_through_date",
-      ]
+      ],
+      true
     );
 
     await client.query("COMMIT");
@@ -213,8 +243,6 @@ async function savePersonalPropertyDocument(username, input) {
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
-  } finally {
-    client.release();
   }
 }
 

@@ -1,0 +1,437 @@
+"use strict";
+
+const { convertQueryParams } = require("./convertQueryParams.js.disabled");
+
+describe("convertQueryParams", function () {
+  describe("Type Conversion", function () {
+    test("converts integer types correctly", function () {
+      const query = { page: "1", limit: "10", count: "0" };
+      const schema = {
+        properties: {
+          page: { type: "integer" },
+          limit: { type: "integer" },
+          count: { type: "integer" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+      expect(result.count).toBe(0);
+      expect(typeof result.page).toBe("number");
+      expect(typeof result.limit).toBe("number");
+      expect(typeof result.count).toBe("number");
+    });
+
+    test("converts number types correctly", function () {
+      const query = { price: "99.99", tax: "7.5", discount: "0.0" };
+      const schema = {
+        properties: {
+          price: { type: "number" },
+          tax: { type: "number" },
+          discount: { type: "number" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.price).toBe(99.99);
+      expect(result.tax).toBe(7.5);
+      expect(result.discount).toBe(0.0);
+      expect(typeof result.price).toBe("number");
+      expect(typeof result.tax).toBe("number");
+      expect(typeof result.discount).toBe("number");
+    });
+
+    test("preserves string types", function () {
+      const query = {
+        name: "John Doe",
+        city: "New York",
+        category: "electronics",
+      };
+      const schema = {
+        properties: {
+          name: { type: "string" },
+          city: { type: "string" },
+          category: { type: "string" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.name).toBe("John Doe");
+      expect(result.city).toBe("New York");
+      expect(result.category).toBe("electronics");
+      expect(typeof result.name).toBe("string");
+      expect(typeof result.city).toBe("string");
+      expect(typeof result.category).toBe("string");
+    });
+
+    test("handles mixed types correctly", function () {
+      const query = {
+        id: "123",
+        name: "Test Item",
+        price: "29.99",
+        active: "true",
+        quantity: "5",
+      };
+      const schema = {
+        properties: {
+          id: { type: "integer" },
+          name: { type: "string" },
+          price: { type: "number" },
+          active: { type: "boolean" }, // Will default to string since not handled
+          quantity: { type: "integer" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.id).toBe(123);
+      expect(result.name).toBe("Test Item");
+      expect(result.price).toBe(29.99);
+      expect(result.active).toBe("true"); // Default case
+      expect(result.quantity).toBe(5);
+    });
+  });
+
+  describe("Edge Cases", function () {
+    test("handles empty query object", function () {
+      const query = {};
+      const schema = {
+        properties: {
+          page: { type: "integer" },
+          name: { type: "string" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result).toEqual({});
+    });
+
+    test("handles empty schema", function () {
+      const query = { page: "1", name: "test" };
+      const schema = { properties: {} };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result).toEqual({});
+    });
+
+    test("ignores query params not in schema", function () {
+      const query = {
+        page: "1",
+        name: "test",
+        unknown: "value",
+        extra: "data",
+      };
+      const schema = {
+        properties: {
+          page: { type: "integer" },
+          name: { type: "string" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result).toEqual({
+        page: 1,
+        name: "test",
+      });
+      expect(result.unknown).toBeUndefined();
+      expect(result.extra).toBeUndefined();
+    });
+
+    test("handles schema properties without type", function () {
+      const query = { value: "test" };
+      const schema = {
+        properties: {
+          value: {}, // No type specified
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.value).toBe("test");
+    });
+
+    test("handles unknown type in schema", function () {
+      const query = { data: "some_value" };
+      const schema = {
+        properties: {
+          data: { type: "unknown_type" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.data).toBe("some_value"); // Falls through to default
+    });
+  });
+
+  describe("Number Parsing Edge Cases", function () {
+    test("handles invalid integer strings", function () {
+      const query = {
+        validInt: "123",
+        invalidInt: "abc",
+        floatAsInt: "12.34",
+        emptyInt: "",
+        negativeInt: "-5",
+      };
+      const schema = {
+        properties: {
+          validInt: { type: "integer" },
+          invalidInt: { type: "integer" },
+          floatAsInt: { type: "integer" },
+          emptyInt: { type: "integer" },
+          negativeInt: { type: "integer" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.validInt).toBe(123);
+      expect(result.invalidInt).toBeNaN();
+      expect(result.floatAsInt).toBe(12); // parseInt truncates
+      expect(result.emptyInt).toBeNaN();
+      expect(result.negativeInt).toBe(-5);
+    });
+
+    test("handles invalid number strings", function () {
+      const query = {
+        validNumber: "123.45",
+        invalidNumber: "not_a_number",
+        emptyNumber: "",
+        negativeNumber: "-99.99",
+        scientificNotation: "1.23e10",
+      };
+      const schema = {
+        properties: {
+          validNumber: { type: "number" },
+          invalidNumber: { type: "number" },
+          emptyNumber: { type: "number" },
+          negativeNumber: { type: "number" },
+          scientificNotation: { type: "number" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.validNumber).toBe(123.45);
+      expect(result.invalidNumber).toBeNaN();
+      expect(result.emptyNumber).toBeNaN();
+      expect(result.negativeNumber).toBe(-99.99);
+      expect(result.scientificNotation).toBe(12300000000);
+    });
+
+    test("handles zero values", function () {
+      const query = {
+        zeroInt: "0",
+        zeroFloat: "0.0",
+        zeroString: "0",
+      };
+      const schema = {
+        properties: {
+          zeroInt: { type: "integer" },
+          zeroFloat: { type: "number" },
+          zeroString: { type: "string" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.zeroInt).toBe(0);
+      expect(result.zeroFloat).toBe(0.0);
+      expect(result.zeroString).toBe("0");
+    });
+  });
+
+  describe("Real-world Scenarios", function () {
+    test("handles typical pagination parameters", function () {
+      const query = { page: "2", limit: "25", offset: "50" };
+      const schema = {
+        properties: {
+          page: { type: "integer" },
+          limit: { type: "integer" },
+          offset: { type: "integer" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result).toEqual({
+        page: 2,
+        limit: 25,
+        offset: 50,
+      });
+    });
+
+    test("handles ACRIS search parameters", function () {
+      const query = {
+        borough: "1",
+        block: "123",
+        lot: "45",
+        doc_type: "DEED",
+        date_from: "2023-01-01",
+        date_to: "2023-12-31",
+        amount_min: "100000.00",
+        amount_max: "1000000.00",
+      };
+      const schema = {
+        properties: {
+          borough: { type: "integer" },
+          block: { type: "integer" },
+          lot: { type: "integer" },
+          doc_type: { type: "string" },
+          date_from: { type: "string" },
+          date_to: { type: "string" },
+          amount_min: { type: "number" },
+          amount_max: { type: "number" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result).toEqual({
+        borough: 1,
+        block: 123,
+        lot: 45,
+        doc_type: "DEED",
+        date_from: "2023-01-01",
+        date_to: "2023-12-31",
+        amount_min: 100000.0,
+        amount_max: 1000000.0,
+      });
+    });
+
+    test("handles organization search parameters", function () {
+      const query = {
+        name: "ACME Corporation",
+        type: "LLC",
+        active: "true",
+        min_employees: "10",
+        founded_year: "1995",
+      };
+      const schema = {
+        properties: {
+          name: { type: "string" },
+          type: { type: "string" },
+          active: { type: "string" }, // Treated as string in this case
+          min_employees: { type: "integer" },
+          founded_year: { type: "integer" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result).toEqual({
+        name: "ACME Corporation",
+        type: "LLC",
+        active: "true",
+        min_employees: 10,
+        founded_year: 1995,
+      });
+    });
+  });
+
+  describe("Input Validation", function () {
+    test("handles null and undefined query values", function () {
+      const query = {
+        nullValue: null,
+        undefinedValue: undefined,
+        normalValue: "123",
+      };
+      const schema = {
+        properties: {
+          nullValue: { type: "integer" },
+          undefinedValue: { type: "string" },
+          normalValue: { type: "integer" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.nullValue).toBeNaN(); // parseInt(null) is NaN
+      expect(result.undefinedValue).toBe(undefined);
+      expect(result.normalValue).toBe(123);
+    });
+
+    test("handles whitespace in values", function () {
+      const query = {
+        trimmedInt: "  123  ",
+        trimmedFloat: "  99.99  ",
+        trimmedString: "  hello world  ",
+      };
+      const schema = {
+        properties: {
+          trimmedInt: { type: "integer" },
+          trimmedFloat: { type: "number" },
+          trimmedString: { type: "string" },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.trimmedInt).toBe(123); // parseInt handles whitespace
+      expect(result.trimmedFloat).toBe(99.99); // parseFloat handles whitespace
+      expect(result.trimmedString).toBe("  hello world  "); // String preserves whitespace
+    });
+  });
+
+  describe("Schema Variations", function () {
+    test("handles schema without properties", function () {
+      const query = { test: "value" };
+      const schema = {}; // No properties key
+
+      // This should throw an error since schema.properties is undefined
+      expect(() => {
+        convertQueryParams(query, schema);
+      }).toThrow();
+    });
+
+    test("handles nested schema properties", function () {
+      const query = { simpleParam: "123" };
+      const schema = {
+        properties: {
+          simpleParam: { type: "integer" },
+          nestedParam: {
+            type: "object",
+            properties: {
+              innerParam: { type: "string" },
+            },
+          },
+        },
+      };
+
+      const result = convertQueryParams(query, schema);
+
+      expect(result.simpleParam).toBe(123);
+      expect(result.nestedParam).toBeUndefined();
+    });
+  });
+
+  describe("Performance", function () {
+    test("handles large number of parameters efficiently", function () {
+      const query = {};
+      const schema = { properties: {} };
+
+      // Generate 1000 parameters
+      for (let i = 0; i < 1000; i++) {
+        query[`param${i}`] = String(i);
+        schema.properties[`param${i}`] = { type: "integer" };
+      }
+
+      const startTime = Date.now();
+      const result = convertQueryParams(query, schema);
+      const endTime = Date.now();
+
+      // Should complete quickly (under 100ms)
+      expect(endTime - startTime).toBeLessThan(100);
+      expect(Object.keys(result)).toHaveLength(1000);
+      expect(result.param0).toBe(0);
+      expect(result.param999).toBe(999);
+    });
+  });
+});

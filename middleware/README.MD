@@ -4,9 +4,3 @@ Since the code map datasets are seeded in the database it is possible to create 
 
 Furthermore, it was recommended to me that the schema validation logic for each route could be extracted into its own middleware function `validateSchema`, however, I am not ready to implement this yet so I created the `validateSchema` function in the middleware folder.
 
-## ToDos# 
-
-- [x] Create a new file called `validateSchema.js` in the `middleware` folder.
-- [ ] create tests for `validateSchema` function
-- [x] Create a new file called `validateDocType.js` in the `middleware` folder.
-- [ ] create tests for `validateDocType` function

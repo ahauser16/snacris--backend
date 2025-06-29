@@ -3,66 +3,86 @@ const bcrypt = require("bcrypt");
 const db = require("../db.js");
 const { BCRYPT_WORK_FACTOR } = require("../config");
 
-const testJobIds = [];
+// Export info about seeded users that tests can rely on
+const seededUsers = {
+  regular: {
+    username: "testuser",
+    password: "password", // The original password before hashing
+    firstName: "Test",
+    lastName: "User",
+    email: "tuser@example.com",
+    isAdmin: false,
+  },
+  admin: {
+    username: "testadmin",
+    password: "password", // The original password before hashing
+    firstName: "Test",
+    lastName: "Admin",
+    email: "tadmin@example.com",
+    isAdmin: true,
+  },
+};
 
 async function commonBeforeAll() {
+  // Clean APPLICATION data only (not reference data or seeded users)
   // noinspection SqlWithoutWhere
-  await db.query("DELETE FROM companies");
+  await db.query("DELETE FROM saved_real_property_master");
   // noinspection SqlWithoutWhere
-  await db.query("DELETE FROM users");
+  await db.query("DELETE FROM saved_personal_property_master");
+  // noinspection SqlWithoutWhere
+  await db.query("DELETE FROM saved_party_names");
+  // noinspection SqlWithoutWhere
+  await db.query("DELETE FROM saved_party_contacts");
+  // noinspection SqlWithoutWhere
+  await db.query("DELETE FROM saved_properties");
+  // noinspection SqlWithoutWhere
+  await db.query("DELETE FROM organization_memberships");
 
-  await db.query(`
-    INSERT INTO companies(handle, name, num_employees, description, logo_url)
-    VALUES ('c1', 'C1', 1, 'Desc1', 'http://c1.img'),
-           ('c2', 'C2', 2, 'Desc2', 'http://c2.img'),
-           ('c3', 'C3', 3, 'Desc3', 'http://c3.img')`);
+  // Clean any temporary test users (but keep seeded testuser/testadmin)
+  await db.query(
+    "DELETE FROM users WHERE username NOT IN ('testuser', 'testadmin')"
+  );
 
-  const resultsJobs = await db.query(`
-    INSERT INTO jobs (title, salary, equity, company_handle)
-    VALUES ('Job1', 100, '0.1', 'c1'),
-           ('Job2', 200, '0.2', 'c1'),
-           ('Job3', 300, '0', 'c1'),
-           ('Job4', NULL, NULL, 'c1')
-    RETURNING id`);
-  testJobIds.splice(0, 0, ...resultsJobs.rows.map(r => r.id));
+  // Create a temporary user specifically for testing SQL insertion
+  await db.query(
+    `
+    INSERT INTO users(username, password, first_name, last_name, email, is_admin)
+    VALUES ($1, $2, 'Temp', 'User', 'temp@test.com', false)`,
+    ["tempnewuser", await bcrypt.hash("temppassword", BCRYPT_WORK_FACTOR)]
+  );
 
-  await db.query(`
-        INSERT INTO users(username,
-                          password,
-                          first_name,
-                          last_name,
-                          email)
-        VALUES ('u1', $1, 'U1F', 'U1L', 'u1@email.com'),
-               ('u2', $2, 'U2F', 'U2L', 'u2@email.com')
-        RETURNING username`,
-      [
-        await bcrypt.hash("password1", BCRYPT_WORK_FACTOR),
-        await bcrypt.hash("password2", BCRYPT_WORK_FACTOR),
-      ]);
-
-  await db.query(`
-        INSERT INTO applications(username, job_id)
-        VALUES ('u1', $1)`,
-      [testJobIds[0]]);
+  console.log(
+    "Test setup: Using seeded users 'testuser', 'testadmin' and created 'tempnewuser'"
+  );
 }
 
 async function commonBeforeEach() {
-  await db.query("BEGIN");
+  await db.query("BEGIN"); // Start a database transaction
 }
 
 async function commonAfterEach() {
-  await db.query("ROLLBACK");
+  await db.query("ROLLBACK"); // Undo any changes made during the test
 }
 
 async function commonAfterAll() {
-  await db.end();
-}
+  // Clean up temporary test user before closing connection
+  try {
+    await db.query("DELETE FROM users WHERE username = 'tempnewuser'");
+  } catch (error) {
+    // Ignore errors if pool is already closed
+    console.log("Note: Could not clean up temp user (pool may be closed)");
+  }
 
+  // Close the database pool only if it hasn't been closed already
+  if (db && db.end && !db.ended) {
+    await db.end();
+  }
+}
 
 module.exports = {
   commonBeforeAll,
   commonBeforeEach,
   commonAfterEach,
   commonAfterAll,
-  testJobIds,
+  seededUsers, // Export seeded user info for tests to use
 };

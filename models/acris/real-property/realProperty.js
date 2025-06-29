@@ -90,8 +90,20 @@ async function saveRealPropertyDocument(username, docInput) {
           document_date, document_amt, recorded_datetime, modified_date,
           reel_yr, reel_nbr, reel_pg, percent_trans, good_through_date)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-       ON CONFLICT (username, document_id) DO UPDATE
-         SET modified_date = EXCLUDED.modified_date
+       ON CONFLICT (username, document_id) DO UPDATE SET
+         record_type = EXCLUDED.record_type,
+         crfn = EXCLUDED.crfn,
+         recorded_borough = EXCLUDED.recorded_borough,
+         doc_type = EXCLUDED.doc_type,
+         document_date = EXCLUDED.document_date,
+         document_amt = EXCLUDED.document_amt,
+         recorded_datetime = EXCLUDED.recorded_datetime,
+         modified_date = EXCLUDED.modified_date,
+         reel_yr = EXCLUDED.reel_yr,
+         reel_nbr = EXCLUDED.reel_nbr,
+         reel_pg = EXCLUDED.reel_pg,
+         percent_trans = EXCLUDED.percent_trans,
+         good_through_date = EXCLUDED.good_through_date
        RETURNING id`,
       [
         username,
@@ -115,10 +127,6 @@ async function saveRealPropertyDocument(username, docInput) {
 
     // helper to batch-insert child arrays
     async function batchInsert(table, rows, columns, clearExisting = false) {
-      console.log(`batchInsert called for table: ${table}`);
-      console.log(`rows:`, JSON.stringify(rows, null, 2));
-      console.log(`columns:`, columns);
-
       // Clear existing records for this master if specified
       if (clearExisting) {
         await client.query(`DELETE FROM ${table} WHERE saved_master_id = $1`, [
@@ -141,9 +149,6 @@ async function saveRealPropertyDocument(username, docInput) {
         .join(", ");
 
       const sql = `INSERT INTO ${table} (${cols}) VALUES ${placeholders} ON CONFLICT DO NOTHING`;
-
-      console.log(`Generated SQL: ${sql}`);
-      console.log(`Values: ${JSON.stringify(vals)}`);
 
       await client.query(sql, vals);
     }
