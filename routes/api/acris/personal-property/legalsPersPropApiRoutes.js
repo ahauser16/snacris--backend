@@ -27,11 +27,11 @@ const router = new express.Router();
  * unit,
  * good_through_date }]
  *
- * Authorization required: none
+ * Authorization required: logged-in user/admin
  *
- * Technical Explanation: This route fetches data from the ACRIS-Personal Property Legals API based on the query parameters provided.  It constructs the URL using URLSearchParams and makes a GET request to the API.  It returns the fetched records.
+ * Technical Explanation: This route fetches data from the ACRIS-Personal Property Legals API based on the query parameters provided. It constructs the URL using URLSearchParams and makes a GET request to the API. It returns the fetched records. This route was used during development for Postman-based API exploration and is deployed in the production application.
  *
- * Use Case: This route is used to fetch data from the the ACRIS-Personal Property Legals API based on user-provided query parameters. The server can then cross-reference this data with other datasets.
+ * Use Case: This route is used to fetch data from the ACRIS-Personal Property Legals API based on user-provided query parameters. The server can then cross-reference this data with other datasets.
  **/
 
 router.get("/fetchRecord", async function (req, res, next) {
@@ -46,9 +46,9 @@ router.get("/fetchRecord", async function (req, res, next) {
 
 /** GET /fetchRecordCount => { count: { legalsRecordCount: number } }
  *
- * Fetch the count of matching records from the ACRIS-Real Property Legals dataset.
+ * Fetch the count of matching records from the ACRIS-Personal Property Legals dataset.
  *
- * Authorization required: none
+ * Authorization required: logged-in user/admin
  */
 
 router.get("/fetchRecordCount", async function (req, res, next) {
@@ -65,13 +65,13 @@ router.get("/fetchRecordCount", async function (req, res, next) {
 
 /** GET /fetchDocIdsCrossRefPartyDocIds => { legalsDocIdsCrossRefParties: [...] }
  *
- * Fetch `document_id` values from the ACRIS-Real Property Legals dataset cross-referenced with Parties dataset.
+ * Fetch `document_id` values from the ACRIS-Personal Property Legals dataset cross-referenced with Parties dataset.
  *
  * Expects `partiesDocIdsCrossRefMaster` to be passed as a JSON array in the query.
  *
  * Returns [{ document_id }]
  *
- * Authorization required: none
+ * Authorization required: logged-in user/admin
  */
 router.get("/fetchDocIdsCrossRefPartyDocIds", async function (req, res, next) {
   try {

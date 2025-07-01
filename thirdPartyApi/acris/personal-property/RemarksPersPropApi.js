@@ -168,6 +168,11 @@ class RemarksPersPropApi {
       return null;
     }
   }
+
+  // Alias method for consistency with other Personal Property API classes
+  static async fetchFromAcris(queryParams) {
+    return await this.fetchAcrisRecords(queryParams);
+  }
 }
 
 module.exports = RemarksPersPropApi;

@@ -260,6 +260,19 @@ class MasterPersPropApi {
       );
     }
   }
+
+  // Alias methods for route compatibility
+  static async fetchFromAcris(query) {
+    return this.fetchAcrisRecords(query);
+  }
+
+  static async fetchCountFromAcris(query) {
+    return this.fetchAcrisRecordCount(query);
+  }
+
+  static async fetchDocIdsFromAcris(query) {
+    return this.fetchAcrisDocumentIds(query);
+  }
 }
 
 module.exports = MasterPersPropApi;

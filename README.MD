@@ -4,7 +4,166 @@
 
 **Database Connection Pooling & Test Suite Improvements:**
 
-- **RESOLVED: Intermittent SASL connection errors** - Migrated from `pg.Client` to `pg.Pool` for reliable database connections
+- \*\*RES## WALKTHROUGH
+
+SNACRIS provides a streamlined experience for accessing NYC property records. Here's a detailed user flow from the frontend perspective:
+
+### User registers & logs in
+
+1. **Registration Process**:
+
+   - Navigate to the SNACRIS homepage at https://snacris.nyc
+   - Click the "Register" button in the top navigation
+   - Complete the registration form with:
+     - Username (unique identifier)
+     - Password (with confirmation)
+     - First and last name
+     - Email address
+   - Click "Create Account"
+   - The system creates your account and automatically logs you in
+
+2. **Login Process (for returning users)**:
+   - Navigate to the SNACRIS homepage
+   - Click the "Login" button
+   - Enter your username and password
+   - Click "Sign In"
+   - The system authenticates you and redirects to your personalized dashboard
+
+### User searches for a property's borough, block and lot using street address parameters.
+
+> KEEP IN MIND ACRIS DATA DOES NOT ALWAYS MATCH GOOGLE MAPS DATA SO I SUGGEST USING THE ADDRESSES BELOW UNLESS YOU WANT TO TRY USING ADDRESSES FROM GOOGLE.
+
+1. **Accessing the Address Search**:
+
+   - From the dashboard, click the "Search by Address" option in the main navigation
+   - The address search form appears with fields for street number, street name, and borough
+
+2. **Entering Address Information**:
+
+   - Enter one of these verified test addresses:
+     - 624 EAST 16 STREET, Brooklyn
+     - 1424 Avenue J, Brooklyn
+     - 19 Old Fulton St, Brooklyn
+   - Select "Brooklyn" from the borough dropdown menu
+   - Click the "Search" button
+
+3. **Viewing Search Results**:
+
+   - The system queries the NYC ACRIS database and returns matching properties
+   - Results display in a clean table format showing:
+     - Borough-Block-Lot (BBL) identifier
+     - Property type
+     - Street address details
+     - Unit information (if applicable)
+     - Air/subterranean rights indicators
+
+4. **Result Interpretation**:
+   - The BBL identifier is displayed prominently (e.g., Borough: 3, Block: 6718, Lot: 48)
+   - Property characteristics are shown with clear labels
+   - If multiple matches exist, they are listed in order of relevance
+
+### Once BBL is obtained, user can view that data and click the "Search By BBL" button which will take them to the "Search By Parcel" page.
+
+1. **BBL Search Transition**:
+
+   - From the address search results, identify the desired property's BBL
+   - Click the "Search By BBL" button adjacent to the property listing
+   - The system transitions to the Parcel Search page with the BBL pre-populated
+
+2. **Parcel Search Form**:
+
+   - The form displays with the Borough, Block, and Lot fields already filled
+   - Additional options appear:
+     - Optional Unit field for condominium searches
+     - Document Class dropdown menu
+     - Date Range selectors
+     - Record Type filters
+
+3. **Refining the Parcel Search**:
+   - Leave the BBL information as is
+   - Select optional filters if desired:
+     - Choose a document class (e.g., "All Classes" for comprehensive results)
+     - Set a date range if looking for specific time periods
+   - Click "Search" to execute the parcel search
+
+### User can search for deed information by choosing "DEEDS & OTHER CONVEYANCES" from the DOCUMENT CLASS dropdown menu and then choose "DEED" from the DOCUMENT TYPE dropdown menu and then click submit.
+
+1. **Specifying Document Types**:
+
+   - In the Document Class dropdown, select "DEEDS & OTHER CONVEYANCES"
+   - Notice that the Document Type dropdown updates with relevant options
+   - Select "DEED" from the Document Type dropdown
+   - Verify the Borough is still correct (e.g., "Brooklyn")
+   - Ensure the BBL information is accurate
+   - Click "Submit" to execute the search
+
+2. **Search Processing**:
+
+   - The system displays a loading indicator
+   - Behind the scenes, it queries multiple ACRIS datasets:
+     - Master records for deed transactions
+     - Legal property descriptions
+     - Party information (buyers/sellers)
+     - Document references
+     - Remarks and notes
+
+3. **Results Overview**:
+   - Search results appear as a list of document IDs with summary information:
+     - Document ID (16-character identifier)
+     - Document Type (DEED)
+     - Recorded Date
+     - Parties involved (typically Grantor/Grantee)
+     - Amount (if applicable)
+   - Results are sorted by recorded date (newest first)
+
+### The user can then browse the documents by selecting the DOCUMENT ID from a selection menu. While viewing a document the user can SAVE a document's data or view DOCUMENT DETAIL or VIEW DOCUMENT in ACRIS.
+
+1. **Document Selection**:
+
+   - From the search results list, click on a Document ID to view details
+   - The system loads a comprehensive document view with five key sections:
+     - Master Record (transaction details)
+     - Parties (individuals/organizations involved)
+     - Property Details (legal description)
+     - References (related documents)
+     - Remarks (additional notes)
+
+2. **Document Interaction Options**:
+
+   - Three primary action buttons appear with each document:
+     - **SAVE** - Saves the complete document to your personal SNACRIS account
+     - **DOCUMENT DETAIL** - Expands to show all available metadata and fields
+     - **VIEW IN ACRIS** - Opens the official NYC ACRIS website view in a new tab
+
+3. **Saving a Document**:
+
+   - Click the "SAVE" button to add the document to your collection
+   - A confirmation appears: "Document successfully saved to your account"
+   - The saved document is now accessible from your user dashboard under "Saved Documents"
+
+4. **Viewing Document Details**:
+
+   - Click "DOCUMENT DETAIL" to expand all sections
+   - Master Record shows the transaction date, amount, type, and identifiers
+   - Parties section lists all entities involved with their roles and contact information
+   - Property Details shows the legal description including borough, block, lot, and unit
+   - References section displays links to related documents
+   - Remarks section shows any additional notes or comments
+
+5. **Exploring in ACRIS**:
+
+   - Click "VIEW IN ACRIS" to open the NYC government ACRIS page
+   - Compare the SNACRIS simplified view with the original government interface
+   - Use ACRIS for downloading official PDF copies of documents if needed
+
+6. **Additional Features**:
+   - Use the breadcrumb navigation to return to search results
+   - Click on party names to search for other documents with the same party
+   - Use the "Back to Search" button to initiate a new search
+   - Access your saved documents anytime from the user dashboard
+
+This walkthrough demonstrates how SNACRIS simplifies the complex process of NYC property research, allowing users to find, view, and save property documents with an intuitive, user-friendly interface.rmittent SASL connection errors\*\* - Migrated from `pg.Client` to `pg.Pool` for reliable database connections
+
 - **Enhanced test reliability** - All 194 tests now pass consistently across 17 test suites
 - **Environment-aware pooling** - Optimized connection settings for test (5), development (10), and production (20 connections)
 - **Supabase compatibility** - Connection pooling works seamlessly with hosted database environments
@@ -14,8 +173,32 @@
 
 - [snacris server (backend)](#snacris-server-backend)
   - [Recent Changes (June 2025)](#recent-changes-june-2025)
-- [How to run the application](#how-to-run-the-application)
-  - [Prerequisites](#prerequisites)
+    - [User registers \& logs in](#user-registers--logs-in)
+    - [User searches for a property's borough, block and lot using street address parameters.](#user-searches-for-a-propertys-borough-block-and-lot-using-street-address-parameters)
+    - [Once BBL is obtained, user can view that data and click the "Search By BBL" button which will take them to the "Search By Parcel" page.](#once-bbl-is-obtained-user-can-view-that-data-and-click-the-search-by-bbl-button-which-will-take-them-to-the-search-by-parcel-page)
+    - [User can search for deed information by choosing "DEEDS \& OTHER CONVEYANCES" from the DOCUMENT CLASS dropdown menu and then choose "DEED" from the DOCUMENT TYPE dropdown menu and then click submit.](#user-can-search-for-deed-information-by-choosing-deeds--other-conveyances-from-the-document-class-dropdown-menu-and-then-choose-deed-from-the-document-type-dropdown-menu-and-then-click-submit)
+    - [The user can then browse the documents by selecting the DOCUMENT ID from a selection menu. While viewing a document the user can SAVE a document's data or view DOCUMENT DETAIL or VIEW DOCUMENT in ACRIS.](#the-user-can-then-browse-the-documents-by-selecting-the-document-id-from-a-selection-menu-while-viewing-a-document-the-user-can-save-a-documents-data-or-view-document-detail-or-view-document-in-acris)
+- [CAPSTONE REQUIREMENTS](#capstone-requirements)
+  - [The title of your site and a link to the URL where it is deployed](#the-title-of-your-site-and-a-link-to-the-url-where-it-is-deployed)
+  - [Website Description \& Features](#website-description--features)
+  - [List the features you implemented and explain why you chose those features to implement](#list-the-features-you-implemented-and-explain-why-you-chose-those-features-to-implement)
+    - [User authentication](#user-authentication)
+    - [Real Property Record save feature to database](#real-property-record-save-feature-to-database)
+  - [`jest` tests](#jest-tests)
+  - [WALKTHROUGH](#walkthrough)
+    - [User registers \& logs in](#user-registers--logs-in-1)
+    - [User searches for a property’s borough, block and lot using street address parameters.](#user-searches-for-a-propertys-borough-block-and-lot-using-street-address-parameters-1)
+    - [Once BBL is obtained, user can view that data and click the “Search By BBL” button which will take them to the “Search By Parcel” page.](#once-bbl-is-obtained-user-can-view-that-data-and-click-the-search-by-bbl-button-which-will-take-them-to-the-search-by-parcel-page-1)
+    - [User can search for deed information by choosing “DEEDS \& OTHER CONVEYANCES” from the DOCUMENT CLASS dropdown menu and then choose “DEED” from the DOCUMENT TYPE dropdown menu and then click submit.](#user-can-search-for-deed-information-by-choosing-deeds--other-conveyances-from-the-document-class-dropdown-menu-and-then-choose-deed-from-the-document-type-dropdown-menu-and-then-click-submit-1)
+    - [The user can then browse the documents by selecting the DOCUMENT ID from a selection menu. While viewing a document the user can SAVE a document’s data or view DOCUMENT DETAIL or VIEW DOCUMENT in ACRIS.](#the-user-can-then-browse-the-documents-by-selecting-the-document-id-from-a-selection-menu-while-viewing-a-document-the-user-can-save-a-documents-data-or-view-document-detail-or-view-document-in-acris-1)
+  - [Keep the API in there, and if you have anything to say about the API then add some notes. If you have created your own API, please document the process.](#keep-the-api-in-there-and-if-you-have-anything-to-say-about-the-api-then-add-some-notes-if-you-have-created-your-own-api-please-document-the-process)
+  - [Identify the technology stack used to create your website](#identify-the-technology-stack-used-to-create-your-website)
+    - [Backend Technologies](#backend-technologies)
+    - [Development \& Testing Tools](#development--testing-tools)
+    - [DevOps \& Deployment](#devops--deployment)
+    - [Security Features](#security-features)
+    - [Architecture Patterns](#architecture-patterns)
+  - [How to run the application](#how-to-run-the-application)
   - [Environment Setup](#environment-setup)
     - [1. Install Dependencies](#1-install-dependencies)
     - [2. Database Setup](#2-database-setup)
@@ -47,9 +230,139 @@
       - [**Using SNACRIS: Property Search Experience**](#using-snacris-property-search-experience)
       - [**Behind the Scenes: System Architecture**](#behind-the-scenes-system-architecture)
 
-# How to run the application
+# CAPSTONE REQUIREMENTS
 
-## Prerequisites
+## The title of your site and a link to the URL where it is deployed
+
+https://snacris.nyc/
+
+## Website Description & Features
+
+SNACRIS (Simplified NYC ACRIS) is a modern, user-friendly interface to New York City's Automated City Register Information System (ACRIS) property records database. It provides multiple powerful ways to search, explore, and save NYC property records:
+
+1. **Search by Address** - Find property information by entering a street address. Simply enter the street number and name, and SNACRIS will locate the property and provide its Borough-Block-Lot (BBL) identifier, unit information, and property characteristics.
+
+2. **Search by Document ID/CRFN** - Look up specific property documents using either a Document ID or City Register File Number (CRFN). This retrieves the complete record with all related information, including parties, property details, and document references.
+
+3. **Search by Document Type** - Find property records by document classification (deeds, mortgages, liens, etc.) and specific document types. Filter results by date range and borough to narrow your search to exactly what you need.
+
+4. **Search by Parcel (BBL)** - Retrieve all records associated with a specific property using its Borough-Block-Lot identifier. This search can include unit-specific information and allows filtering by document class and date range.
+
+5. **Search by Party Name** - Find property records by searching for individuals or organizations involved in property transactions. Search results can be filtered by party type (buyer/seller, borrower/lender), date range, and borough.
+
+6. **Search by Reel & Page** - Access legacy pre-ACRIS records using traditional reel and page references. This search requires the borough, reel year, reel number, and page number.
+
+7. **Search by UCC/Federal Lien Number** - Find Uniform Commercial Code (UCC) filings and federal liens using file numbers. This search focuses on personal property records rather than real property.
+
+Each search returns comprehensive property information that can be saved to your account for future reference. SNACRIS streamlines what was once a complex process, making NYC property research accessible to everyone from real estate professionals to curious homeowners.
+
+## List the features you implemented and explain why you chose those features to implement
+
+### User authentication
+
+### Real Property Record save feature to database
+
+SNACRIS offers a powerful document management system that allows users to save and organize property records for future reference. This feature transforms SNACRIS from a simple search tool into a comprehensive research platform:
+
+**For Regular Users:**
+
+- **Save Important Documents** - When you find a valuable property record during your search, you can save the entire document (with all its details) to your personal account with a single click.
+- **Build Your Document Library** - View all your saved property documents in one place, creating your own personalized collection of NYC property records.
+- **Quick Access to Specific Documents** - Retrieve any saved document instantly by its Document ID without having to search again.
+- **Document Management** - Remove documents from your collection when you no longer need them.
+
+**For Advanced Research:**
+
+- **Compare Historical Records** - Save multiple documents related to a property to track its history and changes in ownership over time.
+- **Create Project Collections** - Save sets of related documents for specific research projects or property investigations.
+- **Export Capability** - Access your saved data for use in reports, presentations, or other applications.
+
+**For Administrators:**
+
+- **User Support** - Administrators can assist users by accessing, managing, and troubleshooting their saved document collections.
+- **Data Management** - System administrators have tools to maintain data integrity across all user accounts.
+
+This feature addresses a key pain point in property research: the need to repeatedly search for the same documents across multiple sessions. With SNACRIS's save feature, users can build a personalized library of property records that persist across sessions, streamlining their workflow and making complex property research more efficient.
+
+## `jest` tests
+
+see [Backend/TESTING.MD](Backend/TESTING.MD) for more details.
+
+## WALKTHROUGH
+
+### User registers & logs in
+
+### User searches for a property’s borough, block and lot using street address parameters.
+
+KEEP IN MIND ACRIS DATA DOES NOT ALWAYS MATCH GOOGLE MAPS DATA SO I SUGGEST USING THE ADDRESSES BELOW UNLESS YOU WANT TO USE TRY USING ADDRESSES FROM GOOGLE.
+
+624 EAST 16 STREET, Brooklyn
+1424 Avenue J, Brooklyn
+19 Old Fulton St, Brooklyn
+
+### Once BBL is obtained, user can view that data and click the “Search By BBL” button which will take them to the “Search By Parcel” page.
+
+### User can search for deed information by choosing “DEEDS & OTHER CONVEYANCES” from the DOCUMENT CLASS dropdown menu and then choose “DEED” from the DOCUMENT TYPE dropdown menu and then click submit.
+
+### The user can then browse the documents by selecting the DOCUMENT ID from a selection menu. While viewing a document the user can SAVE a document’s data or view DOCUMENT DETAIL or VIEW DOCUMENT in ACRIS.
+
+## Keep the API in there, and if you have anything to say about the API then add some notes. If you have created your own API, please document the process.
+
+## Identify the technology stack used to create your website
+
+SNACRIS is built using a modern, robust technology stack that ensures reliability, performance, and maintainability:
+
+### Backend Technologies
+
+- **Node.js (v22+)** - JavaScript runtime for building the server-side application
+- **Express.js** - Web framework for creating RESTful API endpoints and handling HTTP requests
+- **PostgreSQL** - Relational database for storing user data, saved documents, and application settings
+- **pg & pg.Pool** - PostgreSQL client with connection pooling for efficient database interactions
+- **JSON Schema** - For request validation and data integrity enforcement
+- **JWT (JSON Web Tokens)** - Secure authentication mechanism for user sessions
+- **bcrypt** - Industry-standard password hashing for user security
+- **axios** - HTTP client for making requests to external APIs (NYC ACRIS)
+
+### Development & Testing Tools
+
+- **Jest** - Testing framework for unit and integration testing
+- **Supertest** - HTTP assertions for API endpoint testing
+- **nodemon** - Development server with auto-restart capability
+- **dotenv** - Environment variable management for different deployment contexts
+- **morgan** - HTTP request logger middleware for debugging and monitoring
+
+### DevOps & Deployment
+
+- **Render** - Cloud hosting platform for backend deployment
+- **Supabase** - Hosted PostgreSQL database service for production
+- **Continuous Integration** - Automated testing workflow via GitHub Actions
+- **Git/GitHub** - Version control and code collaboration
+
+### Security Features
+
+- **CORS Protection** - Configured to allow only specific origins
+- **Input Validation** - Schema-based validation for all incoming requests
+- **Authentication Middleware** - Route protection with role-based access control
+- **Error Handling** - Comprehensive error management with appropriate HTTP status codes
+- **Environment Isolation** - Separate configurations for development, testing, and production
+
+### Architecture Patterns
+
+- **Model-View-Controller (MVC)** - Separation of concerns for maintainable codebase
+- **RESTful API Design** - Consistent and predictable API endpoints
+- **Middleware Chaining** - For request processing, authentication, and logging
+- **Repository Pattern** - Abstracts database operations from business logic
+- **Connection Pooling** - Optimized database connections for scalability
+
+This technology stack was chosen to provide a balance of developer productivity, application performance, and code maintainability while ensuring a secure and reliable experience for end users.
+
+---
+
+---
+
+---
+
+## How to run the application
 
 Before running the SNACRIS backend server, ensure you have:
 

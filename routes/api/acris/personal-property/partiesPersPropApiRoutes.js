@@ -25,7 +25,11 @@ const router = new express.Router();
  * good_through_date
  * }]
  *
- * Authorization required: yes
+ * Authorization required: logged-in user/admin
+ *
+ * Technical Explanation: This route was used during development with Postman for API exploration and learning purposes, and is now used in the deployed application by logged-in users. It fetches data from the ACRIS Personal Property Parties API based on the query parameters provided.
+ *
+ * Use Case: This route is used to fetch data from the ACRIS Personal Property Parties API based on user-provided query parameters. The server can then cross-reference this data with other datasets for both development testing and production functionality.
  */
 router.get("/fetchRecord", async function (req, res, next) {
   try {
@@ -45,7 +49,11 @@ router.get("/fetchRecord", async function (req, res, next) {
  *
  * Returns [{ document_id }]
  *
- * Authorization required: yes
+ * Authorization required: logged-in user/admin
+ *
+ * Technical Explanation: This route was used during development with Postman for API exploration and learning purposes, and is now used in the deployed application by logged-in users. It fetches cross-referenced document IDs from the ACRIS Personal Property Parties API.
+ *
+ * Use Case: This route enables cross-referencing between Personal Property Parties and Master datasets for both development testing and production functionality.
  */
 router.get("/fetchDocIdsCrossRefMasterDocIds", async function (req, res, next) {
   try {
@@ -68,7 +76,11 @@ router.get("/fetchDocIdsCrossRefMasterDocIds", async function (req, res, next) {
  *
  * Fetch the count of matching records from the ACRIS-Personal Property Parties dataset.
  *
- * Authorization required: yes
+ * Authorization required: logged-in user/admin
+ *
+ * Technical Explanation: This route was used during development with Postman for API exploration and learning purposes, and is now used in the deployed application by logged-in users. It fetches the count of matching records from the ACRIS Personal Property Parties API.
+ *
+ * Use Case: This route is used to determine the number of records that match specific search criteria before fetching full data for both development testing and production functionality.
  */
 router.get("/fetchRecordCount", async function (req, res, next) {
   try {
@@ -86,7 +98,11 @@ router.get("/fetchRecordCount", async function (req, res, next) {
  *
  * Fetch the `document_id` values associated with the matching records from the ACRIS-Personal Property Parties dataset.
  *
- * Authorization required: yes
+ * Authorization required: logged-in user/admin
+ *
+ * Technical Explanation: This route was used during development with Postman for API exploration and learning purposes, and is now used in the deployed application by logged-in users. It fetches document IDs from the ACRIS Personal Property Parties API.
+ *
+ * Use Case: This route is used to retrieve document IDs for cross-referencing with other ACRIS datasets for both development testing and production functionality.
  */
 
 router.get("/fetchDocIds", async function (req, res, next) {

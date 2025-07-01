@@ -13,21 +13,21 @@ const router = new express.Router();
  *
  * Returns [{ document_id, record_type, crfn, doc_id_ref, file_nbr, good_through_date }]
  *
- * Authorization required: none
- * 
- * Technical Explanation: This route fetches data from the ACRIS-Real Property Remarks API based on the query parameters provided.  It constructs the URL using URLSearchParams and makes a GET request to the API.  It returns the fetched records.
- * 
- * Use Case: This route is used to fetch data from the the ACRIS-Real Property Remarks API based on user-provided query parameters. The server can then cross-reference this data with other datasets.
+ * Authorization required: logged-in user/admin
+ *
+ * Technical Explanation: This route was used during development with Postman for API exploration and learning purposes, and is now used in the deployed application by logged-in users. It fetches data from the ACRIS Personal Property Remarks API based on the query parameters provided.
+ *
+ * Use Case: This route is used to fetch data from the ACRIS Personal Property Remarks API based on user-provided query parameters. The server can then cross-reference this data with other datasets for both development testing and production functionality.
  **/
 
 router.get("/fetchRecord", async function (req, res, next) {
-    try {
-        const query = req.query;
-        const records = await RemarksPersPropApi.fetchFromAcris(query);
-        return res.json({ records });
-    } catch (err) {
-        return next(err);
-    }
+  try {
+    const query = req.query;
+    const records = await RemarksPersPropApi.fetchFromAcris(query);
+    return res.json({ records });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 module.exports = router;
