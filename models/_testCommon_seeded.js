@@ -21,8 +21,6 @@ async function commonBeforeAll() {
 
   // Create test organizations only if needed for specific tests
   // (or use the 3 seeded organizations)
-
-  console.log("Test setup: Using seeded users 'testuser' and 'testadmin'");
 }
 
 async function commonBeforeEach() {

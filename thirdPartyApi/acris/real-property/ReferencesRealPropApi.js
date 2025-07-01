@@ -20,7 +20,7 @@ class ReferencesRealPropApi {
             }
             return data;
         } catch (err) {
-            console.error("Error fetching records from Real Property References API:", err.message);
+            
             throw new Error("Failed to fetch records from Real Property References API");
         }
     }
@@ -38,7 +38,7 @@ class ReferencesRealPropApi {
             }
             return Number(data[0].count);
         } catch (err) {
-            console.error("Error fetching record count from Real Property References API:", err.message);
+            
             throw new Error("Failed to fetch record count from Real Property References API");
         }
     }
@@ -56,7 +56,7 @@ class ReferencesRealPropApi {
             }
             return data.map(record => record.document_id);
         } catch (err) {
-            console.error("Error fetching document IDs from Real Property References API:", err.message);
+            
             throw new Error("Failed to fetch document IDs from Real Property References API");
         }
     }
@@ -88,7 +88,7 @@ class ReferencesRealPropApi {
             }
             return Array.from(allDocumentIds);
         } catch (err) {
-            console.error("Error fetching document IDs from Real Property References API:", err.message);
+            
             throw new Error("Failed to fetch document IDs from Real Property References API");
         }
     }
@@ -104,7 +104,7 @@ class ReferencesRealPropApi {
                 let hasMoreRecords = true;
                 while (hasMoreRecords) {
                     const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "ReferencesRealPropApi", batch, limit, offset);
-                    console.log(url, "ReferencesRealPropApi.fetchAcrisRecordsByDocumentIds url");
+                    
                     const headers = {
                         "Content-Type": "application/json",
                         "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -120,10 +120,10 @@ class ReferencesRealPropApi {
                 }
             }
 
-            //console.log(allRecords, "MasterRealPropApi.fetchAcrisRecordsByDocumentIds returns allRecords");
+            //
             return allRecords.length ? allRecords : null;
         } catch (err) {
-            console.error("Error fetching records by document IDs:", err.message);
+            
             return null;
         }
     }

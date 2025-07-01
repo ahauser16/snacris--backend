@@ -20,10 +20,7 @@ class PartiesRealPropApi {
         "PartiesRealPropApi",
         "records"
       );
-      console.log(
-        "'/fetchAcrisRecords(partiesQueryParams)' calls 'SoqlUrl.constructUrl' creating:",
-        url
-      );
+
       const headers = {
         "Content-Type": "application/json",
         "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -32,11 +29,6 @@ class PartiesRealPropApi {
       const { data } = await axios.get(url, { headers });
 
       if (!Array.isArray(data) || !data.length) {
-        console.warn(
-          `No records found for query: ${JSON.stringify(
-            partiesQueryParams
-          )} from Real Property Parties API`
-        );
         throw new NotFoundError(
           "No records found for the given query from Real Property Parties API."
         );
@@ -49,10 +41,7 @@ class PartiesRealPropApi {
         throw err;
       }
       // Otherwise, wrap other errors (network errors, etc.)
-      console.error(
-        "Error fetching records from Real Property Parties API:",
-        err.message
-      );
+
       throw new Error("Failed to fetch records from Real Property Parties API");
     }
   }
@@ -70,10 +59,7 @@ class PartiesRealPropApi {
         "PartiesRealPropApi",
         "countAll"
       );
-      console.log(
-        "'/fetchAcrisRecordCount(partiesQueryParams)' calls 'SoqlUrl.constructUrl' creating:",
-        url
-      );
+
       const headers = {
         "Content-Type": "application/json",
         "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -82,11 +68,6 @@ class PartiesRealPropApi {
       const { data } = await axios.get(url, { headers });
 
       if (!Array.isArray(data) || !data.length || !data[0]?.count) {
-        console.warn(
-          `No count data found for query: ${JSON.stringify(
-            partiesQueryParams
-          )} from Real Property Parties API`
-        );
         throw new NotFoundError(
           "No count data found for the given query from Real Property Parties API."
         );
@@ -99,10 +80,7 @@ class PartiesRealPropApi {
         throw err;
       }
       // Otherwise, wrap other errors (network errors, etc.)
-      console.error(
-        "Error fetching record count from Real Property Parties API:",
-        err.message
-      );
+
       throw new Error(
         "Failed to fetch record count from Real Property Parties API"
       );
@@ -123,10 +101,7 @@ class PartiesRealPropApi {
         "PartiesRealPropApi",
         "document_id"
       );
-      console.log(
-        "'/fetchAcrisDocumentIds(partiesQueryParams)' calls 'SoqlUrl.constructUrl' creating:",
-        url
-      );
+
       const headers = {
         "Content-Type": "application/json",
         "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -135,11 +110,6 @@ class PartiesRealPropApi {
       const { data } = await axios.get(url, { headers });
 
       if (!Array.isArray(data) || !data.length) {
-        console.warn(
-          `No document IDs found for query for partiesQueryParams: ${JSON.stringify(
-            partiesQueryParams
-          )} from Real Property Parties API`
-        );
         throw new NotFoundError(
           "No document IDs found for the given query from Real Property Parties API."
         );
@@ -152,10 +122,7 @@ class PartiesRealPropApi {
         throw err;
       }
       // Otherwise, wrap other errors (network errors, etc.)
-      console.error(
-        "'fetchAcrisDocumentIds' related error fetching document IDs from Real Property Parties API:",
-        err.message
-      );
+
       throw new Error(
         "Failed to fetch document IDs from PartiesRealPropApi.fetchAcrisDocumentIds"
       );
@@ -182,12 +149,6 @@ class PartiesRealPropApi {
         masterRecordsDocumentIds,
         "PartiesRealPropApi",
         batchSize
-      );
-      console.log(
-        "PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef creates URLs: ",
-        queryUrls[0],
-        "PartiesRealPropApi queryUrls",
-        `queryUrls.length: ${queryUrls.length}`
       );
 
       const allDocumentIds = new Set();
@@ -222,7 +183,6 @@ class PartiesRealPropApi {
 
       return Array.from(allDocumentIds);
     } catch (err) {
-      //console.error("'fetchAcrisDocumentIdsCrossRef' related error fetching document IDs from Real Property Parties API:", err.message);
       throw new Error(
         "Failed to fetch document IDs from PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef"
       );
@@ -257,10 +217,7 @@ class PartiesRealPropApi {
             limit,
             offset
           );
-          console.log(
-            url,
-            "PartiesRealPropApi.fetchAcrisRecordsByDocumentIds url"
-          );
+
           const headers = {
             "Content-Type": "application/json",
             "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -276,10 +233,8 @@ class PartiesRealPropApi {
         }
       }
 
-      //console.log(allRecords, "MasterRealPropApi.fetchAcrisRecordsByDocumentIds returns allRecords");
       return allRecords.length ? allRecords : null;
     } catch (err) {
-      console.error("Error fetching records by document IDs:", err.message);
       return null;
     }
   }

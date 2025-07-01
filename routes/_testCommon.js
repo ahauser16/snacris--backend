@@ -50,7 +50,6 @@ async function commonBeforeAll() {
     "DELETE FROM users WHERE username NOT IN ('testuser', 'testadmin')"
   );
 
-  console.log("Route tests: Using seeded users 'testuser' and 'testadmin'");
 }
 
 async function commonBeforeEach() {

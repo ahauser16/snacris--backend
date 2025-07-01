@@ -58,8 +58,6 @@ https://data.cityofnewyork.us/resource/bnx9-e6tj.json?$where=document_id='202406
 
 1. SoQL queries can handle everything that simple filters can, but they require more complex syntax and understanding of the SoQL language.
 
-## ADD NEW DOCUMENTATION HERE
-
 ## ThirdPartyApi Folder Structure
 
 The `thirdPartyApi/` directory contains all external API integration modules, primarily focused on NYC's ACRIS (Automated City Register Information System) and Socrata API interactions. This folder is organized to handle different types of property records and code mappings from the ACRIS system.
@@ -113,27 +111,111 @@ Specialized utility functions for ACRIS API operations:
 - **`SoqlUrl.js`** - Construct SoQL (Socrata Query Language) URLs with proper encoding and parameters
 - **`SoqlUrl.test.js`** - Unit tests for SoQL URL construction
 
-### API Architecture Patterns
+## API Architecture Patterns
 
-#### Data Flow
+## Cross Referencing Result Data via GET Requests to ACRIS APIs
+
+The ACRIS API cross-referencing system implements a sophisticated multi-stage querying pattern that enables complex property record searches by chaining API calls through shared `document_id` values. This approach allows the system to narrow down search results progressively, combining criteria from multiple ACRIS datasets to arrive at precise, targeted results that meet all specified search parameters.
+
+The cross-referencing process follows a sequential filtering methodology where each API call uses the `document_id` results from the previous call as input parameters, effectively creating an intersection of records that satisfy all search criteria. This pattern is essential because ACRIS data is distributed across multiple specialized datasets (Master, Parties, Legals, References, and Remarks), and each dataset contains different types of information that must be correlated through the shared `document_id` field.
+
+## `queryAcrisPartyName.js`
+
+```mermaid
+sequenceDiagram
+    participant USER as USER(FRONTEND)
+    participant SERVER as SERVER
+    participant MasterApi as MasterRealPropApi
+    participant PartiesApi as PartiesRealPropApi
+    participant LegalsApi as LegalsRealPropApi
+    participant ReferencesApi as ReferencesRealPropApi
+    participant RemarksApi as RemarksRealPropApi
+
+    Note over USER, RemarksApi: ACRIS Cross-Referencing Workflow (queryAcrisPartyName.js)
+
+    USER->>SERVER: POST /queryAcrisPartyName/fetchRecord
+    Note right of USER: Search Parameters:<br/>- masterSearchTerms<br/>- partySearchTerms<br/>- legalsSearchTerms
+
+    Note over SERVER: Stage 1: Master Records Query
+    SERVER->>MasterApi: fetchAcrisDocumentIds(masterParams)
+    Note right of MasterApi: Query by doc_type,<br/>recorded_date_range, etc.
+    MasterApi-->>SERVER: Array of document_ids (Master)
+
+    Note over SERVER: Stage 2: Parties Cross-Reference
+    SERVER->>PartiesApi: fetchAcrisDocumentIdsCrossRef(partyParams, masterIds)
+    Note right of PartiesApi: Filter by party name,<br/>party_type + masterIds
+    PartiesApi-->>SERVER: Filtered document_ids (Parties)
+
+    Note over SERVER: Stage 3: Legals Cross-Reference
+    SERVER->>LegalsApi: fetchAcrisDocumentIdsCrossRef(legalParams, partyIds)
+    Note right of LegalsApi: Filter by borough +<br/>partyIds
+    LegalsApi-->>SERVER: Final filtered document_ids (Legals)
+
+    Note over SERVER: Stage 4: Parallel Full Record Retrieval
+    par Fetch Master Records
+        SERVER->>MasterApi: fetchAcrisRecordsByDocumentIds(finalIds)
+        MasterApi-->>SERVER: Complete Master Records
+    and Fetch Party Records
+        SERVER->>PartiesApi: fetchAcrisRecordsByDocumentIds(finalIds)
+        PartiesApi-->>SERVER: Complete Party Records
+    and Fetch Legal Records
+        SERVER->>LegalsApi: fetchAcrisRecordsByDocumentIds(finalIds)
+        LegalsApi-->>SERVER: Complete Legal Records
+    and Fetch Reference Records
+        SERVER->>ReferencesApi: fetchAcrisRecordsByDocumentIds(finalIds)
+        ReferencesApi-->>SERVER: Complete Reference Records
+    and Fetch Remark Records
+        SERVER->>RemarksApi: fetchAcrisRecordsByDocumentIds(finalIds)
+        RemarksApi-->>SERVER: Complete Remark Records
+    end
+
+    Note over SERVER: Stage 5: Result Aggregation & Response Assembly
+    SERVER->>SERVER: Aggregate records by document_id
+    SERVER-->>USER: JSON Response with complete property records
+    Note left of SERVER: Response includes:<br/>- masterRecords<br/>- partyRecords<br/>- legalsRecords<br/>- referencesRecords<br/>- remarksRecords
+```
+
+### Implementation Example: Party Name Search (`queryAcrisPartyName.js`)
+
+The `queryAcrisPartyName.js` route demonstrates the complete cross-referencing workflow through a five-stage process that progressively narrows search results:
+
+**Stage 1: Master Records Query** - The process begins by querying the Master Real Property API (`MasterRealPropApi.fetchAcrisDocumentIds()`) using master search parameters such as document type, document class, and recorded date ranges. This initial query establishes the universe of property transactions that match the basic criteria and returns an array of `document_id` values representing eligible transactions.
+
+**Stage 2: Parties Cross-Reference** - The system then queries the Parties Real Property API (`PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef()`) using both the party search parameters (such as party name and party type) and the `document_id` array from Stage 1. This cross-reference operation identifies which of the Master records also contain parties that match the specified criteria, returning a refined array of `document_id` values that satisfy both Master and Parties conditions.
+
+**Stage 3: Legals Cross-Reference** - Next, the Legals Real Property API (`LegalsRealPropApi.fetchAcrisDocumentIdsCrossRef()`) is queried using the legal search parameters (such as borough specifications) and the `document_id` array from Stage 2. This further narrows the results to include only those transactions that also meet the legal/geographical criteria, producing a final filtered array of `document_id` values.
+
+**Stage 4: Parallel Full Record Retrieval** - With the final filtered `document_id` array established, the system performs parallel API calls to all five ACRIS datasets (`MasterRealPropApi.fetchAcrisRecordsByDocumentIds()`, `PartiesRealPropApi.fetchAcrisRecordsByDocumentIds()`, `LegalsRealPropApi.fetchAcrisRecordsByDocumentIds()`, `ReferencesRealPropApi.fetchAcrisRecordsByDocumentIds()`, and `RemarksRealPropApi.fetchAcrisRecordsByDocumentIds()`) to retrieve complete record details for each `document_id` in the final result set.
+
+**Stage 5: Result Aggregation and Response Assembly** - Finally, the system aggregates all retrieved records by `document_id`, creating a comprehensive response object that includes master records, party records, legal records, reference records, and remark records for each qualifying transaction, organized in a structured format that facilitates client-side data consumption and display.
+
+### Key Technical Features:
+
+- **Progressive Filtering**: Each stage reduces the result set by applying additional criteria, ensuring only records meeting all conditions are included
+- **Batch Processing**: The `fetchAcrisDocumentIdsCrossRef()` methods use URL batching (`SoqlUrl.constructUrlBatches()`) to handle large `document_id` arrays efficiently while respecting API rate limits
+- **Error Isolation**: Each stage captures and handles errors independently, allowing partial success scenarios and providing detailed error reporting for troubleshooting
+- **Parallel Optimization**: The final record retrieval stage uses `Promise.allSettled()` to fetch complete records from all datasets simultaneously, minimizing total query time
+- **Data Deduplication**: The cross-reference methods use `Set` data structures to automatically eliminate duplicate `document_id` values during processing
+
+### Data Flow
 
 1. **Code Maps** - Reference data for interpreting record codes
 2. **Master Records** - Primary property transaction data
 3. **Related Records** - Parties, legals, references, and remarks linked to master records
 
-#### Testing Strategy
+### Testing Strategy
 
 - Unit tests for URL construction and data transformation
 - Integration tests for actual API calls (where applicable)
 - Simple tests for basic functionality validation
 
-#### Batch Processing
+### Batch Processing
 
 - API modules support batch processing for large data requests
 - Rate limiting considerations built into utility functions
 - Error handling for network timeouts and API limits
 
-### File Naming Conventions
+## File Naming Conventions
 
 - **API Modules**: `DescriptiveNameApi.js`
 - **Test Files**: `ModuleName.test.js` or `ModuleName.simple.test.js`

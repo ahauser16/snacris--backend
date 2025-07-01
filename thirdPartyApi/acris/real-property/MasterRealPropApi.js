@@ -29,10 +29,7 @@ class MasterRealPropApi {
           limit,
           offset
         );
-        console.log(
-          "'/fetchAcrisRecords(masterQueryParams)' calls 'SoqlUrl.constructUrl' creating:",
-          url
-        );
+
         const headers = {
           "Content-Type": "application/json",
           "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -52,11 +49,6 @@ class MasterRealPropApi {
       }
 
       if (!allRecords.length) {
-        console.warn(
-          `No records found for masterQueryParams: ${JSON.stringify(
-            masterQueryParams
-          )} from Real Property Master API`
-        );
         throw new NotFoundError(
           "No records found for the given query from Real Property Master API."
         );
@@ -68,10 +60,7 @@ class MasterRealPropApi {
       if (err instanceof NotFoundError) {
         throw err;
       }
-      console.error(
-        "Error fetching records from Real Property Master API:",
-        err.message
-      );
+
       throw new Error("Failed to fetch records from Real Property Master API");
     }
   }
@@ -89,10 +78,7 @@ class MasterRealPropApi {
         "MasterRealPropApi",
         "countAll"
       );
-      console.log(
-        "'/fetchAcrisRecordCount(masterQueryParams)' calls 'SoqlUrl.constructUrl' creating:",
-        url
-      );
+
       const headers = {
         "Content-Type": "application/json",
         "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -101,11 +87,6 @@ class MasterRealPropApi {
       const { data } = await axios.get(url, { headers });
 
       if (!Array.isArray(data) || !data.length || !data[0]?.count) {
-        console.warn(
-          `No count data found for masterQueryParams: ${JSON.stringify(
-            masterQueryParams
-          )} from Real Property Master API`
-        );
         throw new NotFoundError(
           "No count data found for the given query from Real Property Master API."
         );
@@ -117,10 +98,7 @@ class MasterRealPropApi {
       if (err instanceof NotFoundError) {
         throw err;
       }
-      console.error(
-        "Error fetching record count from Real Property Master API:",
-        err.message
-      );
+
       throw new Error(
         "Failed to fetch record count from Real Property Master API"
       );
@@ -148,10 +126,7 @@ class MasterRealPropApi {
           limit,
           offset
         );
-        console.log(
-          "'/fetchAcrisDocumentIds(masterQueryParams)' calls 'SoqlUrl.constructUrl' creating:",
-          url
-        );
+
         const headers = {
           "Content-Type": "application/json",
           "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -171,11 +146,6 @@ class MasterRealPropApi {
       }
 
       if (!documentIds.size) {
-        console.warn(
-          `No document IDs found for query: ${JSON.stringify(
-            masterQueryParams
-          )} from Real Property Master API`
-        );
         throw new NotFoundError(
           "No document IDs found for the given query from Real Property Master API."
         );
@@ -187,10 +157,7 @@ class MasterRealPropApi {
       if (err instanceof NotFoundError) {
         throw err;
       }
-      console.error(
-        "Error fetching document IDs from Real Property Master API:",
-        err.message
-      );
+
       throw new Error(
         "Failed to fetch document IDs from Real Property Master API"
       );
@@ -225,10 +192,7 @@ class MasterRealPropApi {
             limit,
             offset
           );
-          console.log(
-            url,
-            "MasterRealPropApi.fetchAcrisRecordsByDocumentIds url"
-          );
+
           const headers = {
             "Content-Type": "application/json",
             "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -244,10 +208,8 @@ class MasterRealPropApi {
         }
       }
 
-      //console.log(allRecords, "MasterRealPropApi.fetchAcrisRecordsByDocumentIds returns allRecords");
       return allRecords.length ? allRecords : null;
     } catch (err) {
-      console.error("Error fetching records by document IDs:", err.message);
       return null;
     }
   }
@@ -266,17 +228,6 @@ class MasterRealPropApi {
     batchSize = 500
   ) {
     try {
-      // 1. Log input parameters
-      console.log(
-        "fetchAcrisDocumentIdsCrossRef called with masterQueryParams:",
-        masterQueryParams
-      );
-      console.log(
-        "fetchAcrisDocumentIdsCrossRef called with legalsRecordsDocumentIds (first 10):",
-        legalsRecordsDocumentIds.slice(0, 10)
-      );
-      console.log("fetchAcrisDocumentIdsCrossRef batchSize:", batchSize);
-
       // 2. Build batch URLs for querying the API with document_id IN (...)
       const queryUrls = SoqlUrl.constructUrlBatches(
         masterQueryParams,
@@ -284,10 +235,6 @@ class MasterRealPropApi {
         "MasterRealPropApi",
         batchSize
       );
-      console.log("Constructed queryUrls (count):", queryUrls.length);
-      if (queryUrls.length > 0) {
-        console.log("First queryUrl:", queryUrls[0]);
-      }
 
       // 3. Prepare a set to collect unique document_ids from all batches
       const allDocumentIds = new Set();
@@ -299,7 +246,7 @@ class MasterRealPropApi {
 
         while (hasMoreRecords) {
           const paginatedUrl = `${url}&$limit=1000&$offset=${offset}`;
-          console.log("About to fetch:", paginatedUrl);
+
           const headers = {
             "Content-Type": "application/json",
             "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -316,8 +263,6 @@ class MasterRealPropApi {
         }
       }
 
-      console.log("Total unique document_ids found:", allDocumentIds.size);
-
       // 9. If no document_ids found, throw error
       if (allDocumentIds.size === 0) {
         throw new NotFoundError(
@@ -328,10 +273,6 @@ class MasterRealPropApi {
       // 10. Return array of unique document_ids
       return Array.from(allDocumentIds);
     } catch (err) {
-      console.error(
-        "Error fetching document IDs from Real Property Master API (cross-ref):",
-        err.message
-      );
       throw new Error(
         "Failed to fetch document IDs from Real Property Master API (cross-ref)"
       );

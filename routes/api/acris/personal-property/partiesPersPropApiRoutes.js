@@ -11,30 +11,30 @@ const router = new express.Router();
  *
  * Fetch data from the ACRIS-Personal Property Parties dataset based on user-data sent from the frontend.
  *
- * Returns [{ 
- * document_id, 
- * record_type, 
- * party_type, 
- * name, 
- * address_1, 
- * address_2, 
- * country, 
- * city, 
- * state, 
- * zip, 
- * good_through_date 
+ * Returns [{
+ * document_id,
+ * record_type,
+ * party_type,
+ * name,
+ * address_1,
+ * address_2,
+ * country,
+ * city,
+ * state,
+ * zip,
+ * good_through_date
  * }]
  *
  * Authorization required: yes
  */
 router.get("/fetchRecord", async function (req, res, next) {
-    try {
-        const query = req.query;
-        const partiesRecords = await PartiesPersPropApi.fetchFromAcris(query);
-        return res.json({ partiesRecords });
-    } catch (err) {
-        return next(err);
-    }
+  try {
+    const query = req.query;
+    const partiesRecords = await PartiesPersPropApi.fetchFromAcris(query);
+    return res.json({ partiesRecords });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 /** GET /fetchDocIdsCrossRefMasterDocIds => { partiesDocIdsCrossRefMaster: [...] }
@@ -48,15 +48,20 @@ router.get("/fetchRecord", async function (req, res, next) {
  * Authorization required: yes
  */
 router.get("/fetchDocIdsCrossRefMasterDocIds", async function (req, res, next) {
-    try {
-        const query = req.query;
-        const masterRecordsDocumentIds = JSON.parse(query.masterRecordsDocumentIds || "[]");
-        console.log("Parsed masterRecordsDocumentIds:", masterRecordsDocumentIds); // Debug log
-        const partiesDocIdsCrossRefMaster = await PartiesPersPropApi.fetchDocIdsFromAcrisCrossRefMaster(query, masterRecordsDocumentIds);
-        return res.json({ partiesDocIdsCrossRefMaster });
-    } catch (err) {
-        return next(err);
-    }
+  try {
+    const query = req.query;
+    const masterRecordsDocumentIds = JSON.parse(
+      query.masterRecordsDocumentIds || "[]"
+    );
+    const partiesDocIdsCrossRefMaster =
+      await PartiesPersPropApi.fetchDocIdsFromAcrisCrossRefMaster(
+        query,
+        masterRecordsDocumentIds
+      );
+    return res.json({ partiesDocIdsCrossRefMaster });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 /** GET /fetchRecordCount => { count: { partiesRecordCount: number } }
@@ -66,15 +71,16 @@ router.get("/fetchDocIdsCrossRefMasterDocIds", async function (req, res, next) {
  * Authorization required: yes
  */
 router.get("/fetchRecordCount", async function (req, res, next) {
-    try {
-        const query = req.query;
-        const partiesRecordCount = await PartiesPersPropApi.fetchCountFromAcris(query);
-        return res.json({ partiesRecordCount });
-    } catch (err) {
-        return next(err);
-    }
+  try {
+    const query = req.query;
+    const partiesRecordCount = await PartiesPersPropApi.fetchCountFromAcris(
+      query
+    );
+    return res.json({ partiesRecordCount });
+  } catch (err) {
+    return next(err);
+  }
 });
-
 
 /** GET /fetchRecordCount => { count: { partiesRecordsDocumentIds: [...] } }
  *
@@ -84,13 +90,14 @@ router.get("/fetchRecordCount", async function (req, res, next) {
  */
 
 router.get("/fetchDocIds", async function (req, res, next) {
-    try {
-        const query = req.query;
-        const partiesRecordsDocumentIds = await PartiesPersPropApi.fetchDocIdsFromAcris(query);
-        return res.json({ partiesRecordsDocumentIds });
-    } catch (err) {
-        return next(err);
-    }
+  try {
+    const query = req.query;
+    const partiesRecordsDocumentIds =
+      await PartiesPersPropApi.fetchDocIdsFromAcris(query);
+    return res.json({ partiesRecordsDocumentIds });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 module.exports = router;

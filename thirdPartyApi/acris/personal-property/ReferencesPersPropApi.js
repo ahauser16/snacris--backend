@@ -20,7 +20,6 @@ class ReferencesPersPropApi {
             }
             return data;
         } catch (err) {
-            console.error("Error fetching records from Personal Property References API:", err.message);
             throw new Error("Failed to fetch records from Personal Property References API");
         }
     }
@@ -38,7 +37,6 @@ class ReferencesPersPropApi {
             }
             return Number(data[0].count);
         } catch (err) {
-            console.error("Error fetching record count from Personal Property References API:", err.message);
             throw new Error("Failed to fetch record count from Personal Property References API");
         }
     }
@@ -56,7 +54,6 @@ class ReferencesPersPropApi {
             }
             return data.map(record => record.document_id);
         } catch (err) {
-            console.error("Error fetching document IDs from Personal Property References API:", err.message);
             throw new Error("Failed to fetch document IDs from Personal Property References API");
         }
     }
@@ -88,7 +85,6 @@ class ReferencesPersPropApi {
             }
             return Array.from(allDocumentIds);
         } catch (err) {
-            console.error("Error fetching document IDs from Personal Property References API:", err.message);
             throw new Error("Failed to fetch document IDs from Personal Property References API");
         }
     }
@@ -104,7 +100,6 @@ class ReferencesPersPropApi {
                 let hasMoreRecords = true;
                 while (hasMoreRecords) {
                     const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "ReferencesPersPropApi", batch, limit, offset);
-                    console.log(url, "ReferencesPersPropApi.fetchAcrisRecordsByDocumentIds url");
                     const headers = {
                         "Content-Type": "application/json",
                         "X-App-Token": process.env.APP_TOKEN,
@@ -122,7 +117,6 @@ class ReferencesPersPropApi {
 
             return allRecords.length ? allRecords : null;
         } catch (err) {
-            console.error("Error fetching records by document IDs:", err.message);
             return null;
         }
     }

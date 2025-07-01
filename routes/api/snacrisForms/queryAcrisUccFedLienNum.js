@@ -11,11 +11,6 @@ const router = new express.Router();
 
 router.get("/fetchRecord", async function (req, res, next) {
   try {
-    console.log(
-      "'queryAcrisUccFedLienNum' received request with query parameters:",
-      req.query
-    );
-
     const { masterSearchTerms, legalsSearchTerms } = req.query;
 
     // Build masterQueryParams from reel_yr, reel_nbr, reel_pg
@@ -23,7 +18,6 @@ router.get("/fetchRecord", async function (req, res, next) {
     if (masterSearchTerms?.ucc_lien_file_number)
       masterQueryParams.ucc_lien_file_number =
         masterSearchTerms.ucc_lien_file_number;
-    console.log("masterQueryParams:", masterQueryParams);
 
     // Validate required master params
     if (!masterQueryParams.ucc_lien_file_number) {
@@ -36,7 +30,6 @@ router.get("/fetchRecord", async function (req, res, next) {
     const legalsQueryParams = {};
     if (legalsSearchTerms?.borough)
       legalsQueryParams.borough = legalsSearchTerms.borough;
-    console.log("legalsQueryParams:", legalsQueryParams);
 
     // Validate required legals param
     if (!legalsQueryParams.borough) {
@@ -50,7 +43,6 @@ router.get("/fetchRecord", async function (req, res, next) {
       // Step 1: Fetch master document IDs
       const masterRecordsDocumentIds =
         await MasterPersPropApi.fetchAcrisDocumentIds(masterQueryParams);
-      console.log("masterRecordsDocumentIds:", masterRecordsDocumentIds);
 
       // Step 2: Cross-reference with Legals
       let legalsRecordsDocumentIds = [];
@@ -61,12 +53,9 @@ router.get("/fetchRecord", async function (req, res, next) {
             masterRecordsDocumentIds
           );
       } else {
-        console.log("No master records found, skipping legals cross-reference");
       }
       crossReferencedDocumentIds = legalsRecordsDocumentIds;
-      console.log("crossReferencedDocumentIds:", crossReferencedDocumentIds);
     } catch (err) {
-      console.error("Error fetching ACRIS dataset:", err.message);
       return res.status(500).json({
         dataFound: false,
         datasets: "Real Property: Master, Legals",
@@ -76,10 +65,6 @@ router.get("/fetchRecord", async function (req, res, next) {
 
     // Fetch full records from all datasets in parallel using crossReferencedDocumentIds
     try {
-      console.log(
-        "Fetching full records for document IDs:",
-        crossReferencedDocumentIds
-      );
       const [
         masterRecords,
         partiesRecords,
@@ -124,11 +109,8 @@ router.get("/fetchRecord", async function (req, res, next) {
         ),
       }));
 
-      console.log("Final results:", results);
-
       return res.json(results);
     } catch (err) {
-      console.error("Error fetching full records from datasets:", err.message);
       return res.status(500).json({
         dataFound: false,
         error: "Failed to fetch full records from all datasets",
@@ -136,7 +118,6 @@ router.get("/fetchRecord", async function (req, res, next) {
       });
     }
   } catch (err) {
-    console.error("Error in queryAcrisUccFedLienNum route:", err.message);
     return next(err);
   }
 });

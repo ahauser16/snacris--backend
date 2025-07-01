@@ -31,19 +31,11 @@ describe("LegalsRealPropApi", () => {
   let mockAxios;
   let mockSoqlUrl;
   let mockBatchArray;
-  let consoleWarnSpy;
-  let consoleErrorSpy;
-  let consoleLogSpy;
 
   beforeEach(() => {
     mockAxios = axios;
     mockSoqlUrl = SoqlUrl;
     mockBatchArray = batchArray;
-
-    // Setup console spies
-    consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-    consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 
     // Set up environment variable
     process.env.NYC_OPEN_DATA_APP_TOKEN = "test-token";
@@ -53,9 +45,6 @@ describe("LegalsRealPropApi", () => {
   });
 
   afterEach(() => {
-    consoleWarnSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
-    consoleLogSpy.mockRestore();
     delete process.env.NYC_OPEN_DATA_APP_TOKEN;
   });
 
@@ -120,12 +109,6 @@ describe("LegalsRealPropApi", () => {
       ).rejects.toThrow(
         "No records found for the given query from Real Property Legals API."
       );
-
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        `No records found for query: ${JSON.stringify(
-          mockLegalsQueryParams
-        )} from Real Property Legals API`
-      );
     });
 
     it("should throw NotFoundError when data is null or undefined", async () => {
@@ -152,11 +135,6 @@ describe("LegalsRealPropApi", () => {
         LegalsRealPropApi.fetchAcrisRecords(mockLegalsQueryParams)
       ).rejects.toThrow(
         "Failed to fetch records from Real Property Legals API"
-      );
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching records from Real Property Legals API:",
-        "Network error"
       );
     });
 
@@ -238,12 +216,6 @@ describe("LegalsRealPropApi", () => {
       ).rejects.toThrow(
         "No count data found for the given query from Real Property Legals API."
       );
-
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        `No count data found for query: ${JSON.stringify(
-          mockLegalsQueryParams
-        )} from Real Property Legals API`
-      );
     });
 
     it("should throw NotFoundError when count property is missing", async () => {
@@ -271,11 +243,6 @@ describe("LegalsRealPropApi", () => {
         LegalsRealPropApi.fetchAcrisRecordCount(mockLegalsQueryParams)
       ).rejects.toThrow(
         "Failed to fetch record count from Real Property Legals API"
-      );
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching record count from Real Property Legals API:",
-        "Network timeout"
       );
     });
   });
@@ -315,10 +282,6 @@ describe("LegalsRealPropApi", () => {
         "2023123456789002",
         "2023123456789003",
       ]);
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        mockUrl,
-        "LegalsRealPropApi.fetchAcrisDocumentIds url"
-      );
     });
 
     it("should extract document_id values from response objects", async () => {
@@ -351,12 +314,6 @@ describe("LegalsRealPropApi", () => {
       ).rejects.toThrow(
         "No document IDs found for the given query from Real Property Legals API."
       );
-
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        `No document IDs found for query: ${JSON.stringify(
-          mockLegalsQueryParams
-        )} from Real Property Legals API`
-      );
     });
 
     it("should throw NotFoundError when data is null", async () => {
@@ -383,11 +340,6 @@ describe("LegalsRealPropApi", () => {
         LegalsRealPropApi.fetchAcrisDocumentIds(mockLegalsQueryParams)
       ).rejects.toThrow(
         "Failed to fetch document IDs from Real Property Legals API"
-      );
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching document IDs from Real Property Legals API:",
-        "API rate limit exceeded"
       );
     });
   });
@@ -603,11 +555,6 @@ describe("LegalsRealPropApi", () => {
       ).rejects.toThrow(
         "Failed to fetch document IDs from Real Property Legals API"
       );
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching document IDs from Real Property Legals API:",
-        "Server error"
-      );
     });
 
     it("should use default batch size when not provided", async () => {
@@ -688,10 +635,6 @@ describe("LegalsRealPropApi", () => {
         },
       });
       expect(result).toEqual(mockRecords);
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        mockUrl,
-        "LegalsRealPropApi.fetchAcrisRecordsByDocumentIds url"
-      );
     });
 
     it("should handle multiple batches", async () => {
@@ -817,10 +760,6 @@ describe("LegalsRealPropApi", () => {
       );
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching records by document IDs:",
-        "Connection timeout"
-      );
     });
 
     it("should use correct batch size constant", async () => {

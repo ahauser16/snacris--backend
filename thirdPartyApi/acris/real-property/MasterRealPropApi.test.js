@@ -780,21 +780,15 @@ describe("MasterRealPropApi", function () {
     });
 
     test("logs debug information during execution", async function () {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
       const mockQueryParams = { doc_type: "DEED" };
       const mockRecords = [{ document_id: "2023123456789001" }];
 
       mockedSoqlUrl.constructUrl.mockReturnValue("https://api.test/logging");
       mockedAxios.get.mockResolvedValue({ data: mockRecords });
 
-      await MasterRealPropApi.fetchAcrisRecords(mockQueryParams);
+      const result = await MasterRealPropApi.fetchAcrisRecords(mockQueryParams);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "'/fetchAcrisRecords(masterQueryParams)' calls 'SoqlUrl.constructUrl' creating:",
-        "https://api.test/logging"
-      );
-
-      consoleSpy.mockRestore();
+      expect(result).toEqual(mockRecords);
     });
   });
 });

@@ -16,7 +16,6 @@ class PartiesPersPropApi {
     static async fetchAcrisRecords(partiesQueryParams) {
         try {
             const url = SoqlUrl.constructUrl(partiesQueryParams, "PartiesPersPropApi", "records");
-            console.log("'/fetchAcrisRecords(partiesQueryParams)' calls 'SoqlUrl.constructUrl' creating:", url);
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.APP_TOKEN,
@@ -25,13 +24,11 @@ class PartiesPersPropApi {
             const { data } = await axios.get(url, { headers });
 
             if (!data?.length) {
-                console.warn(`No records found for query: ${JSON.stringify(partiesQueryParams)} from Personal Property Parties API`);
                 throw new NotFoundError("No records found for the given query from Personal Property Parties API.");
             }
 
             return data;
         } catch (err) {
-            console.error("Error fetching records from Personal Property Parties API:", err.message);
             throw new Error("Failed to fetch records from Personal Property Parties API");
         }
     }
@@ -45,7 +42,6 @@ class PartiesPersPropApi {
     static async fetchAcrisRecordCount(partiesQueryParams) {
         try {
             const url = SoqlUrl.constructUrl(partiesQueryParams, "PartiesPersPropApi", "countAll");
-            console.log("'/fetchAcrisRecordCount(partiesQueryParams)' calls 'SoqlUrl.constructUrl' creating:", url);
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.APP_TOKEN,
@@ -54,13 +50,11 @@ class PartiesPersPropApi {
             const { data } = await axios.get(url, { headers });
 
             if (!data?.length || !data[0]?.count) {
-                console.warn(`No count data found for query: ${JSON.stringify(partiesQueryParams)} from Personal Property Parties API`);
                 throw new NotFoundError("No count data found for the given query from Personal Property Parties API.");
             }
 
             return Number(data[0].count);
         } catch (err) {
-            console.error("Error fetching record count from Personal Property Parties API:", err.message);
             throw new Error("Failed to fetch record count from Personal Property Parties API");
         }
     }
@@ -74,7 +68,6 @@ class PartiesPersPropApi {
     static async fetchAcrisDocumentIds(partiesQueryParams) {
         try {
             const url = SoqlUrl.constructUrl(partiesQueryParams, "PartiesPersPropApi", "document_id");
-            console.log("'/fetchAcrisDocumentIds(partiesQueryParams)' calls 'SoqlUrl.constructUrl' creating:", url);
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.APP_TOKEN,
@@ -83,13 +76,11 @@ class PartiesPersPropApi {
             const { data } = await axios.get(url, { headers });
 
             if (!data?.length) {
-                console.warn(`No document IDs found for query for partiesQueryParams: ${JSON.stringify(partiesQueryParams)} from Personal Property Parties API`);
                 throw new NotFoundError("No document IDs found for the given query from Personal Property Parties API.");
             }
 
             return data.map(record => record.document_id);
         } catch (err) {
-            console.error("'fetchAcrisDocumentIds' related error fetching document IDs from Personal Property Parties API:", err.message);
             throw new Error("Failed to fetch document IDs from PartiesPersPropApi.fetchAcrisDocumentIds");
         }
     }
@@ -105,7 +96,6 @@ class PartiesPersPropApi {
     static async fetchAcrisDocumentIdsCrossRef(partiesQueryParams, masterRecordsDocumentIds, batchSize = 500) {
         try {
             const queryUrls = SoqlUrl.constructUrlBatches(partiesQueryParams, masterRecordsDocumentIds, "PartiesPersPropApi", batchSize);
-            console.log('PartiesPersPropApi.fetchAcrisDocumentIdsCrossRef creates URLs: ', queryUrls[0], "PartiesPersPropApi queryUrls", `queryUrls.length: ${queryUrls.length}`);
 
             const allDocumentIds = new Set();
 
@@ -159,7 +149,6 @@ class PartiesPersPropApi {
                 let hasMoreRecords = true;
                 while (hasMoreRecords) {
                     const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "PartiesPersPropApi", batch, limit, offset);
-                    console.log(url, "PartiesPersPropApi.fetchAcrisRecordsByDocumentIds url");
                     const headers = {
                         "Content-Type": "application/json",
                         "X-App-Token": process.env.APP_TOKEN,
@@ -177,7 +166,6 @@ class PartiesPersPropApi {
 
             return allRecords.length ? allRecords : null;
         } catch (err) {
-            console.error("Error fetching records by document IDs:", err.message);
             return null;
         }
     }

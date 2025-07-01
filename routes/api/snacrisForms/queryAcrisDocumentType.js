@@ -57,7 +57,6 @@ router.get("/fetchRecord", async function (req, res, next) {
   } catch (err) {
     errMsg.push(`Master IDs: ${err.message}`);
   }
-  console.log("🐾 masterIds:", masterIds.length, masterIds);
 
   let legalsIds = [];
   if (masterIds.length) {
@@ -70,7 +69,6 @@ router.get("/fetchRecord", async function (req, res, next) {
       errMsg.push(`Legals IDs: ${err.message}`);
     }
   }
-  console.log("🐾 legalsIds:", legalsIds.length, legalsIds);
 
   const finalIds = legalsIds;
 
@@ -129,7 +127,6 @@ router.get("/fetchRecord", async function (req, res, next) {
     remarksRecords: remarksRecords.filter((r) => r.document_id === document_id),
   }));
 
-  console.log(results);
 
   return res.json({ dataFound: true, results });
 });

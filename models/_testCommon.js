@@ -50,10 +50,6 @@ async function commonBeforeAll() {
     VALUES ($1, $2, 'Temp', 'User', 'temp@test.com', false)`,
     ["tempnewuser", await bcrypt.hash("temppassword", BCRYPT_WORK_FACTOR)]
   );
-
-  console.log(
-    "Test setup: Using seeded users 'testuser', 'testadmin' and created 'tempnewuser'"
-  );
 }
 
 async function commonBeforeEach() {
@@ -70,7 +66,6 @@ async function commonAfterAll() {
     await db.query("DELETE FROM users WHERE username = 'tempnewuser'");
   } catch (error) {
     // Ignore errors if pool is already closed
-    console.log("Note: Could not clean up temp user (pool may be closed)");
   }
 
   // Close the database pool only if it hasn't been closed already

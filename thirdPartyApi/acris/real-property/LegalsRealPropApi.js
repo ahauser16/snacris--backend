@@ -28,11 +28,6 @@ class LegalsRealPropApi {
       const { data } = await axios.get(url, { headers });
 
       if (!Array.isArray(data) || !data.length) {
-        console.warn(
-          `No records found for query: ${JSON.stringify(
-            legalsQueryParams
-          )} from Real Property Legals API`
-        );
         throw new NotFoundError(
           "No records found for the given query from Real Property Legals API."
         );
@@ -45,10 +40,6 @@ class LegalsRealPropApi {
         throw err;
       }
       // Otherwise, wrap other errors (network errors, etc.)
-      console.error(
-        "Error fetching records from Real Property Legals API:",
-        err.message
-      );
       throw new Error("Failed to fetch records from Real Property Legals API");
     }
   }
@@ -74,11 +65,6 @@ class LegalsRealPropApi {
       const { data } = await axios.get(url, { headers });
 
       if (!Array.isArray(data) || !data.length || !data[0]?.count) {
-        console.warn(
-          `No count data found for query: ${JSON.stringify(
-            legalsQueryParams
-          )} from Real Property Legals API`
-        );
         throw new NotFoundError(
           "No count data found for the given query from Real Property Legals API."
         );
@@ -91,10 +77,6 @@ class LegalsRealPropApi {
         throw err;
       }
       // Otherwise, wrap other errors (network errors, etc.)
-      console.error(
-        "Error fetching record count from Real Property Legals API:",
-        err.message
-      );
       throw new Error(
         "Failed to fetch record count from Real Property Legals API"
       );
@@ -114,7 +96,7 @@ class LegalsRealPropApi {
         "LegalsRealPropApi",
         "document_id"
       );
-      console.log(url, "LegalsRealPropApi.fetchAcrisDocumentIds url");
+
       const headers = {
         "Content-Type": "application/json",
         "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -123,11 +105,6 @@ class LegalsRealPropApi {
       const { data } = await axios.get(url, { headers });
 
       if (!data?.length) {
-        console.warn(
-          `No document IDs found for query: ${JSON.stringify(
-            legalsQueryParams
-          )} from Real Property Legals API`
-        );
         throw new NotFoundError(
           "No document IDs found for the given query from Real Property Legals API."
         );
@@ -140,10 +117,6 @@ class LegalsRealPropApi {
         throw err;
       }
       // Otherwise, wrap other errors (network errors, etc.)
-      console.error(
-        "Error fetching document IDs from Real Property Legals API:",
-        err.message
-      );
       throw new Error(
         "Failed to fetch document IDs from Real Property Legals API"
       );
@@ -177,7 +150,6 @@ class LegalsRealPropApi {
         "LegalsRealPropApi",
         batchSize
       );
-      //console.log(queryUrls[0], queryUrls.length, "LegalsRealPropApi queryUrls");
 
       const allDocumentIds = new Set();
 
@@ -211,10 +183,6 @@ class LegalsRealPropApi {
 
       return Array.from(allDocumentIds);
     } catch (err) {
-      console.error(
-        "Error fetching document IDs from Real Property Legals API:",
-        err.message
-      );
       throw new Error(
         "Failed to fetch document IDs from Real Property Legals API"
       );
@@ -249,10 +217,7 @@ class LegalsRealPropApi {
             limit,
             offset
           );
-          console.log(
-            url,
-            "LegalsRealPropApi.fetchAcrisRecordsByDocumentIds url"
-          );
+
           const headers = {
             "Content-Type": "application/json",
             "X-App-Token": process.env.NYC_OPEN_DATA_APP_TOKEN,
@@ -268,10 +233,8 @@ class LegalsRealPropApi {
         }
       }
 
-      //console.log(allRecords, "MasterRealPropApi.fetchAcrisRecordsByDocumentIds returns allRecords");
       return allRecords.length ? allRecords : null;
     } catch (err) {
-      console.error("Error fetching records by document IDs:", err.message);
       return null;
     }
   }

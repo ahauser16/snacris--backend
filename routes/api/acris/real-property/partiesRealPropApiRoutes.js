@@ -16,14 +16,16 @@ const router = new express.Router();
  * Authorization required: yes
  */
 router.get("/fetchRecord", async function (req, res, next) {
-    try {
-        const query = req.query;
-        //const partiesRecords = await PartiesRealPropApi.fetchFromAcris(query); // <-- old code
-        const realPropPartiesRecords = await PartiesRealPropApi.fetchAcrisRecords(query); 
-        return res.json({ realPropPartiesRecords });
-    } catch (err) {
-        return next(err);
-    }
+  try {
+    const query = req.query;
+    //const partiesRecords = await PartiesRealPropApi.fetchFromAcris(query); // <-- old code
+    const realPropPartiesRecords = await PartiesRealPropApi.fetchAcrisRecords(
+      query
+    );
+    return res.json({ realPropPartiesRecords });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 /** GET /fetchDocIdsCrossRefMasterDocIds => { partiesDocIdsCrossRefMaster: [...] }
@@ -37,15 +39,21 @@ router.get("/fetchRecord", async function (req, res, next) {
  * Authorization required: yes
  */
 router.get("/fetchDocIdsCrossRefMasterDocIds", async function (req, res, next) {
-    try {
-        const query = req.query;
-        const masterRecordsDocumentIds = JSON.parse(query.masterRecordsDocumentIds || "[]");
-        console.log("Parsed masterRecordsDocumentIds:", masterRecordsDocumentIds); // Debug log
-        const partiesDocIdsCrossRefMaster = await PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef(query, masterRecordsDocumentIds); 
-        return res.json({ partiesDocIdsCrossRefMaster });
-    } catch (err) {
-        return next(err);
-    }
+  try {
+    const query = req.query;
+    const masterRecordsDocumentIds = JSON.parse(
+      query.masterRecordsDocumentIds || "[]"
+    );
+
+    const partiesDocIdsCrossRefMaster =
+      await PartiesRealPropApi.fetchAcrisDocumentIdsCrossRef(
+        query,
+        masterRecordsDocumentIds
+      );
+    return res.json({ partiesDocIdsCrossRefMaster });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 /** GET /fetchRecordCount => { count: { partiesRecordCount: number } }
@@ -55,13 +63,14 @@ router.get("/fetchDocIdsCrossRefMasterDocIds", async function (req, res, next) {
  * Authorization required: yes
  */
 router.get("/fetchRecordCount", async function (req, res, next) {
-    try {
-        const query = req.query;
-        const realPropPartiesRecordCount = await PartiesRealPropApi.fetchAcrisRecordCount(query); // <-- old code
-        return res.json({ realPropPartiesRecordCount });
-    } catch (err) {
-        return next(err);
-    }
+  try {
+    const query = req.query;
+    const realPropPartiesRecordCount =
+      await PartiesRealPropApi.fetchAcrisRecordCount(query); // <-- old code
+    return res.json({ realPropPartiesRecordCount });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 /** GET /fetchRecordCount => { count: { partiesRecordsDocumentIds: [...] } }
@@ -72,31 +81,33 @@ router.get("/fetchRecordCount", async function (req, res, next) {
  */
 
 router.get("/fetchDocIds", async function (req, res, next) {
-    try {
-        const query = req.query;
-        const realPropPartiesRecordsDocumentIds = await PartiesRealPropApi.fetchAcrisDocumentIds(query); // <-- old code
-        return res.json({ realPropPartiesRecordsDocumentIds });
-    } catch (err) {
-        return next(err);
-    }
+  try {
+    const query = req.query;
+    const realPropPartiesRecordsDocumentIds =
+      await PartiesRealPropApi.fetchAcrisDocumentIds(query); // <-- old code
+    return res.json({ realPropPartiesRecordsDocumentIds });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 router.get("/fetchAcrisRecordsByDocumentIds", async function (req, res, next) {
-    try {
-        let { documentIds } = req.query;
-        // Support both comma-separated and JSON array
-        if (typeof documentIds === "string") {
-            if (documentIds.startsWith("[")) {
-                documentIds = JSON.parse(documentIds);
-            } else {
-                documentIds = documentIds.split(",");
-            }
-        }
-        const realPropPartiesRecords = await PartiesRealPropApi.fetchAcrisRecordsByDocumentIds(documentIds);  
-        return res.json({ realPropPartiesRecords });
-    } catch (err) {
-        return next(err);
+  try {
+    let { documentIds } = req.query;
+    // Support both comma-separated and JSON array
+    if (typeof documentIds === "string") {
+      if (documentIds.startsWith("[")) {
+        documentIds = JSON.parse(documentIds);
+      } else {
+        documentIds = documentIds.split(",");
+      }
     }
+    const realPropPartiesRecords =
+      await PartiesRealPropApi.fetchAcrisRecordsByDocumentIds(documentIds);
+    return res.json({ realPropPartiesRecords });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 module.exports = router;

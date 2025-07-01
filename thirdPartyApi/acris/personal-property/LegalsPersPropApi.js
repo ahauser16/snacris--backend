@@ -24,13 +24,11 @@ class LegalsPersPropApi {
             const { data } = await axios.get(url, { headers });
 
             if (!data?.length) {
-                console.warn(`No records found for query: ${JSON.stringify(legalsQueryParams)} from Personal Property Legals API`);
                 throw new NotFoundError("No records found for the given query from Personal Property Legals API.");
             }
 
             return data;
         } catch (err) {
-            console.error("Error fetching records from Personal Property Legals API:", err.message);
             throw new Error("Failed to fetch records from Personal Property Legals API");
         }
     }
@@ -52,13 +50,11 @@ class LegalsPersPropApi {
             const { data } = await axios.get(url, { headers });
 
             if (!data?.length || !data[0]?.count) {
-                console.warn(`No count data found for query: ${JSON.stringify(legalsQueryParams)} from Personal Property Legals API`);
                 throw new NotFoundError("No count data found for the given query from Personal Property Legals API.");
             }
 
             return Number(data[0].count);
         } catch (err) {
-            console.error("Error fetching record count from Personal Property Legals API:", err.message);
             throw new Error("Failed to fetch record count from Personal Property Legals API");
         }
     }
@@ -72,7 +68,6 @@ class LegalsPersPropApi {
     static async fetchAcrisDocumentIds(legalsQueryParams) {
         try {
             const url = SoqlUrl.constructUrl(legalsQueryParams, "LegalsPersPropApi", "document_id");
-            console.log(url, "LegalsPersPropApi.fetchAcrisDocumentIds url");
             const headers = {
                 "Content-Type": "application/json",
                 "X-App-Token": process.env.APP_TOKEN,
@@ -81,13 +76,11 @@ class LegalsPersPropApi {
             const { data } = await axios.get(url, { headers });
 
             if (!data?.length) {
-                console.warn(`No document IDs found for query: ${JSON.stringify(legalsQueryParams)} from Personal Property Legals API`);
                 throw new NotFoundError("No document IDs found for the given query from Personal Property Legals API.");
             }
 
             return data.map(record => record.document_id);
         } catch (err) {
-            console.error("Error fetching document IDs from Personal Property Legals API:", err.message);
             throw new Error("Failed to fetch document IDs from Personal Property Legals API");
         }
     }
@@ -107,7 +100,6 @@ class LegalsPersPropApi {
             );
 
             const queryUrls = SoqlUrl.constructUrlBatches(legalsQueryParams, documentIds, "LegalsPersPropApi", batchSize);
-            console.log(queryUrls, "LegalsPersPropApi.fetchAcrisDocumentIdsCrossRef queryUrls");
 
             const allDocumentIds = new Set();
 
@@ -139,7 +131,6 @@ class LegalsPersPropApi {
 
             return Array.from(allDocumentIds);
         } catch (err) {
-            console.error("Error fetching document IDs from Personal Property Legals API:", err.message);
             throw new Error("Failed to fetch document IDs from Personal Property Legals API");
         }
     }
@@ -162,7 +153,6 @@ class LegalsPersPropApi {
                 let hasMoreRecords = true;
                 while (hasMoreRecords) {
                     const url = SoqlUrl.constructUrlForDocumentIds(queryParams, "LegalsPersPropApi", batch, limit, offset);
-                    console.log(url, "LegalsPersPropApi.fetchAcrisRecordsByDocumentIds url");
                     const headers = {
                         "Content-Type": "application/json",
                         "X-App-Token": process.env.APP_TOKEN,
@@ -180,7 +170,6 @@ class LegalsPersPropApi {
 
             return allRecords.length ? allRecords : null;
         } catch (err) {
-            console.error("Error fetching records by document IDs:", err.message);
             return null;
         }
     }
