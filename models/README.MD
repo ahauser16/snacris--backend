@@ -1,6 +1,6 @@
 # Javascript Models Notes
 
-The models folder contains files from the last Springboard project such as `company.js`, `job.js` and `user.js`, which define the structure and methods for interacting with the database. These models encapsulate the logic for creating, reading, updating, and deleting (CRUD) records in the database. For example, the `Job` model includes methods for creating a job, finding jobs with optional filters, retrieving a job by ID, updating job data, and deleting a job.  I chose to keep these files because I'm using the same authentication system as the previous project and as a reference to design my own project.
+The models folder contains files from the last Springboard project such as `company.js`, `job.js` and `user.js`, which define the structure and methods for interacting with the database. These models encapsulate the logic for creating, reading, updating, and deleting (CRUD) records in the database. For example, the `Job` model includes methods for creating a job, finding jobs with optional filters, retrieving a job by ID, updating job data, and deleting a job. I chose to keep these files because I'm using the same authentication system as the previous project and as a reference to design my own project.
 
 ## Helpful `psql` commands
 
@@ -11,105 +11,81 @@ The models folder contains files from the last Springboard project such as `comp
 - To list all the data within a table, such as country_codes, while connected to the database, use the following SQL command: `SELECT * FROM country_codes;`
 
 ## Relevant CRUD Operations
+
 1. Create:
+
 - **Insert a new record**: Add a new record to the database.
 
 2. Read:
+
 - **Find all records**: Retrieve all records from the database.
 - **Find a single record by ID**: Retrieve a specific record by its unique identifier.
 - **Search records**: Retrieve records based on specific search criteria.
 
 3. Update:
+
 - **Update a record by ID**: Modify an existing record identified by its unique identifier.
 
 4. Delete:
+
 - **Delete a record by ID**: Remove a specific record from the database by its unique identifier.
 
-## Folder Structure
+## ADD NEW DOCUMENTATION HERE
 
-Within the `models` folder is the `acris` folder which contains all the models associated with the 15 ACRIS datasets divided into three sub-folders: `real-property`, `personal-property` and `code-maps` which contain the files listed below. 
+## Models Folder Structure
 
-- [x]  means the model was tested and working in Postman.
+The `models/` directory contains all database model files organized by functionality and domain. This folder follows a hierarchical structure that separates core models, ACRIS-related models, and organizational models.
 
-`real-property` models
-- `MasterRealPropModel.js`
-- [ ] `saveRecord`
-- [x] `saveRecordByUser`
-- [x] `findAllRecordsByUser`
-- [ ] `findAllRecords`
-- [x] `findRecordFromUserByDocumentId`
-- [ ] `findRecordById`
-- [x] `searchRecordsFromUserBySearchCriteria`
-- [ ] `update`
-- [x] `deleteRecordByUser`
-- [ ] `remove`
-- `LegalsRealPropModel.js`
-- `PartiesRealPropModel.js`
-- `ReferencesRealPropModel.js`
-- `RemarksRealPropModel.js`
+### Root Level Files
 
-`personal-property` models
-- `MasterPersPropModel.js`
-- `LegalsPersPropModel.js`
-- `PartiesPersPropModel.js`
-- `ReferencesPersPropModel.js`
-- `RemarksPersPropModel.js`
+- **`user.js`** - Core user model handling user authentication, profile management, and user-related CRUD operations
+- **`user.test.js`** - Unit tests for the user model
+- **`userWithSeededData.test.js`** - Integration tests for user model with seeded test data
+- **`_testCommon.js`** - Common test utilities and setup functions shared across model tests
+- **`_testCommon_seeded.js`** - Test utilities specifically for seeded data scenarios
 
-`code-maps` models
-- `CountriesCodeMapModel.js`
-- `DocTypesCodeMapModel.js`
-- `PropTypesCodeMapModel.js`
-- `StatesCodeMapModel.js`
-- `UccTypesCodeMapModel.js`
+### ACRIS Models (`acris/`)
 
-All the data from the `code-map` datasets is already seeded in the `SNACRIS` database so the `code-map` models will contain CRUD methods associated with updating the seeded data that will not be accessible by users or admins but rather functions synced to the monthly updates to the `code-map` datasets reachable by API endpoints.
+The ACRIS (Automated City Register Information System) models handle NYC property and legal document data:
 
-The `real-property` and `personal-property` models in **SNACRIS** contain CRUD methods for interacting with the database using ACRIS data received from the API endpoints hosted by NYC Open Data and powered by Socrata (see `Backend/api/` folder for more information on the ACRIS API endpoints). The integrity of ACRIS data is maintained by restricting users and admins from modifying these records directly. Therefore, any `update` methods should be used programmatically rather than through routes.
+#### Code Maps (`acris/code-maps/`)
 
-For example, a user can make a GET request to the Real Property Master endpoint via the `api` route, view the data, and then decide to save it to the database. This is a crucial use case for **SNACRIS** users because once the data is saved, users gain access to features not available on the ACRIS website, such as notifications if the record changes. **SNACRIS** will make daily GET requests to check for changes in saved records, notify users of any changes, and update the database accordingly.
+Reference models for various ACRIS code mappings:
 
-Users can save ACRIS data to the database but can only view the data they saved. Admins, however, can view any user's data and save data viewable by all users. For example, the database is seeded with ACRIS data associated with the Empire State Building, which is useful for testing and providing users with an example experience upon first login.
+- **`CountriesCodeMapModel.js`** - Country code mappings and lookups
+- **`DocTypesCodeMapModel.js`** - Document type code mappings
+- **`PropTypesCodeMapModel.js`** - Property type code mappings
+- **`StatesCodeMapModel.js`** - State code mappings
+- **`UccTypesCodeMapModel.js`** - UCC (Uniform Commercial Code) type mappings
+- Each model includes corresponding `.test.js` files for unit testing
 
-### `create` methods 
+#### Personal Property (`acris/personal-property/`)
 
-#### `saveRecord` and `saveRecordByUser`
+- **`personalProperty.js`** - Model for ACRIS personal property records and transactions
+- **`personalProperty.test.js`** - Unit tests for personal property model
 
-Given this structure, there must be a `create` method for programmatic use (or by an admin-protected route) and a `create` method exclusive to individual users. The `saveRecord` method inserts a record into the `acris_real_property_master` table, while `saveRecordByUser` invokes the `saveRecord` method, inserts a record into the `acris_real_property_master` table, and creates a reference in the `user_saved_real_property_master` join table. Note Well: the `saveRecord` method is only invoked programmatically or by an admin-protected route.
+#### Real Property (`acris/real-property/`)
 
-In the context the application, it makes sense to associate the `username` with the `document_id` in the `user_saved_real_property_master` join table. This is because the `document_id` is a unique identifier within the ACRIS dataset, and it is the key piece of information that identifies a specific record.  However, if two users save the same record, there will be multiple entries with the same `document_id` in the `acris_real_property_master` table. To handle this scenario the `user_saved_real_property_master` join table must accommodate multiple users saving the same `document_id`.
+- **`realProperty.js`** - Model for ACRIS real property records, deeds, and transactions
+- **`realProperty.test.js`** - Unit tests for real property model
 
-### `read` methods
+### Organization Models (`organization/`)
 
-#### `findAllRecords ` and `findAllRecordsByUser`
+- **`organization.js`** - Model for organization entities, membership management, and organization-related operations
+- **`organization.test.js`** - Unit tests for organization model
 
-The `findAllRecords` and `findAllRecordsByUser` methods are designed to retrieve records from the `acris_real_property_master` table based on the user's role and context. The `findAllRecordsByUser` method fetches all records associated with a specific user by joining the `acris_real_property_master` table with the `user_saved_real_property_master` join table, ensuring that only records saved by the logged-in user are retrieved. This method is invoked by a protected route, allowing only authenticated users to access their own records. On the other hand, the `findAllRecords` method can retrieve all records in the database or all records associated with a specific user if a username is provided. This method is intended for use by an admin-protected route or programmatically, enabling admins to view all records or investigate records saved by a particular user. This structure ensures that users can only access their own data while admins have the flexibility to manage and review all records in the database.
+### Testing Strategy
 
-#### `findRecordByIdAndUser` and `findRecordById`
+Each model follows a consistent testing pattern:
 
-The `findRecordByIdAndUser` and `findRecordById` methods are designed to retrieve specific records from the `acris_real_property_master` table based on the user's role and context. The `findRecordByIdAndUser` method fetches a single record associated with a specific user by joining the `acris_real_property_master` table with the `user_saved_real_property_master` join table, ensuring that only the record saved by the logged-in user is retrieved. This method is invoked by a protected route, allowing only authenticated users to access their own records based on the provided `document_id`. On the other hand, the `findRecordById` method can retrieve a specific record from the database based on the provided `document_id`, regardless of the user who saved it. This method can optionally retrieve a record associated with a specific user if a username is provided. It is intended for use by an admin-protected route or programmatically, enabling admins to view any record in the database or investigate records saved by a particular user. This structure ensures that users can only access their own data while admins have the flexibility to manage and review all records in the database.
+- Unit tests (`.test.js`) for individual model methods
+- Integration tests for models with external dependencies
+- Common test utilities to reduce code duplication
+- Seeded data tests for realistic data scenarios
 
-#### `searchRecords` and `searchRecordsByUser`
+### File Naming Conventions
 
-### `update` methods
-
-#### `update` (programmatic use only)
-
-### `delete` methods
-
-#### `deleteRecord` and `deleteRecordByUser`
-
-
-## ToDos
-
-- [x] In the `snacris--backend/models/acris` folder create three subfolders: `real-property`, `personal-property` and `code-maps`.
-
-- [x] In the `snacris--backend/models/acris` folder rename the files `realPropertyMasterModel.js`, `realPropertyLegals.js`, `realPropertyParties.js`, `realPropertyReferences.js` and `realPropertyRemarks.js` to `MasterRealPropModel.js`, `LegalsRealPropModel.js`, `PartiesRealPropModel.js`, `ReferencesRealPropModel.js` and `RemarksRealPropModel.js`.  Then move the renamed files into the `snacris--backend/models/acris/real-property` subfolder.
-
-- NB--> The `master` dataset (and subsequently the `master.js` model) for the Real Property and Personal Property datasets is structured in that the `document_id` is a unique identifier.  If you query the Real Property Master API (or Personal Property Master API) for the `document_id` value of "2013100700087001" you will [should!] receive a single record back.  However, this is not the case for the other four datasets and so I had to refactor each of the `legals`, `parties`, `remarks` and `references` models based on this discovery.
-
-- [x] In the `snacris--backend/models/acris/personal-property` subfolder create the following five files: `MasterPersPropModel.js`, `LegalsPersPropModel.js`, `PartiesPersPropModel.js`, `ReferencesPersPropModel.js` and `RemarksPersPropModel.js`.  
-
-- [x] In the `snacris--backend/models/acris/code-maps` subfolder create the following five files: `CountriesCodeMapModel.js`, `DocTypesCodeMapModel.js`, `PropTypesCodeMapModel.js`, `StatesCodeMapModel.js` and `UccTypesCodeMapModel.js`.
-- [ ] Spend time designing these functions.
-
-
+- **Models**: `camelCase.js` (e.g., `realProperty.js`)
+- **Tests**: `modelName.test.js`
+- **Code Maps**: `PascalCaseCodeMapModel.js`
+- **README files**: Present in each subdirectory explaining domain-specific details

@@ -1,87 +1,210 @@
-# Route related notes
+# Routes Documentation
 
-## Context
+This directory contains all the route handlers for the SNACRIS backend application, organized by functionality and purpose. The routes provide API endpoints for user authentication, ACRIS data queries, organization management, and database operations.
 
-**Best Practices**
-1. Use URL Parameters for Identifiers:
-- URL parameters are typically used for resource identifiers. This makes the URL more descriptive and aligns with RESTful principles.
-- Example: `GET /records/:document_id` to fetch a specific record by its `document_id`.
+## Table of Contents
 
-2. Use Request Body for Data:
-- The request body is used to send data to the server, especially for `POST`, `PUT`, and `PATCH` requests.
-- Example: `POST /records` with a JSON body containing the record data to create a new record.
+- [Overview](#overview)
+- [Main Route Files](#main-route-files)
+- [Directory Structure](#directory-structure)
+- [API Routes](#api-routes)
+- [Database Routes](#database-routes)
+- [Page Routes](#page-routes)
+- [Utilities](#utilities)
+- [Testing](#testing)
 
-**GET Requests and Request Body**
-- **GET Requests**: According to the HTTP specification, GET requests should not have a body. The parameters for GET requests should be included in the URL, either as path parameters or query parameters.
-- **Path Parameters**: Use path parameters for mandatory identifiers.
-- **Query Parameters**: Use query parameters for optional filters or search criteria.
+## Overview
 
-## ToDos:
+The routes directory is organized into several categories:
 
-- [x] Update the route folder and file names and their contents located here: `snacris--backend/routes/db/acris/` with three two subfolders: `db` and `api` and within each should contain a subfolder `acris`.  
-- [x] Within each `acris` subfolder there should be three subfolders named `code-maps`, `personal-property` and `real-property`.  
+- **Authentication & Users**: User registration, login, and user management
+- **API Routes**: External API calls to ACRIS endpoints and form processing
+- **Database Routes**: Direct database operations for saved ACRIS data
+- **Organization Routes**: Organization-related operations
+- **Page Routes**: Static page serving
+- **Utilities**: Helper functions and utilities
 
-### ACRIS API related routes
+## Main Route Files
 
-- [ ] Refactor the Real Property and Personal Property API files to allow the user to search by more robust search criteria and not just by the `document_id`.
-- [ ] Create a module that takes the search criteria and search modifiers used by the user and returns `Socrata Query Language` syntax that is used to make the GET request.
+### `index.js`
 
-- [x] `api/acris/code-maps` will have a `js` file for the following datasets: `countriesCodeMapApiRoutes`, `statesCodeMapApiRoutes`, `uccTypesCodeMapApiRoutes`, `docTypesCodeMapApiRoutes` and `propTypesCodeMapApiRoutes`.  
+Central route aggregator that imports and exports all route modules. This file serves as the main entry point for all routes and organizes them into logical groups:
 
-- NB --> These code-map api routes won't be accessed by the user on the front end.  Instead these datasets will populate fields on the front end when the relevant webpage loads via request to the database. The tests should include the use case where the full dataset is downloaded, compared to the values in the database.  If an update has been made to a dataset then the corresponding sql table should be updated to reflect the update.
-- [ ] Create tests for `countriesCodeMapApiRoutes`
-- [ ] Create tests for `statesCodeMapApiRoutes`
-- [ ] Create tests for `uccTypesCodeMapApiRoutes`
-- [ ] Create tests for `docTypesCodeMapApiRoutes`
-- [ ] Create tests for `propTypesCodeMapApiRoutes`
-  
-- [x] `api/acris/personal-property` will have a `js` file for the following datasets: `masterPersPropApiRoutes`, `legalsPersPropApiRoutes`, `partiesPersPropApiRoutes`, `referencesPersPropApiRoutes` and `remarksPersPropApiRoutes`.
-- [ ] Create tests for `masterPersPropApiRoutes`
-- [ ] Create tests for `legalsPersPropApiRoutes`
-- [ ] Create tests for `partiesPersPropApiRoutes`
-- [ ] Create tests for `referencesPersPropApiRoutes`
-- [ ] Create tests for `remarksPersPropApiRoutes`
+- User and authentication routes
+- Organization routes
+- SNACRIS form routes (external API calls)
+- ACRIS API routes (real property, personal property, code maps)
+- Database routes for saved data
 
-- [x] `api/acris/real-property` will have a `js` file for the following datasets: `masterRealPropApiRoutes`, `legalsRealPropApiRoutes`, `partiesRealPropApiRoutes`, `referencesRealPropApiRoutes` and `remarksRealPropApiRoutes`.  
-- [ ] Create tests for `masterRealPropApiRoutes`
-- [ ] Create tests for `legalsRealPropApiRoutes`
-- [ ] Create tests for `partiesRealPropApiRoutes`
-- [ ] Create tests for `referencesRealPropApiRoutes`
-- [ ] Create tests for `remarksRealPropApiRoutes`
+### `auth.js`
 
-### database related routes
+Handles user authentication endpoints:
 
-- [x] `db/acris/code-maps` will have a `js` file for the following datasets: `countriesCodeMapDbRoutes`, `statesCodeMapDbRoutes`, `uccCodeMapDbRoutes`, `docTypesCodeMapDbRoutes` and `propTypesCodeMapDbRoutes`.  
-- [ ] Design `countriesCodeMapDbRoutes.js`
-- [ ] Design `statesCodeMapDbRoutes.js`
-- [ ] Design `uccCodeMapDbRoutes.js`
-- [ ] Design `docTypesCodeMapDbRoutes.js`
-- [ ] Design `propTypesCodeMapDbRoutes.js`
+- `POST /auth/token` - User login and JWT token generation
+- `POST /auth/register` - New user registration
 
-- [x] `db/acris/personal-property` will have a `js` file for the following datasets: `masterPersPropDbRoutes`, `legalsPersPropDbRoutes`, `partiesPersPropDbRoutes`, `referencesPersPropDbRoutes` and `remarksPersPropDbRoutes`.  
-- [ ] Design `masterPersPropDbRoutes.js`
-- [ ] Design `legalsPersPropDbRoutes.js`
-- [ ] Design `partiesPersPropDbRoutes.js`
-- [ ] Design `referencesPersPropDbRoutes.js`
-- [ ] Design `remarksPersPropDbRoutes.js`
+### `users.js`
 
-- [x] `db/acris/real-property` will have a `js` file for the following datasets: `masterRealPropDbRoutes`, `legalsRealPropDbRoutes`, `partiesRealPropDbRoutes`, `referencesRealPropDbRoutes` and `remarksRealPropDbRoutes`.  
-- [x] Design `masterRealPropDbRoutes.js` by analyzing the routes to ensure they meet best practices.  This route file will serve as a template for the `masterPersPropDbRoutes.js` file, however, each other dataset in the Real Property category have different data flow and structure so don't plan on using this as a template for the others.  NB the checklist for the routes below means they were successfully tested using Postman.
-  - [x] `saveDataByAdmin`
-  - [x] `saveDataByUser`
-  - [x] `getAllRecordsByUser`
-  - [x] `getRecordsByAdmin`
-  - [x] `getRecordFromUserByDocumentId/:document_id`
-  - [ ] `fetchRecordByAdmin/:document_id`
-  - [x] `searchSavedUserRecords`
-  - [ ] `updateRecordByAdmin/:document_id`
-  - [x] `deleteRecordByUser/:document_id`
-  - [ ] `deleteRecordByAdmin/:document_id`
-- [ ] Design `legalsRealPropDbRoutes.js`
-- [ ] Design `partiesRealPropDbRoutes.js`
-- [ ] Design `referencesRealPropDbRoutes.js`
-- [ ] Design `remarksRealPropDbRoutes.js`
+User management endpoints:
 
-**index.js & app.js**
+- User profile operations
+- User data CRUD operations
 
-- [x]  update the `index.js` file within the `routes` folder to use the updated file names listed above as well as the import names in `app.js`
+## Directory Structure
+
+```
+routes/
+├── index.js                    # Route aggregator
+├── auth.js                     # Authentication routes
+├── users.js                    # User management routes
+├── _testCommon.js             # Test utilities
+├── api/                       # External API routes
+│   ├── acris/                 # ACRIS API endpoints
+│   │   ├── code-maps/         # Code mapping API routes
+│   │   ├── personal-property/ # Personal property API routes
+│   │   └── real-property/     # Real property API routes
+│   ├── organization/          # Organization API routes
+│   └── snacrisForms/          # Form processing routes
+├── db/                        # Database operation routes
+│   └── acris/                 # ACRIS database routes
+│       ├── code-maps/         # Code mapping database operations
+│       └── real-property/     # Real property database operations
+├── pages/                     # Static page routes
+│   └── home.js               # Home page route
+└── utils/                     # Route utilities
+    ├── convertQueryParams.js.disabled
+    └── convertQueryParams.test.js.disabled
+```
+
+## API Routes
+
+### `/api/acris/`
+
+External API calls to NYC ACRIS endpoints:
+
+#### Real Property (`/api/acris/real-property/`)
+
+- **Master Records**: Main property transaction data
+- **Legals**: Legal descriptions and property details
+- **Parties**: Involved parties (buyers, sellers, attorneys)
+- **Remarks**: Additional comments and notes
+- **References**: Cross-references to other documents
+
+#### Personal Property (`/api/acris/personal-property/`)
+
+- **Master Records**: Personal property transaction data
+- **Legals**: Legal descriptions for personal property
+- **Parties**: Involved parties in personal property transactions
+- **Remarks**: Comments and additional information
+- **References**: Document cross-references
+
+#### Code Maps (`/api/acris/code-maps/`)
+
+- **Countries**: Country code mappings
+- **States**: US state code mappings
+- **Document Types**: Document control code mappings
+- **Property Types**: Property type code mappings
+- **UCC Types**: UCC collateral type code mappings
+
+### `/api/organization/`
+
+Organization management:
+
+- Organization CRUD operations
+- Organization membership management
+
+### `/api/snacrisForms/`
+
+Form processing routes that handle frontend form submissions and make coordinated external API calls:
+
+- **`queryAcrisAddressParcel.js`**: Property queries by address or BBL (Borough-Block-Lot)
+- **`queryAcrisParcel.js`**: Parcel-specific queries
+- **`queryAcrisDocIdCrfn.js`**: Document ID and CRFN queries
+- **`queryAcrisPartyName.js`**: Party name searches
+- **`queryAcrisDocumentType.js`**: Document type queries
+- **`queryAcrisTransactionNumber.js`**: Transaction number lookups
+- **`queryAcrisReelPage.js`**: Reel and page number queries
+- **`queryAcrisUccFedLienNum.js`**: UCC and Federal lien number searches
+
+Each form route provides:
+
+- Data retrieval from ACRIS APIs
+- Data analysis and processing
+- Deduplication and filtering
+- Error handling and status reporting
+
+## Database Routes
+
+### `/db/acris/`
+
+Direct database operations for data previously saved from ACRIS APIs:
+
+#### Code Maps (`/db/acris/code-maps/`)
+
+- **Document Types**: CRUD operations for document type codes stored in database
+- **Other code maps**: (Planned implementation for countries, states, property types, UCC types)
+
+#### Real Property (`/db/acris/real-property/`)
+
+- **Real Property Database Routes**: CRUD operations for saved real property data
+
+#### Personal Property (`/db/acris/personal-property/`)
+
+- **Personal Property Database Routes**: (Planned implementation for saved personal property data)
+
+## Page Routes
+
+### `/pages/`
+
+Static page serving:
+
+- **`home.js`**: Home page route handler
+
+## Utilities
+
+### `/utils/`
+
+Route-related utility functions:
+
+- **`convertQueryParams.js.disabled`**: Query parameter conversion utilities (currently disabled)
+- **`README.md`**: Utilities documentation
+
+## Testing
+
+The routes directory includes comprehensive test files:
+
+- **`_testCommon.js`**: Common testing utilities and setup
+- **`auth.test.js`**: Authentication route tests
+- **`users.test.js`**: User route tests
+- **Individual route test files**: Each major route file has corresponding test files
+
+### Test File Naming Convention
+
+- Route files: `routeName.js`
+- Test files: `routeName.test.js`
+
+## Route Organization Principles
+
+1. **Separation of Concerns**: External API calls, database operations, and form processing are separated into different directories
+2. **Logical Grouping**: Related functionality is grouped together (e.g., all ACRIS-related routes under `/api/acris/`)
+3. **Consistent Naming**: Route files follow consistent naming conventions
+4. **Comprehensive Testing**: Each route module has corresponding test files
+5. **Modular Design**: Routes are designed as independent modules that can be easily imported and used
+
+## Future Development
+
+Several route modules are marked as TODO for future implementation:
+
+- Personal property database routes
+- Additional code mapping database routes
+- Enhanced query parameter conversion utilities
+
+## Dependencies
+
+Routes depend on:
+
+- Express.js for routing framework
+- JSONSchema for request validation
+- Custom models for data operations
+- Authentication middleware
+- Error handling utilities
