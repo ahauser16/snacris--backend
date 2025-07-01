@@ -13,35 +13,35 @@ router.get("/fetchRecord", async function (req, res, next) {
   const errMsg = [];
   const { masterSearchTerms = {} } = req.query;
 
-  // 1) Determine document_id (direct or via CRFN)
-  let documentIdToQuery = null;
+  // 1) Determine document_id(s) (direct or via CRFN)
+  let finalIds = [];
+
   if (masterSearchTerms.document_id) {
-    documentIdToQuery = masterSearchTerms.document_id;
+    // Case 1: Direct document_id provided
+    finalIds = [masterSearchTerms.document_id];
   } else if (masterSearchTerms.crfn) {
+    // Case 2: CRFN provided - need to fetch document_ids first
     try {
-      const recs = await MasterRealPropApi.fetchAcrisRecords({
+      const documentIds = await MasterRealPropApi.fetchAcrisDocumentIds({
         crfn: masterSearchTerms.crfn,
       });
-      if (!Array.isArray(recs) || recs.length === 0) {
+      if (!Array.isArray(documentIds) || documentIds.length === 0) {
         errMsg.push(
-          `No master record found for crfn: ${masterSearchTerms.crfn}`
+          `No document IDs found for crfn: ${masterSearchTerms.crfn}`
         );
       } else {
-        documentIdToQuery = recs[0].document_id;
+        finalIds = documentIds;
       }
     } catch (err) {
-      errMsg.push(`Master Records: ${err.message}`);
+      errMsg.push(`Fetching Document IDs: ${err.message}`);
     }
   } else {
     errMsg.push("Must provide either document_id or crfn.");
   }
 
-  if (errMsg.length || !documentIdToQuery) {
+  if (errMsg.length || finalIds.length === 0) {
     return res.json({ dataFound: false, errMsg });
   }
-
-  const finalIds = [documentIdToQuery];
-  console.log(`finalIds is equal to: `, finalIds);
 
   // 2) Fetch full records in parallel
   const [
