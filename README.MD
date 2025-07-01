@@ -1,10 +1,74 @@
 # snacris server (backend)
 
-## Recent Changes (June 2025)
+**TABLE OF CONTENTS**
 
-**Database Connection Pooling & Test Suite Improvements:**
+- [snacris server (backend)](#snacris-server-backend)
+- [CAPSTONE REQUIREMENTS](#capstone-requirements)
+  - [The title of your site and a link to the URL where it is deployed](#the-title-of-your-site-and-a-link-to-the-url-where-it-is-deployed)
+  - [WALKTHROUGH](#walkthrough)
+    - [User registers \& logs in](#user-registers--logs-in)
+    - [User searches for a property's borough, block and lot using street address parameters.](#user-searches-for-a-propertys-borough-block-and-lot-using-street-address-parameters)
+    - [Once BBL is obtained, user can view that data and click the "Search By BBL" button which will take them to the "Search By Parcel" page.](#once-bbl-is-obtained-user-can-view-that-data-and-click-the-search-by-bbl-button-which-will-take-them-to-the-search-by-parcel-page)
+    - [User can search for deed information by choosing "DEEDS \& OTHER CONVEYANCES" from the DOCUMENT CLASS dropdown menu and then choose "DEED" from the DOCUMENT TYPE dropdown menu and then click submit.](#user-can-search-for-deed-information-by-choosing-deeds--other-conveyances-from-the-document-class-dropdown-menu-and-then-choose-deed-from-the-document-type-dropdown-menu-and-then-click-submit)
+    - [The user can then browse the documents by selecting the DOCUMENT ID from a selection menu. While viewing a document the user can SAVE a document's data or view DOCUMENT DETAIL or VIEW DOCUMENT in ACRIS.](#the-user-can-then-browse-the-documents-by-selecting-the-document-id-from-a-selection-menu-while-viewing-a-document-the-user-can-save-a-documents-data-or-view-document-detail-or-view-document-in-acris)
+  - [Website Description \& Features](#website-description--features)
+  - [List the features you implemented and explain why you chose those features to implement](#list-the-features-you-implemented-and-explain-why-you-chose-those-features-to-implement)
+    - [User authentication](#user-authentication)
+    - [Real Property Record save feature to database](#real-property-record-save-feature-to-database)
+  - [`jest` tests](#jest-tests)
+  - [WALKTHROUGH](#walkthrough-1)
+    - [User registers \& logs in](#user-registers--logs-in-1)
+    - [User searches for a property’s borough, block and lot using street address parameters.](#user-searches-for-a-propertys-borough-block-and-lot-using-street-address-parameters-1)
+    - [Once BBL is obtained, user can view that data and click the “Search By BBL” button which will take them to the “Search By Parcel” page.](#once-bbl-is-obtained-user-can-view-that-data-and-click-the-search-by-bbl-button-which-will-take-them-to-the-search-by-parcel-page-1)
+    - [User can search for deed information by choosing “DEEDS \& OTHER CONVEYANCES” from the DOCUMENT CLASS dropdown menu and then choose “DEED” from the DOCUMENT TYPE dropdown menu and then click submit.](#user-can-search-for-deed-information-by-choosing-deeds--other-conveyances-from-the-document-class-dropdown-menu-and-then-choose-deed-from-the-document-type-dropdown-menu-and-then-click-submit-1)
+    - [The user can then browse the documents by selecting the DOCUMENT ID from a selection menu. While viewing a document the user can SAVE a document’s data or view DOCUMENT DETAIL or VIEW DOCUMENT in ACRIS.](#the-user-can-then-browse-the-documents-by-selecting-the-document-id-from-a-selection-menu-while-viewing-a-document-the-user-can-save-a-documents-data-or-view-document-detail-or-view-document-in-acris-1)
+  - [Keep the API in there, and if you have anything to say about the API then add some notes. If you have created your own API, please document the process.](#keep-the-api-in-there-and-if-you-have-anything-to-say-about-the-api-then-add-some-notes-if-you-have-created-your-own-api-please-document-the-process)
+  - [Identify the technology stack used to create your website](#identify-the-technology-stack-used-to-create-your-website)
+    - [Backend Technologies](#backend-technologies)
+    - [Development \& Testing Tools](#development--testing-tools)
+    - [DevOps \& Deployment](#devops--deployment)
+    - [Security Features](#security-features)
+    - [Architecture Patterns](#architecture-patterns)
+  - [How to run the application](#how-to-run-the-application)
+  - [Environment Setup](#environment-setup)
+    - [1. Install Dependencies](#1-install-dependencies)
+    - [2. Database Setup](#2-database-setup)
+      - [Create Development Database](#create-development-database)
+      - [Set Up Database Schema](#set-up-database-schema)
+      - [Optional: Set Up Test Database](#optional-set-up-test-database)
+    - [3. Environment Variables](#3-environment-variables)
+  - [Running the Application](#running-the-application)
+    - [Development Mode](#development-mode)
+    - [Production Mode](#production-mode)
+    - [Verify the Server is Running](#verify-the-server-is-running)
+  - [Common Issues \& Solutions](#common-issues--solutions)
+    - [Port Already in Use](#port-already-in-use)
+    - [Database Connection Issues](#database-connection-issues)
+    - [Environment Variables Not Loading](#environment-variables-not-loading)
+  - [Production Deployment](#production-deployment)
+    - [Supabase/Hosted Database](#supabasehosted-database)
+- [Testing](#testing)
+- [Overview of SNACRIS](#overview-of-snacris)
+  - [Features Implemented](#features-implemented)
+  - [Technology Stack](#technology-stack)
+  - [Features To Be Added](#features-to-be-added)
+    - [**Personal Notes \& Annotations**](#personal-notes--annotations)
+    - [**Organization Collaboration**](#organization-collaboration)
+    - [**Custom Search Form Builder**](#custom-search-form-builder)
+    - [Data Flow - User Perspective](#data-flow---user-perspective)
+      - [**Getting Started: User Registration**](#getting-started-user-registration)
+      - [**Returning Users: Login Process**](#returning-users-login-process)
+      - [**Using SNACRIS: Property Search Experience**](#using-snacris-property-search-experience)
+      - [**Behind the Scenes: System Architecture**](#behind-the-scenes-system-architecture)
 
-- \*\*RES## WALKTHROUGH
+# CAPSTONE REQUIREMENTS
+
+## The title of your site and a link to the URL where it is deployed
+
+https://snacris.nyc/
+
+
+## WALKTHROUGH
 
 SNACRIS provides a streamlined experience for accessing NYC property records. Here's a detailed user flow from the frontend perspective:
 
@@ -161,80 +225,6 @@ SNACRIS provides a streamlined experience for accessing NYC property records. He
    - Click on party names to search for other documents with the same party
    - Use the "Back to Search" button to initiate a new search
    - Access your saved documents anytime from the user dashboard
-
-This walkthrough demonstrates how SNACRIS simplifies the complex process of NYC property research, allowing users to find, view, and save property documents with an intuitive, user-friendly interface.rmittent SASL connection errors\*\* - Migrated from `pg.Client` to `pg.Pool` for reliable database connections
-
-- **Enhanced test reliability** - All 194 tests now pass consistently across 17 test suites
-- **Environment-aware pooling** - Optimized connection settings for test (5), development (10), and production (20 connections)
-- **Supabase compatibility** - Connection pooling works seamlessly with hosted database environments
-- **Updated documentation** - Removed outdated troubleshooting workarounds and updated all test-related instructions
-
-**TABLE OF CONTENTS**
-
-- [snacris server (backend)](#snacris-server-backend)
-  - [Recent Changes (June 2025)](#recent-changes-june-2025)
-    - [User registers \& logs in](#user-registers--logs-in)
-    - [User searches for a property's borough, block and lot using street address parameters.](#user-searches-for-a-propertys-borough-block-and-lot-using-street-address-parameters)
-    - [Once BBL is obtained, user can view that data and click the "Search By BBL" button which will take them to the "Search By Parcel" page.](#once-bbl-is-obtained-user-can-view-that-data-and-click-the-search-by-bbl-button-which-will-take-them-to-the-search-by-parcel-page)
-    - [User can search for deed information by choosing "DEEDS \& OTHER CONVEYANCES" from the DOCUMENT CLASS dropdown menu and then choose "DEED" from the DOCUMENT TYPE dropdown menu and then click submit.](#user-can-search-for-deed-information-by-choosing-deeds--other-conveyances-from-the-document-class-dropdown-menu-and-then-choose-deed-from-the-document-type-dropdown-menu-and-then-click-submit)
-    - [The user can then browse the documents by selecting the DOCUMENT ID from a selection menu. While viewing a document the user can SAVE a document's data or view DOCUMENT DETAIL or VIEW DOCUMENT in ACRIS.](#the-user-can-then-browse-the-documents-by-selecting-the-document-id-from-a-selection-menu-while-viewing-a-document-the-user-can-save-a-documents-data-or-view-document-detail-or-view-document-in-acris)
-- [CAPSTONE REQUIREMENTS](#capstone-requirements)
-  - [The title of your site and a link to the URL where it is deployed](#the-title-of-your-site-and-a-link-to-the-url-where-it-is-deployed)
-  - [Website Description \& Features](#website-description--features)
-  - [List the features you implemented and explain why you chose those features to implement](#list-the-features-you-implemented-and-explain-why-you-chose-those-features-to-implement)
-    - [User authentication](#user-authentication)
-    - [Real Property Record save feature to database](#real-property-record-save-feature-to-database)
-  - [`jest` tests](#jest-tests)
-  - [WALKTHROUGH](#walkthrough)
-    - [User registers \& logs in](#user-registers--logs-in-1)
-    - [User searches for a property’s borough, block and lot using street address parameters.](#user-searches-for-a-propertys-borough-block-and-lot-using-street-address-parameters-1)
-    - [Once BBL is obtained, user can view that data and click the “Search By BBL” button which will take them to the “Search By Parcel” page.](#once-bbl-is-obtained-user-can-view-that-data-and-click-the-search-by-bbl-button-which-will-take-them-to-the-search-by-parcel-page-1)
-    - [User can search for deed information by choosing “DEEDS \& OTHER CONVEYANCES” from the DOCUMENT CLASS dropdown menu and then choose “DEED” from the DOCUMENT TYPE dropdown menu and then click submit.](#user-can-search-for-deed-information-by-choosing-deeds--other-conveyances-from-the-document-class-dropdown-menu-and-then-choose-deed-from-the-document-type-dropdown-menu-and-then-click-submit-1)
-    - [The user can then browse the documents by selecting the DOCUMENT ID from a selection menu. While viewing a document the user can SAVE a document’s data or view DOCUMENT DETAIL or VIEW DOCUMENT in ACRIS.](#the-user-can-then-browse-the-documents-by-selecting-the-document-id-from-a-selection-menu-while-viewing-a-document-the-user-can-save-a-documents-data-or-view-document-detail-or-view-document-in-acris-1)
-  - [Keep the API in there, and if you have anything to say about the API then add some notes. If you have created your own API, please document the process.](#keep-the-api-in-there-and-if-you-have-anything-to-say-about-the-api-then-add-some-notes-if-you-have-created-your-own-api-please-document-the-process)
-  - [Identify the technology stack used to create your website](#identify-the-technology-stack-used-to-create-your-website)
-    - [Backend Technologies](#backend-technologies)
-    - [Development \& Testing Tools](#development--testing-tools)
-    - [DevOps \& Deployment](#devops--deployment)
-    - [Security Features](#security-features)
-    - [Architecture Patterns](#architecture-patterns)
-  - [How to run the application](#how-to-run-the-application)
-  - [Environment Setup](#environment-setup)
-    - [1. Install Dependencies](#1-install-dependencies)
-    - [2. Database Setup](#2-database-setup)
-      - [Create Development Database](#create-development-database)
-      - [Set Up Database Schema](#set-up-database-schema)
-      - [Optional: Set Up Test Database](#optional-set-up-test-database)
-    - [3. Environment Variables](#3-environment-variables)
-  - [Running the Application](#running-the-application)
-    - [Development Mode](#development-mode)
-    - [Production Mode](#production-mode)
-    - [Verify the Server is Running](#verify-the-server-is-running)
-  - [Common Issues \& Solutions](#common-issues--solutions)
-    - [Port Already in Use](#port-already-in-use)
-    - [Database Connection Issues](#database-connection-issues)
-    - [Environment Variables Not Loading](#environment-variables-not-loading)
-  - [Production Deployment](#production-deployment)
-    - [Supabase/Hosted Database](#supabasehosted-database)
-- [Testing](#testing)
-- [Overview of SNACRIS](#overview-of-snacris)
-  - [Features Implemented](#features-implemented)
-  - [Technology Stack](#technology-stack)
-  - [Features To Be Added](#features-to-be-added)
-    - [**Personal Notes \& Annotations**](#personal-notes--annotations)
-    - [**Organization Collaboration**](#organization-collaboration)
-    - [**Custom Search Form Builder**](#custom-search-form-builder)
-    - [Data Flow - User Perspective](#data-flow---user-perspective)
-      - [**Getting Started: User Registration**](#getting-started-user-registration)
-      - [**Returning Users: Login Process**](#returning-users-login-process)
-      - [**Using SNACRIS: Property Search Experience**](#using-snacris-property-search-experience)
-      - [**Behind the Scenes: System Architecture**](#behind-the-scenes-system-architecture)
-
-# CAPSTONE REQUIREMENTS
-
-## The title of your site and a link to the URL where it is deployed
-
-https://snacris.nyc/
 
 ## Website Description & Features
 
